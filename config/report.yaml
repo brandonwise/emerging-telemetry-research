@@ -1,0 +1,29 @@
+version: 1
+
+discord:
+  enabled: true
+  maximum_embed_findings: 5
+  attach_html_report: true
+  mention_roles_for_flash: []
+  suppress_embeds_for_source_links: true
+
+email:
+  enabled: false
+  attach_html_report: true
+  inline_summary: true
+
+html:
+  self_contained: true
+  remote_assets: false
+  content_security_policy: "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  escape_all_source_text: true
+  include_usage: true
+  include_source_health: true
+  include_evidence_timeline: true
+
+publication:
+  allow_empty_report: true
+  include_degraded_source_banner: true
+  require_verified_claims: true
+  display_timezone: America/New_York
+  flash_threshold: 85

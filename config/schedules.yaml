@@ -1,0 +1,39 @@
+version: 1
+timezone: America/New_York
+
+jobs:
+  structured_ingest:
+    cron: "*/15 * * * *"
+    workflow: openclaw/workflows/threat-radar.lobster
+    mode: isolated
+    args: ["--mode", "structured-ingest"]
+
+  hourly_discovery:
+    cron: "8 * * * *"
+    workflow: openclaw/workflows/threat-radar.lobster
+    mode: isolated
+    args: ["--mode", "hourly-discovery"]
+
+  watch_refresh:
+    cron: "22 */4 * * *"
+    workflow: openclaw/workflows/threat-radar.lobster
+    mode: isolated
+    args: ["--mode", "watch-refresh"]
+
+  morning_brief:
+    cron: "30 7 * * *"
+    workflow: openclaw/workflows/threat-radar.lobster
+    mode: isolated
+    args: ["--mode", "daily-brief", "--edition", "morning"]
+
+  afternoon_delta:
+    cron: "0 15 * * *"
+    workflow: openclaw/workflows/threat-radar.lobster
+    mode: isolated
+    args: ["--mode", "daily-brief", "--edition", "afternoon-delta"]
+
+  weekly_evaluation:
+    cron: "0 9 * * 1"
+    workflow: openclaw/workflows/evaluation.lobster
+    mode: isolated
+    args: ["--suite", "weekly-production-retrospective"]

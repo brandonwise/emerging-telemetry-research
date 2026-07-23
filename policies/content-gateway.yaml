@@ -1,0 +1,46 @@
+version: 1
+
+default_disposition: quarantine
+
+allowed_text_types:
+  - text/plain
+  - text/html
+  - application/json
+  - application/xml
+  - application/rss+xml
+  - application/atom+xml
+  - application/pdf
+
+remove:
+  - script
+  - style
+  - iframe
+  - object
+  - embed
+  - form
+  - input
+  - button
+  - svg_script
+  - event_handlers
+  - html_comments
+  - hidden_text
+
+canonicalization:
+  normalize_unicode: NFC
+  remove_zero_width: true
+  flag_bidi_controls: true
+  detect_confusables: true
+  normalize_line_endings: true
+
+model_input:
+  maximum_excerpt_characters: 12000
+  maximum_evidence_items: 20
+  label_field: untrusted_evidence
+  permit_raw_html: false
+  permit_remote_images: false
+
+risk_actions:
+  critical: block_model_access
+  high: deterministic_extraction_only
+  medium: restricted_model_extraction
+  low: normal_sanitized_pipeline

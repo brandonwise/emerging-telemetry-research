@@ -1,0 +1,32 @@
+version: 1
+
+default: deny
+
+allowed_schemes: [https]
+allow_http_source_ids: []
+maximum_redirects: 3
+maximum_response_bytes: 10485760
+maximum_archive_depth: 2
+maximum_archive_files: 100
+maximum_decompression_ratio: 20
+
+blocked_networks:
+  - 0.0.0.0/8
+  - 10.0.0.0/8
+  - 100.64.0.0/10
+  - 127.0.0.0/8
+  - 169.254.0.0/16
+  - 172.16.0.0/12
+  - 192.0.0.0/24
+  - 192.168.0.0/16
+  - 224.0.0.0/4
+  - ::/128
+  - ::1/128
+  - fc00::/7
+  - fe80::/10
+  - ff00::/8
+
+block_cloud_metadata: true
+revalidate_dns_after_redirect: true
+block_credentials_in_url: true
+strip_authorization_on_cross_origin_redirect: true

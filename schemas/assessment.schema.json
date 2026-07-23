@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/assessment.v1.json",
+  "title": "Agent Assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "assessment_id", "cluster_id", "agent_role", "created_at", "judgment", "claims", "uncertainties", "recommended_disposition"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "assessment_id": {"type": "string", "pattern": "^as_[A-Za-z0-9_-]+$"},
+    "cluster_id": {"type": "string"},
+    "agent_role": {"enum": ["specialist", "impact", "skeptic", "citation_verifier", "coordinator"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "model": {"type": "string"},
+    "prompt_revision": {"type": "string"},
+    "judgment": {"type": "string", "maxLength": 3000},
+    "claims": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "certainty", "evidence_ids"],
+        "properties": {
+          "text": {"type": "string", "maxLength": 1200},
+          "certainty": {"enum": ["observed", "reported", "inferred", "confirmed"]},
+          "evidence_ids": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string"}}
+        }
+      }
+    },
+    "uncertainties": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1000}},
+    "contradictions": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1000}},
+    "recommended_disposition": {"enum": ["flash", "watch", "daily", "archive", "reject"]},
+    "requested_followups": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 600}}
+  }
+}

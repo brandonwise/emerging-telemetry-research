@@ -1,0 +1,57 @@
+version: 1
+
+weights:
+  impact:
+    max: 25
+  exploitability:
+    max: 20
+  evidence_strength:
+    max: 15
+  momentum:
+    max: 15
+  novelty_lead_time:
+    max: 15
+  organization_relevance:
+    max: 10
+
+penalties:
+  single_source_indirect: -8
+  source_dependency_high: -10
+  material_contradiction: -8
+  stale_without_new_evidence: -6
+  high_injection_risk: -5
+  unverifiable_screenshot_only: -7
+  attribution_without_direct_evidence: -12
+
+thresholds:
+  flash: 85
+  watch: 65
+  daily: 45
+
+hard_rules:
+  require_citation_for_promotion: true
+  require_independent_source_or_direct_artifact_for_flash: true
+  confirmed_requires_deterministic_rule: true
+  coordinator_cannot_override_policy: true
+  media_saturation_reduces_novelty: true
+
+confirmation_rules:
+  - id: authoritative_direct
+    conditions:
+      any:
+        - cisa_kev_present: true
+        - vendor_csaf_status_in: [known_affected, fixed]
+        - direct_malicious_package_advisory: true
+        - signed_vendor_advisory: true
+  - id: independent_corroboration
+    conditions:
+      independent_source_count_gte: 2
+      direct_artifact_count_gte: 1
+
+features:
+  windows_minutes: [15, 60, 360, 1440, 10080]
+  burst_algorithms: [ewma, cusum]
+  source_lineage_required: true
+  novelty_media_baseline_hours:
+    maximum_credit: 168
+    zero_credit_after_media_saturation: 24

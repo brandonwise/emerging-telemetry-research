@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openclaw-emerging-threat-radar"
+version = "0.1.0"
+description = "Proactive, evidence-backed emerging cyber-threat radar for OpenClaw"
+requires-python = ">=3.12"
+dependencies = [
+  "boto3>=1.35,<2",
+  "bleach>=6.2,<7",
+  "defusedxml>=0.7,<1",
+  "httpx>=0.28,<1",
+  "jinja2>=3.1,<4",
+  "jsonschema[format]>=4.23,<5",
+  "opentelemetry-api>=1.29,<2",
+  "opentelemetry-sdk>=1.29,<2",
+  "psycopg[binary,pool]>=3.2,<4",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "python-dateutil>=2.9,<3",
+  "pyyaml>=6.0,<7",
+  "sqlalchemy>=2.0,<3",
+  "tenacity>=9.0,<10",
+  "typer>=0.15,<1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.25,<1",
+  "pytest-cov>=6,<7",
+  "ruff>=0.9,<1",
+  "types-pyyaml>=6.0"
+]
+
+[project.scripts]
+threat-radar = "apps.worker.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps", "packages"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --disable-warnings"
+testpaths = ["tests"]

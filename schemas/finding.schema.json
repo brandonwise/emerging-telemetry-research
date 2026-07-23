@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/finding.v1.json",
+  "title": "Threat Radar Finding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "finding_id", "cluster_id", "title", "why_now", "category",
+    "emergence_stage", "publication_class", "priority_score", "score_components",
+    "confidence", "first_observed_at", "known", "unknown", "claims", "next_check_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "finding_id": {"type": "string", "pattern": "^fd_[A-Za-z0-9_-]+$"},
+    "cluster_id": {"type": "string", "pattern": "^cl_[A-Za-z0-9_-]+$"},
+    "title": {"type": "string", "minLength": 5, "maxLength": 180},
+    "why_now": {"type": "string", "minLength": 10, "maxLength": 600},
+    "category": {"enum": ["vulnerability", "active_exploitation", "supply_chain", "malicious_package", "campaign", "infrastructure", "credential_exposure", "vendor_incident", "other"]},
+    "emergence_stage": {"enum": ["rumor", "watch_signal", "credible_emerging", "confirmed", "resolved", "corrected"]},
+    "publication_class": {"enum": ["flash", "watch", "daily", "archive"]},
+    "priority_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "score_components": {"$ref": "#/$defs/score"},
+    "confidence": {"$ref": "#/$defs/confidence"},
+    "momentum": {"enum": ["falling", "flat", "rising", "accelerating"]},
+    "novelty": {"enum": ["low", "medium", "high", "exceptional"]},
+    "lead_time_hours": {"type": ["number", "null"]},
+    "first_observed_at": {"type": "string", "format": "date-time"},
+    "last_updated_at": {"type": "string", "format": "date-time"},
+    "affected": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/affected"}},
+    "exploit_status": {"enum": ["unknown", "none_observed", "poc_claimed", "poc_verified_without_execution", "exploitation_suspected", "exploitation_observed", "known_exploited"]},
+    "organization_relevance": {"type": "string", "maxLength": 1500},
+    "known": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string", "maxLength": 800}},
+    "unknown": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 800}},
+    "contradictions": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 800}},
+    "defensive_actions": {"type": "array", "maxItems": 20, "items": {"$ref": "#/$defs/action"}},
+    "mappings": {"type": "array", "maxItems": 50, "items": {"$ref": "#/$defs/mapping"}},
+    "indicators": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/indicator"}},
+    "claims": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"$ref": "#/$defs/claim"}},
+    "skeptic_summary": {"type": "string", "maxLength": 2000},
+    "next_check_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "exploitability", "evidence_strength", "momentum", "novelty_lead_time", "organization_relevance", "penalties"],
+      "properties": {
+        "impact": {"type": "number", "minimum": 0, "maximum": 25},
+        "exploitability": {"type": "number", "minimum": 0, "maximum": 20},
+        "evidence_strength": {"type": "number", "minimum": 0, "maximum": 15},
+        "momentum": {"type": "number", "minimum": 0, "maximum": 15},
+        "novelty_lead_time": {"type": "number", "minimum": 0, "maximum": 15},
+        "organization_relevance": {"type": "number", "minimum": 0, "maximum": 10},
+        "penalties": {"type": "number", "minimum": -30, "maximum": 0}
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "probability", "rationale"],
+      "properties": {
+        "level": {"enum": ["low", "medium", "high"]},
+        "probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "rationale": {"type": "string", "maxLength": 1000}
+      }
+    },
+    "affected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name"],
+      "properties": {
+        "type": {"enum": ["product", "package", "repository", "service", "platform", "sector"]},
+        "name": {"type": "string", "maxLength": 500},
+        "version_range": {"type": ["string", "null"], "maxLength": 500}
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "action", "reversible"],
+      "properties": {
+        "priority": {"enum": ["immediate", "today", "monitor", "later"]},
+        "action": {"type": "string", "maxLength": 1000},
+        "reversible": {"type": "boolean"},
+        "requires_approval": {"type": "boolean"}
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "identifier"],
+      "properties": {
+        "scheme": {"enum": ["CVE", "CWE", "GHSA", "OSV", "ATTACK", "CPE", "PURL", "OTHER"]},
+        "identifier": {"type": "string", "maxLength": 500}
+      }
+    },
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "handling"],
+      "properties": {
+        "type": {"enum": ["domain", "ip", "url", "hash", "email", "package", "repository", "other"]},
+        "value": {"type": "string", "maxLength": 2000},
+        "handling": {"enum": ["public", "sensitive", "redacted"]}
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "text", "certainty", "evidence_ids", "verification_status"],
+      "properties": {
+        "claim_id": {"type": "string"},
+        "text": {"type": "string", "maxLength": 1200},
+        "certainty": {"enum": ["observed", "reported", "inferred", "confirmed"]},
+        "evidence_ids": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string", "pattern": "^ev_[A-Za-z0-9_-]+$"}},
+        "verification_status": {"enum": ["pending", "verified", "rejected"]}
+      }
+    }
+  }
+}

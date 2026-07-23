@@ -1,0 +1,77 @@
+version: 1
+
+default: deny
+
+roles:
+  coordinator:
+    allow:
+      - evidence.read
+      - prior_assessment.read
+      - assessment.submit
+    deny:
+      - browser.*
+      - shell.*
+      - filesystem.*
+      - secret.*
+      - schedule.*
+      - channel.*
+      - admin.*
+
+  collector:
+    allow:
+      - safe_fetch.plan
+      - safe_fetch.execute
+      - artifact.submit
+      - source_cursor.read
+      - source_cursor.write
+    deny:
+      - channel.*
+      - schedule.*
+      - secret.read_other
+      - shell.*
+      - admin.*
+
+  extractor:
+    allow:
+      - sanitized_evidence.read
+      - observation.submit
+    deny:
+      - browser.*
+      - shell.*
+      - channel.*
+      - schedule.*
+      - secret.*
+
+  analyst:
+    allow:
+      - evidence.read
+      - cluster.read
+      - analysis.submit
+    deny:
+      - raw_artifact.read
+      - browser.direct
+      - shell.*
+      - channel.*
+      - schedule.*
+      - secret.*
+
+  publisher:
+    allow:
+      - report.read_verified
+      - report.render
+      - delivery.send_configured
+      - delivery.receipt_write
+    deny:
+      - browser.*
+      - raw_artifact.*
+      - evidence.search_external
+      - shell.*
+      - schedule.*
+      - secret.read_unscoped
+
+validation:
+  reject_unknown_tools: true
+  reject_unknown_parameters: true
+  require_idempotency_key_for_side_effects: true
+  require_policy_revision: true
+  maximum_tool_calls_per_step: 12

@@ -1,0 +1,24 @@
+name: CodeQL
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "39 5 * * 2"
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  analyze:
+    # CodeQL on a private repository may require the appropriate GitHub plan/license.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [python]
+    steps:
+      - uses: actions/checkout@v4 # Pin to reviewed SHA before production.
+      - uses: github/codeql-action/init@v3 # Pin to reviewed SHA before production.
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@v3 # Pin to reviewed SHA before production.

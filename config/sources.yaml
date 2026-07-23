@@ -1,0 +1,182 @@
+version: 1
+
+defaults:
+  enabled: false
+  timeout_seconds: 20
+  max_response_bytes: 10485760
+  max_redirects: 3
+  retention_days: 365
+  jitter_seconds: 90
+  terms_review_required: true
+
+sources:
+  - id: cisa-kev
+    name: CISA Known Exploited Vulnerabilities
+    class: authoritative_vulnerability
+    trust_tier: 0
+    enabled: true
+    adapter: cisa_kev
+    schedule: "*/15 * * * *"
+    rate_limit_per_minute: 4
+    confirmation_role: direct
+
+  - id: cve-list-v5
+    name: CVE List V5
+    class: authoritative_vulnerability
+    trust_tier: 0
+    enabled: true
+    adapter: cve_v5
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 4
+    confirmation_role: direct
+
+  - id: nvd-cve
+    name: NVD CVE API
+    class: authoritative_vulnerability
+    trust_tier: 0
+    enabled: true
+    adapter: nvd
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 5
+    confirmation_role: direct
+
+  - id: first-epss
+    name: FIRST EPSS
+    class: exploit_probability
+    trust_tier: 0
+    enabled: true
+    adapter: epss
+    schedule: "17 */6 * * *"
+    rate_limit_per_minute: 4
+    confirmation_role: enrichment
+
+  - id: osv
+    name: Open Source Vulnerabilities
+    class: ecosystem_advisory
+    trust_tier: 0
+    enabled: true
+    adapter: osv
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: direct
+
+  - id: github-advisories
+    name: GitHub Global Security Advisories
+    class: ecosystem_advisory
+    trust_tier: 0
+    enabled: true
+    adapter: github_advisory
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: direct
+
+  - id: openssf-malicious-packages
+    name: OpenSSF Malicious Packages
+    class: malicious_package
+    trust_tier: 0
+    enabled: true
+    adapter: openssf_malicious_packages
+    schedule: "*/15 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: direct
+
+  - id: vendor-csaf
+    name: Approved Vendor CSAF/VEX Feeds
+    class: vendor_advisory
+    trust_tier: 0
+    enabled: false
+    adapter: csaf_directory
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: direct
+    configuration_required:
+      - provider_allowlist
+
+  - id: github-precursors
+    name: Approved Repository Precursors
+    class: code_precursor
+    trust_tier: 1
+    enabled: false
+    adapter: github_precursor
+    schedule: "*/15 * * * *"
+    rate_limit_per_minute: 20
+    confirmation_role: precursor
+    configuration_required:
+      - repository_watchlist
+      - github_app_credentials
+
+  - id: package-ecosystems
+    name: Package Registry Precursors
+    class: supply_chain_precursor
+    trust_tier: 1
+    enabled: false
+    adapter: package_registry
+    schedule: "*/15 * * * *"
+    rate_limit_per_minute: 20
+    confirmation_role: precursor
+    configuration_required:
+      - ecosystems
+      - package_watchlist
+
+  - id: certificate-transparency
+    name: Certificate Transparency Signals
+    class: infrastructure_precursor
+    trust_tier: 1
+    enabled: false
+    adapter: certificate_transparency
+    schedule: "*/30 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: precursor
+    configuration_required:
+      - brand_and_project_watchlist
+
+  - id: x-researchers
+    name: Curated X Researcher Signals
+    class: social_research
+    trust_tier: 2
+    enabled: false
+    adapter: x_search
+    schedule: "7 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    configuration_required:
+      - approved_access
+      - curated_accounts
+      - query_templates
+
+  - id: reddit-security
+    name: Curated Reddit Security Signals
+    class: social_research
+    trust_tier: 2
+    enabled: false
+    adapter: reddit
+    schedule: "13 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    configuration_required:
+      - approved_access
+      - communities
+
+  - id: brave-web
+    name: Brave Web Discovery
+    class: web_discovery
+    trust_tier: 2
+    enabled: true
+    adapter: openclaw_brave_search
+    schedule: "23 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    freshness_windows:
+      - day
+      - week
+
+  - id: media-baseline
+    name: Media Baseline
+    class: media
+    trust_tier: 3
+    enabled: true
+    adapter: brave_media_baseline
+    schedule: "41 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: baseline
+    novelty_weight: -1.0

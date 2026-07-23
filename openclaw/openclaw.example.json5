@@ -1,0 +1,299 @@
+// Illustrative OpenClaw configuration for the Threat Radar.
+// Before applying, validate every path against the installed version:
+//   openclaw config schema
+//   openclaw config schema lookup agents
+//   openclaw doctor --deep
+// Current OpenClaw uses agents.list while documentation refers to each list item
+// conceptually as agents.entries.*.
+{
+  models: {
+    pricing: { enabled: true },
+    providers: {
+      openai: {
+        // Make the Codex harness a fail-closed requirement for supported OpenAI routes.
+        agentRuntime: { id: "codex" },
+      },
+    },
+  },
+
+  agents: {
+    defaults: {
+      userTimezone: "America/New_York",
+      contextInjection: "continuation-skip",
+      bootstrapMaxChars: 12000,
+      bootstrapTotalMaxChars: 30000,
+      contextLimits: {
+        memoryGetMaxChars: 8000,
+        toolResultMaxChars: 16000,
+        postCompactionMaxChars: 1400,
+      },
+      reasoningDefault: "off",
+      elevatedDefault: "off",
+      timeoutSeconds: 600,
+      maxConcurrent: 12,
+      skills: [],
+      modelPolicy: {
+        allow: [
+          "openai/gpt-5.6-sol",
+          "openai/gpt-5.6-luna",
+          "anthropic/claude-haiku-4-5",
+          // Add the exact approved balanced and economical models available
+          // in this installation. Do not use an unrestricted wildcard in production.
+        ],
+      },
+      models: {
+        "openai/gpt-5.6-sol": {
+          alias: "radar-chief",
+          agentRuntime: { id: "codex" },
+          params: { cacheRetention: "long" },
+        },
+        "openai/gpt-5.6-luna": { alias: "radar-utility" },
+        "anthropic/claude-haiku-4-5": { alias: "radar-cheap" },
+      },
+      sandbox: {
+        mode: "all",
+        backend: "docker",
+        scope: "agent",
+        workspaceAccess: "none",
+        workspaceRoot: "~/.openclaw/sandboxes/threat-radar",
+        docker: {
+          image: "openclaw-sandbox:bookworm-slim",
+          readOnlyRoot: true,
+          tmpfs: ["/tmp", "/var/tmp", "/run"],
+          network: "none",
+          user: "1000:1000",
+          capDrop: ["ALL"],
+          pidsLimit: 128,
+          memory: "768m",
+          memorySwap: "768m",
+          cpus: 1,
+        },
+        browser: {
+          enabled: false,
+          headless: true,
+          allowHostControl: false,
+          autoStart: false,
+        },
+        prune: { idleHours: 8, maxAgeDays: 3 },
+      },
+    },
+
+    list: [
+      {
+        id: "radar-orchestrator",
+        default: true,
+        name: "Threat Radar Orchestrator",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/orchestrator",
+        // Embedded Lobster is disabled in sandboxed contexts. This agent is therefore
+        // unsandboxed but has no general shell/browser/channel tools. It may invoke only
+        // reviewed, repository-owned Lobster workflows through the lobster tool.
+        sandbox: { mode: "off" },
+        model: "openai/gpt-5.6-luna",
+        thinkingDefault: "low",
+        skills: [],
+        tools: {
+          allow: ["lobster", "session_status"],
+          deny: [
+            "exec", "process", "read", "write", "edit", "apply_patch",
+            "browser", "web_search", "web_fetch", "discord", "message",
+            "cron", "gateway", "nodes", "canvas", "image"
+          ],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-collector-official",
+        name: "Official Advisory Collector",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/collector-official",
+        model: "openai/gpt-5.6-luna",
+        thinkingDefault: "minimal",
+        sandbox: {
+          mode: "all",
+          scope: "agent",
+          workspaceAccess: "none",
+          docker: { network: "radar-egress" },
+        },
+        tools: {
+          allow: ["web_search", "web_fetch", "session_status"],
+          deny: ["exec", "process", "read", "write", "edit", "browser", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-collector-web",
+        name: "Web and Research Signal Collector",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/collector-web",
+        model: "anthropic/claude-haiku-4-5",
+        thinkingDefault: "low",
+        sandbox: {
+          mode: "all",
+          scope: "agent",
+          workspaceAccess: "none",
+          docker: { network: "radar-egress" },
+          browser: {
+            enabled: true,
+            network: "radar-browser-egress",
+            headless: true,
+            allowHostControl: false,
+            autoStart: true,
+          },
+        },
+        tools: {
+          allow: ["web_search", "web_fetch", "browser", "session_status"],
+          deny: ["exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-extractor",
+        name: "Structured Evidence Extractor",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/extractor",
+        model: "anthropic/claude-haiku-4-5",
+        thinkingDefault: "minimal",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["llm-task", "session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-specialist",
+        name: "Threat Intelligence Specialist",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/specialist",
+        model: {
+          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          fallbacks: ["openai/gpt-5.6-luna"]
+        },
+        thinkingDefault: "high",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-skeptic",
+        name: "Adversarial Intelligence Reviewer",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/skeptic",
+        model: {
+          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          fallbacks: ["openai/gpt-5.6-luna"]
+        },
+        thinkingDefault: "high",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-verifier",
+        name: "Claim and Citation Verifier",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/verifier",
+        model: {
+          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          fallbacks: ["openai/gpt-5.6-luna"]
+        },
+        thinkingDefault: "high",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-chief",
+        name: "Chief Emerging Threat Coordinator",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/coordinator",
+        model: { primary: "openai/gpt-5.6-sol", fallbacks: [] },
+        // "max" is the current highest documented config enum. Confirm with
+        // `openclaw config schema` if this installation exposes another label.
+        thinkingDefault: "max",
+        reasoningDefault: "off",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes", "canvas", "image"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
+        id: "radar-publisher",
+        name: "Threat Radar Publisher",
+        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/publisher",
+        model: "openai/gpt-5.6-luna",
+        thinkingDefault: "minimal",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          // Use a dedicated Discord account/channel binding and a narrow custom
+          // report-delivery tool in production instead of broad message authority.
+          allow: ["discord", "message", "session_status"],
+          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "cron", "gateway", "nodes"],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+    ],
+  },
+
+  plugins: {
+    entries: {
+      codex: { enabled: true },
+      "llm-task": { enabled: true },
+      // Enable the bundled Lobster plugin/tool and keep workflow files reviewed.
+      lobster: { enabled: true },
+    },
+  },
+
+  // Bind only the publishing agent to the private Discord destination.
+  // Replace placeholders with the configured account, guild, and channel.
+  bindings: [
+    {
+      agentId: "radar-publisher",
+      match: {
+        channel: "discord",
+        accountId: "threat-radar-bot",
+        guildId: "DISCORD_GUILD_ID",
+        peer: { kind: "channel", id: "DISCORD_CHANNEL_ID" },
+      },
+    },
+  ],
+
+  session: {
+    scope: "per-sender",
+    dmScope: "per-account-channel-peer",
+    reset: { mode: "daily", atHour: 4 },
+    maintenance: {
+      mode: "enforce",
+      pruneAfter: "14d",
+      maxEntries: 2000,
+      resetArchiveRetention: "30d",
+      maxDiskBytes: "2gb",
+      highWaterBytes: "1600mb",
+    },
+  },
+
+  messages: {
+    responseUsage: "full",
+    visibleReplies: "message_tool",
+  },
+
+  tools: {
+    // Embedded Lobster must be explicitly enabled for the orchestrator.
+    alsoAllow: ["lobster"],
+    loopDetection: {
+      enabled: true,
+    },
+  },
+}

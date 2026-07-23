@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>OpenClaw Emerging Threat Radar — Architecture & Implementation Guide</title>
+<style>
+:root{--bg:#07111f;--bg2:#0b1728;--panel:#0e1d31;--panel2:#12243a;--ink:#edf5ff;--muted:#9db0c7;--line:#243b56;--cyan:#54d8ff;--blue:#718cff;--violet:#a779ff;--green:#51e2a0;--amber:#ffce63;--red:#ff718b;--shadow:0 18px 55px rgba(0,0,0,.28);--radius:18px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 20% -10%,rgba(84,216,255,.13),transparent 30%),radial-gradient(circle at 90% 5%,rgba(167,121,255,.12),transparent 34%),var(--bg);color:var(--ink);font:15px/1.62 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}code{font-family:"SFMono-Regular",Consolas,monospace;font-size:.9em;color:#cfe8ff;background:#091525;padding:.14rem .35rem;border:1px solid #1c3450;border-radius:6px}.shell{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;padding:28px 20px;border-right:1px solid var(--line);background:rgba(7,17,31,.9);backdrop-filter:blur(14px);overflow:auto}.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}.mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cyan),var(--violet));color:#06111e;font-size:22px;font-weight:900;box-shadow:0 8px 25px rgba(84,216,255,.2)}.brand strong{font-size:14px;letter-spacing:.06em;text-transform:uppercase}.brand small{display:block;color:var(--muted);font-size:11px}.navlabel{margin:20px 10px 8px;color:#66809c;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.16em}.nav a{display:block;padding:8px 10px;border-radius:9px;color:#b9c9db;font-size:13px}.nav a:hover{background:#10223a;text-decoration:none;color:#fff}.side-status{margin-top:24px;padding:14px;border:1px solid #24405f;border-radius:14px;background:linear-gradient(135deg,rgba(81,226,160,.08),rgba(84,216,255,.04))}.side-status b{color:var(--green);font-size:12px}.side-status p{margin:5px 0 0;color:var(--muted);font-size:11px}.main{min-width:0}.hero{padding:72px clamp(28px,6vw,88px) 56px;border-bottom:1px solid var(--line);position:relative;overflow:hidden}.hero:before{content:"";position:absolute;width:520px;height:520px;border:1px solid rgba(84,216,255,.12);border-radius:50%;right:-190px;top:-250px;box-shadow:0 0 0 70px rgba(84,216,255,.025),0 0 0 150px rgba(167,121,255,.018)}.eyebrow{color:var(--cyan);text-transform:uppercase;font-weight:800;letter-spacing:.17em;font-size:12px}.hero h1{max-width:940px;margin:15px 0 18px;font-size:clamp(42px,6vw,78px);line-height:1.02;letter-spacing:-.055em}.hero h1 span{background:linear-gradient(90deg,#fff,var(--cyan) 55%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}.hero .lede{max-width:900px;color:#b8cae0;font-size:clamp(17px,2vw,22px);line-height:1.55}.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}.chip{padding:8px 12px;border-radius:999px;border:1px solid #2d4865;background:rgba(14,29,49,.72);color:#c8d8e8;font-size:12px}.chip i{display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:var(--green)}.content{max-width:1500px;margin:0 auto;padding:22px clamp(24px,5vw,74px) 90px}.section{padding:64px 0 12px;scroll-margin-top:16px}.kicker{color:var(--violet);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:800}.section h2{margin:8px 0 12px;font-size:clamp(30px,4vw,48px);line-height:1.12;letter-spacing:-.035em}.section-intro{max-width:920px;color:var(--muted);font-size:17px;margin-bottom:28px}.grid{display:grid;gap:18px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:linear-gradient(150deg,rgba(18,36,58,.95),rgba(10,23,40,.95));border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}.card h3{margin:0 0 8px;font-size:18px}.card p{margin:0;color:var(--muted)}.card .num{font-size:34px;font-weight:850;letter-spacing:-.04em;color:var(--cyan)}.pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:#1a304c;color:#b9d5ed}.pill.green{background:rgba(81,226,160,.12);color:var(--green)}.pill.red{background:rgba(255,113,139,.12);color:var(--red)}.pill.amber{background:rgba(255,206,99,.12);color:var(--amber)}.principle{border-left:3px solid var(--cyan)}.principle strong{display:block;font-size:17px;margin-bottom:5px}.diagram{background:#091727;border:1px solid var(--line);border-radius:22px;padding:18px;overflow:auto;box-shadow:var(--shadow)}svg text{font-family:Inter,ui-sans-serif,system-ui,sans-serif}.flow{display:flex;gap:7px;align-items:stretch;overflow:auto;padding:14px 0 4px}.flow .step{min-width:126px;padding:15px 12px;border-radius:13px;border:1px solid #294664;background:#10233a;text-align:center;font-weight:760;font-size:12px}.flow .step small{display:block;color:var(--muted);font-weight:500;margin-top:4px}.arrow{display:grid;place-items:center;color:#5f83a7;font-weight:900}.zone{padding:19px;border-radius:16px;border:1px solid var(--line);position:relative;overflow:hidden}.zone:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--cyan)}.zone.red:before{background:var(--red)}.zone.amber:before{background:var(--amber)}.zone.green:before{background:var(--green)}.zone h3{margin:0 0 6px}.zone p{margin:0;color:var(--muted)}table{width:100%;border-collapse:separate;border-spacing:0;background:#0b1a2d;border:1px solid var(--line);border-radius:16px;overflow:hidden}th,td{text-align:left;padding:13px 14px;border-bottom:1px solid #1e354f;vertical-align:top}th{background:#10243b;color:#d9ebfb;font-size:11px;text-transform:uppercase;letter-spacing:.09em}td{color:#b7c7d8}tr:last-child td{border-bottom:0}.scorebar{height:10px;border-radius:999px;background:#06101d;overflow:hidden;margin-top:10px}.scorebar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--cyan),var(--violet))}.model-ladder{display:grid;gap:10px}.tier{display:grid;grid-template-columns:110px 1fr auto;gap:16px;align-items:center;padding:17px;border:1px solid var(--line);border-radius:14px;background:#0c1d31}.tier .label{font-weight:850;color:var(--cyan)}.tier .cost{font-size:11px;color:var(--muted)}.timeline{position:relative;margin-left:16px}.timeline:before{content:"";position:absolute;left:10px;top:8px;bottom:8px;width:2px;background:#29435e}.mile{position:relative;padding:0 0 25px 44px}.mile:before{content:"";position:absolute;left:2px;top:5px;width:18px;height:18px;border:2px solid var(--cyan);background:var(--bg);border-radius:50%;box-shadow:0 0 0 5px rgba(84,216,255,.08)}.mile h3{margin:0 0 6px}.mile p{margin:0;color:var(--muted)}.callout{padding:22px;border-radius:18px;border:1px solid rgba(255,206,99,.35);background:linear-gradient(130deg,rgba(255,206,99,.08),rgba(167,121,255,.05));font-size:16px}.callout strong{color:var(--amber)}.mono{font-family:"SFMono-Regular",Consolas,monospace;white-space:pre-wrap;background:#06101d;border:1px solid #203952;padding:18px;border-radius:14px;color:#b9d6ee;font-size:12px;overflow:auto}.check{list-style:none;padding:0;margin:0}.check li{position:relative;padding:7px 0 7px 28px;color:#bdccdc}.check li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:900}.footer{margin-top:70px;padding:34px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;color:#7f96ad;font-size:12px}.print-note{display:none}@media(max-width:1100px){.shell{grid-template-columns:1fr}.sidebar{display:none}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.hero{padding:50px 22px}.content{padding:14px 18px 60px}.g2,.g3,.g4{grid-template-columns:1fr}.tier{grid-template-columns:1fr}.footer{display:block}.hero h1{font-size:44px}}@media print{body{background:#fff;color:#111}.shell{display:block}.sidebar{display:none}.hero,.content{padding:24px;max-width:none}.card,.diagram,table,.tier,.zone,.mono,.callout{box-shadow:none;background:#fff;color:#111;border-color:#ccc}.card p,.section-intro,.zone p,td,.mile p,.tier .cost{color:#444}.hero h1 span{color:#111}.print-note{display:block}.section{page-break-inside:avoid}.footer{color:#555}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+  <div class="brand"><div class="mark">R</div><div><strong>Threat Radar</strong><small>OpenClaw architecture</small></div></div>
+  <div class="nav">
+    <div class="navlabel">System</div>
+    <a href="#north-star">North star</a><a href="#architecture">Architecture</a><a href="#pipeline">Detection pipeline</a><a href="#sources">Source strategy</a>
+    <div class="navlabel">Intelligence</div>
+    <a href="#agents">Agent topology</a><a href="#models">Model routing</a><a href="#scoring">Scoring</a><a href="#reporting">Reports</a>
+    <div class="navlabel">Assurance</div>
+    <a href="#security">Injection resilience</a><a href="#reliability">Reliability</a><a href="#evals">Evals</a><a href="#roadmap">Roadmap</a><a href="#handoff">Build handoff</a>
+  </div>
+  <div class="side-status"><b>Architecture-grade starter</b><p>Private-repo scaffold, schemas, policies, workflows, tests, and sample report included.</p></div>
+</aside>
+<main class="main">
+<header class="hero">
+  <div class="eyebrow">Proactive cyber intelligence • production implementation guide</div>
+  <h1>OpenClaw <span>Emerging Threat Radar</span></h1>
+  <p class="lede">A multi-agent early-warning system that discovers credible vulnerabilities, exploitation, and supply-chain threats while they are still weak signals—then proves every conclusion with evidence, survives hostile content, and spends high-end model capacity only where it changes the decision.</p>
+  <div class="chips"><span class="chip"><i></i>Evidence-first</span><span class="chip"><i></i>Prompt-injection resilient</span><span class="chip"><i></i>Deterministic workflows</span><span class="chip"><i></i>Cost attributed</span><span class="chip"><i></i>Discord + rich HTML</span><span class="chip"><i></i>Private GitHub</span></div>
+</header>
+<div class="content">
+<section id="north-star" class="section">
+  <div class="kicker">01 • Mission</div><h2>Find the event before it becomes a headline.</h2>
+  <p class="section-intro">The radar is not a news summarizer. Its advantage comes from upstream signals, source-lineage analysis, novelty measurement, and rapid but disciplined reassessment.</p>
+  <div class="grid g4">
+    <div class="card"><div class="num">100%</div><h3>Claim citation coverage</h3><p>No user-facing factual claim without a stored evidence ID, timestamp, and source URI.</p></div>
+    <div class="card"><div class="num">0</div><h3>Privileged injection effects</h3><p>Hostile content may influence a low-privilege extraction result, but cannot gain tools, secrets, persistence, or publishing authority.</p></div>
+    <div class="card"><div class="num">&lt;15m</div><h3>Flash delivery target</h3><p>From receipt of qualifying evidence to a verified high-impact alert.</p></div>
+    <div class="card"><div class="num">100%</div><h3>Cost attribution</h3><p>Provider, model, agent, stage, source, run, and finding.</p></div>
+  </div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card principle"><strong>Untrusted content is data.</strong><p>It is never allowed to redefine a task, policy, tool call, schedule, memory item, or destination.</p></div>
+    <div class="card principle"><strong>Workflow state is deterministic.</strong><p>OpenClaw cron, Task Flow, Lobster, and the database own the run—not conversational memory.</p></div>
+    <div class="card principle"><strong>Expensive reasoning is scarce.</strong><p>Code and economical models filter the stream; GPT-5.6 Sol adjudicates only the highest-value or disputed clusters.</p></div>
+  </div>
+</section>
+
+<section id="architecture" class="section">
+  <div class="kicker">02 • Architecture</div><h2>Four planes, five trust zones, one evidence ledger.</h2>
+  <p class="section-intro">The design mirrors the broader enterprise intelligence platform: Mesh & Runtime, Control Plane, Data Plane, and Experience Plane. Each boundary narrows authority and reduces blast radius.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 1280 690" width="100%" role="img" aria-label="Threat Radar architecture diagram">
+      <defs><linearGradient id="g1" x1="0" x2="1"><stop stop-color="#54d8ff"/><stop offset="1" stop-color="#a779ff"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".22"/></filter></defs>
+      <rect x="20" y="20" width="1240" height="650" rx="24" fill="#071321" stroke="#24405f"/>
+      <text x="50" y="58" fill="#7f96ad" font-size="13" font-weight="700" letter-spacing="2">HOSTILE SOURCE ZONE</text>
+      <g filter="url(#shadow)">
+        <rect x="50" y="80" width="210" height="82" rx="14" fill="#10243b" stroke="#ff718b"/><text x="155" y="113" fill="#fff" text-anchor="middle" font-size="17" font-weight="800">Tier 0 facts</text><text x="155" y="139" fill="#9db0c7" text-anchor="middle" font-size="12">KEV • CVE • EPSS • OSV</text>
+        <rect x="280" y="80" width="210" height="82" rx="14" fill="#10243b" stroke="#ffce63"/><text x="385" y="113" fill="#fff" text-anchor="middle" font-size="17" font-weight="800">Precursors</text><text x="385" y="139" fill="#9db0c7" text-anchor="middle" font-size="12">Code • packages • domains</text>
+        <rect x="510" y="80" width="210" height="82" rx="14" fill="#10243b" stroke="#a779ff"/><text x="615" y="113" fill="#fff" text-anchor="middle" font-size="17" font-weight="800">Research signals</text><text x="615" y="139" fill="#9db0c7" text-anchor="middle" font-size="12">X • Reddit • communities</text>
+        <rect x="740" y="80" width="210" height="82" rx="14" fill="#10243b" stroke="#54d8ff"/><text x="845" y="113" fill="#fff" text-anchor="middle" font-size="17" font-weight="800">Vendor / PSIRT</text><text x="845" y="139" fill="#9db0c7" text-anchor="middle" font-size="12">CSAF • VEX • hotfixes</text>
+        <rect x="970" y="80" width="240" height="82" rx="14" fill="#10243b" stroke="#718cff"/><text x="1090" y="113" fill="#fff" text-anchor="middle" font-size="17" font-weight="800">Media baseline</text><text x="1090" y="139" fill="#9db0c7" text-anchor="middle" font-size="12">Lead-time comparison only</text>
+      </g>
+      <path d="M630 174 V211" stroke="url(#g1)" stroke-width="4"/><polygon points="622,207 638,207 630,221" fill="#54d8ff"/>
+      <rect x="300" y="222" width="660" height="84" rx="17" fill="#12243a" stroke="#54d8ff" filter="url(#shadow)"/><text x="630" y="255" fill="#fff" text-anchor="middle" font-size="19" font-weight="850">Safe Fetch + Quarantine + Content Security Gateway</text><text x="630" y="282" fill="#9db0c7" text-anchor="middle" font-size="12">SSRF policy • immutable bytes • sandbox parsing • active-content removal • injection risk</text>
+      <path d="M630 308 V344" stroke="url(#g1)" stroke-width="4"/><polygon points="622,340 638,340 630,354" fill="#54d8ff"/>
+      <rect x="110" y="355" width="1020" height="105" rx="18" fill="#0d2035" stroke="#51e2a0" filter="url(#shadow)"/><text x="145" y="389" fill="#51e2a0" font-size="13" font-weight="800" letter-spacing="1">DATA PLANE</text><text x="620" y="390" fill="#fff" text-anchor="middle" font-size="20" font-weight="850">Evidence ledger • entity graph • clusters • run state • object storage</text><text x="620" y="420" fill="#9db0c7" text-anchor="middle" font-size="13">Raw hash → sanitized hash → observation → claim → evidence mapping → report version</text><text x="620" y="444" fill="#7f96ad" text-anchor="middle" font-size="11">PostgreSQL + pgvector • S3-compatible immutable storage • replay and audit</text>
+      <path d="M405 462 V499" stroke="#54d8ff" stroke-width="3"/><path d="M835 462 V499" stroke="#a779ff" stroke-width="3"/>
+      <rect x="90" y="500" width="625" height="105" rx="18" fill="#11253c" stroke="#54d8ff"/><text x="120" y="532" fill="#54d8ff" font-size="13" font-weight="800" letter-spacing="1">CONTROL PLANE</text><text x="402" y="535" fill="#fff" text-anchor="middle" font-size="18" font-weight="800">Correlate → score → specialist → skeptic → verifier → chief</text><text x="402" y="565" fill="#9db0c7" text-anchor="middle" font-size="12">Typed packets • model budgets • policy gates • no raw web content</text><text x="402" y="588" fill="#7f96ad" text-anchor="middle" font-size="11">OpenClaw cron + Task Flow + reviewed Lobster workflows</text>
+      <rect x="735" y="500" width="455" height="105" rx="18" fill="#11253c" stroke="#a779ff"/><text x="765" y="532" fill="#a779ff" font-size="13" font-weight="800" letter-spacing="1">EXPERIENCE PLANE</text><text x="962" y="535" fill="#fff" text-anchor="middle" font-size="18" font-weight="800">Verified report JSON → deterministic render</text><text x="962" y="565" fill="#9db0c7" text-anchor="middle" font-size="12">Discord embeds • rich HTML • email • downloadable file</text><text x="962" y="588" fill="#7f96ad" text-anchor="middle" font-size="11">Publisher cannot browse; researchers cannot publish</text>
+      <text x="50" y="645" fill="#66809c" font-size="12">Core rule: authority decreases as proximity to hostile content increases.</text>
+    </svg>
+  </div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="zone red"><h3>Zone A — hostile internet</h3><p>Pages, feeds, code, social content, documents, metadata, images, archives, and APIs.</p></div>
+    <div class="zone amber"><h3>Zone B/C — quarantine & sanitize</h3><p>Raw bytes are immutable; parsers are disposable; only bounded normalized observations exit.</p></div>
+    <div class="zone green"><h3>Zone D/E — analyze & publish</h3><p>Typed evidence only. No raw content, no arbitrary URLs, no privilege inheritance.</p></div>
+  </div>
+</section>
+
+<section id="pipeline" class="section">
+  <div class="kicker">03 • Detection loop</div><h2>A fast loop with deterministic gates.</h2>
+  <p class="section-intro">The system fans out aggressively at collection, then narrows the stream at every later stage. This is the inverse of sending all content to one “smart” agent.</p>
+  <div class="flow"><div class="step">DETECT<small>source plans</small></div><div class="arrow">→</div><div class="step">INGEST<small>safe fetch</small></div><div class="arrow">→</div><div class="step">QUARANTINE<small>hash + store</small></div><div class="arrow">→</div><div class="step">SANITIZE<small>strip + scan</small></div><div class="arrow">→</div><div class="step">EXTRACT<small>strict JSON</small></div><div class="arrow">→</div><div class="step">CORRELATE<small>entities + lineage</small></div><div class="arrow">→</div><div class="step">SCORE<small>code first</small></div><div class="arrow">→</div><div class="step">CHALLENGE<small>falsify</small></div><div class="arrow">→</div><div class="step">VERIFY<small>claim/evidence</small></div><div class="arrow">→</div><div class="step">PUBLISH<small>render + deliver</small></div></div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card"><span class="pill green">Emergence analytics</span><h3 style="margin-top:12px">What makes a signal early?</h3><ul class="check"><li>First-seen and lead-time versus media baseline</li><li>15m, 1h, 6h, 24h, and 7d velocity windows</li><li>EWMA/CUSUM burst relative to each source's baseline</li><li>New entities, terms, relationships, and graph growth</li><li>Independent-source diversity, not raw mention count</li><li>EPSS jump, exploit evidence, hotfixes, package anomalies</li></ul></div>
+    <div class="card"><span class="pill amber">Anti-hype logic</span><h3 style="margin-top:12px">What prevents false urgency?</h3><ul class="check"><li>Repost and syndication lineage collapses echoes</li><li>Mainstream saturation decreases novelty</li><li>Skeptic searches for benign explanations</li><li>Contradictions reduce score and confidence</li><li>“Confirmed” requires a deterministic confirmation rule</li><li>No citations means Archive, regardless of model confidence</li></ul></div>
+  </div>
+</section>
+
+<section id="sources" class="section">
+  <div class="kicker">04 • Source strategy</div><h2>Authoritative facts establish truth. Precursors create advantage.</h2>
+  <p class="section-intro">Every source has a declared role: direct evidence, precursor, discovery, enrichment, contradiction, correction, or media baseline.</p>
+  <table><thead><tr><th>Tier</th><th>Role</th><th>Examples</th><th>How it affects confidence</th></tr></thead><tbody>
+    <tr><td><span class="pill green">T0</span></td><td>Structured authoritative</td><td>CISA KEV, CVE/NVD, EPSS, OSV, GitHub Advisories, OpenSSF malicious packages, vendor CSAF/VEX</td><td>Direct confirmation or high-quality enrichment</td></tr>
+    <tr><td><span class="pill amber">T1</span></td><td>Upstream precursors</td><td>Security commits, emergency releases, package ownership changes, install-script anomalies, PoC repository activity, certificate patterns</td><td>High novelty; requires corroboration or a direct artifact</td></tr>
+    <tr><td><span class="pill">T2</span></td><td>Research and community</td><td>Curated X, Reddit, specialist blogs, public communities, conference material</td><td>Discovery and momentum; never confirmation alone</td></tr>
+    <tr><td><span class="pill red">T3</span></td><td>Media baseline</td><td>Mainstream and trade press</td><td>Measures lead time; broad coverage reduces novelty</td></tr>
+  </tbody></table>
+  <div class="callout" style="margin-top:18px"><strong>Deep-web boundary:</strong> use lawful, authorized OSINT only. No unauthorized access, credential attacks, interactive criminal-market engagement, malware execution, or indiscriminate scanning. Any Tor-based collector is a future, separately approved, read-only environment with no corporate route and no identity interaction.</div>
+</section>
+
+<section id="agents" class="section">
+  <div class="kicker">05 • Agent topology</div><h2>Specialists disagree on purpose; policy decides what they may do.</h2>
+  <p class="section-intro">The system uses multiple agents for independent reasoning, not as a substitute for deterministic workflow control.</p>
+  <div class="grid g3">
+    <div class="card"><span class="pill">Coordinator</span><h3>Chief Intelligence Coordinator</h3><p>GPT-5.6 Sol, maximum reasoning. Final disposition and synthesis. Sanitized evidence only; no browser, shell, secrets, schedule, or channel tools.</p></div>
+    <div class="card"><span class="pill green">Collectors</span><h3>Source specialists</h3><p>Official advisories, code/repositories, supply chain, researcher/social, vendor/PSIRT, and infrastructure. Separate workspaces, credentials, and source budgets.</p></div>
+    <div class="card"><span class="pill amber">Security</span><h3>Content Security Gate</h3><p>Deterministic sanitizer plus risk classifier. Stops active content, hidden instructions, parser abuse, oversized artifacts, and suspicious encodings.</p></div>
+    <div class="card"><span class="pill">Economical</span><h3>Extractors</h3><p>Small JSON-only calls. Extract entities, versions, claims, timestamps, exploit status, and evidence roles. Low token caps and no tools.</p></div>
+    <div class="card"><span class="pill red">Challenge</span><h3>Skeptic</h3><p>Attempts to falsify the event, identify copied sourcing, find chronology errors, expose hype, and downgrade unsupported attribution.</p></div>
+    <div class="card"><span class="pill green">Gate</span><h3>Citation Verifier</h3><p>Checks claim entailment, evidence IDs, source independence, timestamps, qualifiers, and confidence language before publication.</p></div>
+  </div>
+</section>
+
+<section id="models" class="section">
+  <div class="kicker">06 • Model economics</div><h2>Spend intelligence where it changes the outcome.</h2>
+  <p class="section-intro">The cost curve should narrow sharply. Most artifacts never need a high-end reasoning model.</p>
+  <div class="model-ladder">
+    <div class="tier"><div class="label">Tier A</div><div><strong>Deterministic code</strong><br><span style="color:var(--muted)">Fetch, hash, dedupe, normalize, burst features, score, validate, render.</span></div><div class="cost">~70–90% of events</div></div>
+    <div class="tier"><div class="label">Tier B</div><div><strong>Economical extraction</strong><br><span style="color:var(--muted)">Strict JSON tagging and observation extraction; cached by content hash.</span></div><div class="cost">Low cost</div></div>
+    <div class="tier"><div class="label">Tier C</div><div><strong>Balanced analysts</strong><br><span style="color:var(--muted)">Technical interpretation, contradiction analysis, impact and relevance.</span></div><div class="cost">Promoted clusters</div></div>
+    <div class="tier"><div class="label">Tier D</div><div><strong>GPT-5.6 Sol / Codex harness / max reasoning</strong><br><span style="color:var(--muted)">Top N, Flash candidates, high-impact uncertainty, material disagreement, final ranking.</span></div><div class="cost">Scarce reserve</div></div>
+  </div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card"><h3>Hard budgets</h3><p>Per run, source, stage, cluster, model, and day—plus a reserved Flash budget and human approval to exceed the emergency ceiling.</p></div>
+    <div class="card"><h3>Early exits</h3><p>Duplicate, stale, low-relevance, low-impact, and low-evidence clusters stop before expensive analysis.</p></div>
+    <div class="card"><h3>Full telemetry</h3><p>Input/output/cache tokens, requests, tool calls, latency, provider, model, agent, stage, finding, and estimated currency.</p></div>
+  </div>
+</section>
+
+<section id="scoring" class="section">
+  <div class="kicker">07 • Scoring</div><h2>Priority is explainable, not mystical.</h2>
+  <p class="section-intro">Impact, exploitability, evidence, momentum, novelty, and organizational relevance remain separate so the team can see why an item ranks where it does.</p>
+  <div class="grid g2">
+    <div class="card"><h3>100-point deterministic score</h3>
+      <div>Impact — 25<div class="scorebar"><span style="width:100%"></span></div></div>
+      <div style="margin-top:12px">Exploitability — 20<div class="scorebar"><span style="width:80%"></span></div></div>
+      <div style="margin-top:12px">Evidence — 15<div class="scorebar"><span style="width:60%"></span></div></div>
+      <div style="margin-top:12px">Momentum — 15<div class="scorebar"><span style="width:60%"></span></div></div>
+      <div style="margin-top:12px">Novelty / lead time — 15<div class="scorebar"><span style="width:60%"></span></div></div>
+      <div style="margin-top:12px">Organization relevance — 10<div class="scorebar"><span style="width:40%"></span></div></div>
+      <p style="margin-top:14px">Penalties up to −30 for dependent sourcing, contradiction, staleness, injection risk, screenshots without provenance, or unsupported attribution.</p>
+    </div>
+    <div class="card"><h3>Publication gates</h3><table><thead><tr><th>Class</th><th>Rule</th><th>Behavior</th></tr></thead><tbody><tr><td><span class="pill red">Flash</span></td><td>≥85 plus confirmation gate, or critical direct rule</td><td>Immediate verified alert; optional human gate</td></tr><tr><td><span class="pill amber">Watch</span></td><td>65–84</td><td>Recheck every 1–4 hours</td></tr><tr><td><span class="pill">Daily</span></td><td>45–64</td><td>Include when relevant and evidence-backed</td></tr><tr><td><span class="pill green">Archive</span></td><td>&lt;45 or missing citations</td><td>Retain for future correlation</td></tr></tbody></table></div>
+  </div>
+</section>
+
+<section id="reporting" class="section">
+  <div class="kicker">08 • Experience</div><h2>Discord for speed. Rich HTML for depth.</h2>
+  <p class="section-intro">A Discord embed carries the executive signal; the attached self-contained HTML brief carries the evidence timeline, score detail, source health, and usage.</p>
+  <div class="grid g3">
+    <div class="card"><h3>Finding card</h3><p>Why now, stage, score components, confidence, momentum, first seen, affected assets, exploit status, relevance, knowns, unknowns, contradictions, actions, mappings, indicators, citations, and next check.</p></div>
+    <div class="card"><h3>Daily brief</h3><p>Executive summary, top findings, watchlist deltas, supply chain, exploitation, campaigns, corrections, source coverage, model usage, cost, and feedback prompts.</p></div>
+    <div class="card"><h3>Truthful silence</h3><p>“No material emerging threats met the publication threshold” is a valid outcome. The system never manufactures volume to make the report look active.</p></div>
+  </div>
+</section>
+
+<section id="security" class="section">
+  <div class="kicker">09 • Prompt-injection resilience</div><h2>Assume the detector misses. Make the payload powerless.</h2>
+  <p class="section-intro">Detection lowers noise; hard boundaries lower impact. No prompt can grant itself tools or move content into a more trusted zone.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 1220 420" width="100%" role="img" aria-label="Prompt injection defense layers">
+      <rect x="20" y="20" width="1180" height="380" rx="22" fill="#071321" stroke="#24405f"/>
+      <g><rect x="50" y="70" width="190" height="260" rx="16" fill="#241522" stroke="#ff718b"/><text x="145" y="110" fill="#ff718b" text-anchor="middle" font-size="16" font-weight="850">HOSTILE INPUT</text><text x="145" y="151" fill="#d8b5bd" text-anchor="middle" font-size="12">Visible instructions</text><text x="145" y="177" fill="#d8b5bd" text-anchor="middle" font-size="12">Hidden CSS / metadata</text><text x="145" y="203" fill="#d8b5bd" text-anchor="middle" font-size="12">Encoded payloads</text><text x="145" y="229" fill="#d8b5bd" text-anchor="middle" font-size="12">Tool-call bait</text><text x="145" y="255" fill="#d8b5bd" text-anchor="middle" font-size="12">Delayed triggers</text><text x="145" y="281" fill="#d8b5bd" text-anchor="middle" font-size="12">Sybil corroboration</text></g>
+      <g><rect x="280" y="70" width="205" height="260" rx="16" fill="#242115" stroke="#ffce63"/><text x="382" y="110" fill="#ffce63" text-anchor="middle" font-size="16" font-weight="850">CONTENT GATE</text><text x="382" y="151" fill="#d8ceb0" text-anchor="middle" font-size="12">Safe fetch / SSRF</text><text x="382" y="177" fill="#d8ceb0" text-anchor="middle" font-size="12">Immutable quarantine</text><text x="382" y="203" fill="#d8ceb0" text-anchor="middle" font-size="12">Sandbox parser</text><text x="382" y="229" fill="#d8ceb0" text-anchor="middle" font-size="12">Canonicalize / strip</text><text x="382" y="255" fill="#d8ceb0" text-anchor="middle" font-size="12">Malware / YARA</text><text x="382" y="281" fill="#d8ceb0" text-anchor="middle" font-size="12">Risk classification</text></g>
+      <g><rect x="525" y="70" width="205" height="260" rx="16" fill="#142138" stroke="#54d8ff"/><text x="627" y="110" fill="#54d8ff" text-anchor="middle" font-size="16" font-weight="850">DATA DIODE</text><text x="627" y="151" fill="#b8cee0" text-anchor="middle" font-size="12">Strict JSON schemas</text><text x="627" y="177" fill="#b8cee0" text-anchor="middle" font-size="12">Unknown fields denied</text><text x="627" y="203" fill="#b8cee0" text-anchor="middle" font-size="12">Bounded excerpts</text><text x="627" y="229" fill="#b8cee0" text-anchor="middle" font-size="12">Evidence IDs only</text><text x="627" y="255" fill="#b8cee0" text-anchor="middle" font-size="12">No source memory</text><text x="627" y="281" fill="#b8cee0" text-anchor="middle" font-size="12">No arbitrary URLs</text></g>
+      <g><rect x="770" y="70" width="205" height="260" rx="16" fill="#15291f" stroke="#51e2a0"/><text x="872" y="110" fill="#51e2a0" text-anchor="middle" font-size="16" font-weight="850">LEAST PRIVILEGE</text><text x="872" y="151" fill="#b7d7c7" text-anchor="middle" font-size="12">Collectors cannot publish</text><text x="872" y="177" fill="#b7d7c7" text-anchor="middle" font-size="12">Publisher cannot browse</text><text x="872" y="203" fill="#b7d7c7" text-anchor="middle" font-size="12">Chief has no secrets</text><text x="872" y="229" fill="#b7d7c7" text-anchor="middle" font-size="12">No shell / execution</text><text x="872" y="255" fill="#b7d7c7" text-anchor="middle" font-size="12">Scoped credentials</text><text x="872" y="281" fill="#b7d7c7" text-anchor="middle" font-size="12">Egress deny by default</text></g>
+      <g><rect x="1015" y="70" width="155" height="260" rx="16" fill="#1b1b35" stroke="#a779ff"/><text x="1092" y="110" fill="#a779ff" text-anchor="middle" font-size="16" font-weight="850">VERIFY</text><text x="1092" y="151" fill="#c9bee0" text-anchor="middle" font-size="12">Skeptic</text><text x="1092" y="177" fill="#c9bee0" text-anchor="middle" font-size="12">Claim entailment</text><text x="1092" y="203" fill="#c9bee0" text-anchor="middle" font-size="12">Source lineage</text><text x="1092" y="229" fill="#c9bee0" text-anchor="middle" font-size="12">Canary checks</text><text x="1092" y="255" fill="#c9bee0" text-anchor="middle" font-size="12">Policy gate</text><text x="1092" y="281" fill="#c9bee0" text-anchor="middle" font-size="12">Audit log</text></g>
+      <g fill="#66809c" font-size="25"><text x="254" y="210">→</text><text x="499" y="210">→</text><text x="744" y="210">→</text><text x="989" y="210">→</text></g>
+      <text x="610" y="370" fill="#9db0c7" text-anchor="middle" font-size="13">Even a successful semantic injection remains trapped inside a context with no authority to cause a privileged effect.</text>
+    </svg>
+  </div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card"><h3>Time-bomb resistance</h3><p>No source-derived schedules or persistent memory; prior state is typed assessments, not transcripts; hypotheses expire without evidence.</p></div>
+    <div class="card"><h3>Network resistance</h3><p>Central fetch gateway blocks loopback, private, link-local, metadata, DNS rebinding, unsafe redirects, credentials in URLs, and unbounded downloads.</p></div>
+    <div class="card"><h3>Report resistance</h3><p>Source text is escaped. No remote scripts, forms, frames, active source HTML, or automatic source images. Restrictive CSP by default.</p></div>
+  </div>
+</section>
+
+<section id="reliability" class="section">
+  <div class="kicker">10 • Reliability</div><h2>Designed to fail partially, recover cleanly, and never lie about coverage.</h2>
+  <div class="grid g3">
+    <div class="card"><h3>Durable state</h3><p>PostgreSQL run/step records, idempotency keys, cursor checkpoints, immutable report versions, dead-letter queue, and replay.</p></div>
+    <div class="card"><h3>Degraded operation</h3><p>Source and model circuit breakers, fallbacks, partial reports, explicit coverage gaps, Flash budget reserve, and no silent model substitution.</p></div>
+    <div class="card"><h3>Observability</h3><p>OpenTelemetry metrics/traces/logs, source freshness, queue age, run success, tool loops, policy denials, delivery receipts, and cost.</p></div>
+  </div>
+  <table style="margin-top:18px"><thead><tr><th>Failure</th><th>Expected behavior</th><th>Never do</th></tr></thead><tbody><tr><td>One source unavailable</td><td>Continue, mark degraded, backfill from cursor later</td><td>Broaden egress or disable validation</td></tr><tr><td>Coordinator unavailable</td><td>Hold Flash; publish only deterministic/degraded watch update if policy allows</td><td>Silently swap to an unapproved model</td></tr><tr><td>Discord retry</td><td>Reuse delivery idempotency key and report version</td><td>Create duplicate alerts</td></tr><tr><td>Parser crash</td><td>Destroy worker, retain artifact, dead-letter and alert</td><td>Parse on the host with secrets present</td></tr></tbody></table>
+</section>
+
+<section id="evals" class="section">
+  <div class="kicker">11 • Evaluation</div><h2>Measure whether the whole system is early, right, safe, and worth the cost.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Historical time-travel replay</h3><p>Reveal artifacts only at their historical timestamps. Compare first Watch and Flash to the first credible precursor, direct evidence, and media baseline. This prevents hindsight leakage.</p><ul class="check"><li>Precision@K and high-impact recall</li><li>Median and percentile lead time</li><li>False alerts and time to correction</li><li>Confidence calibration and source-independence accuracy</li><li>Cost per actionable finding</li></ul></div>
+    <div class="card"><h3>Adversarial security suite</h3><p>Test every parser, source route, and agent boundary with visible, hidden, encoded, delayed, and chained injections.</p><ul class="check"><li>CSS, comments, SVG, PDF annotations, OCR, code comments</li><li>Unicode, bidi, zero-width, base64, nested archives</li><li>Fake system messages, tool JSON, secret requests</li><li>Sybil echo and fake citations</li><li>Cross-document and next-run triggers</li></ul></div>
+  </div>
+  <div class="grid g4" style="margin-top:18px"><div class="card"><div class="num">≥98%</div><p>Citation entailment</p></div><div class="card"><div class="num">≥80%</div><p>Top-five precision after shadow tuning</p></div><div class="card"><div class="num">0</div><p>State-changing injection success</p></div><div class="card"><div class="num">≥99%</div><p>Scheduled run success</p></div></div>
+</section>
+
+<section id="roadmap" class="section">
+  <div class="kicker">12 • Delivery roadmap</div><h2>Build the safety boundary before the swarm.</h2>
+  <div class="timeline">
+    <div class="mile"><h3>Phase 0 — foundations</h3><p>Private repo, architecture decisions, schemas, threat model, CI, source terms, retention, secrets, and evaluation data contract.</p></div>
+    <div class="mile"><h3>Phase 1 — safe ingestion</h3><p>PostgreSQL, object storage, connector SDK, Tier 0 sources, centralized egress, immutable capture, cursors, health, replay.</p></div>
+    <div class="mile"><h3>Phase 2 — sanitize and normalize</h3><p>Disposable parsers, active-content removal, injection telemetry, strict extraction, entity graph, evidence ledger, source lineage.</p></div>
+    <div class="mile"><h3>Phase 3 — scoring and bounded agents</h3><p>Features, thresholds, model router, specialists, skeptic, verifier, chief, Task Flow and Lobster orchestration.</p></div>
+    <div class="mile"><h3>Phase 4 — experience</h3><p>Report JSON, deterministic rich HTML, Discord embeds/attachments, email adapter, usage and source-health views.</p></div>
+    <div class="mile"><h3>Phase 5 — backtest and shadow</h3><p>Historical replay, benign anomalies, injection corpus, calibration, analyst feedback, release gates.</p></div>
+    <div class="mile"><h3>Phase 6 — production hardening</h3><p>Scaling, SLOs, backup/restore, chaos tests, audits, runbooks, deployment approvals, rollback.</p></div>
+    <div class="mile"><h3>Phase 7 — advanced relevance</h3><p>SBOM/inventory matching, source reliability, graph campaigns, optional isolated lawful sources, STIX/MISP workflows.</p></div>
+  </div>
+</section>
+
+<section id="handoff" class="section">
+  <div class="kicker">13 • Build handoff</div><h2>The repository is organized for an OpenClaw coordinator to execute.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Start order</h3><ol style="color:#bdccdc"><li>Read <code>OPENCLAW_BUILD_PROMPT.md</code>.</li><li>Review the implementation, architecture, threat model, security, and eval documents.</li><li>Validate the example config against <code>openclaw config schema</code>.</li><li>Implement the first vertical slice using Tier 0 sources.</li><li>Run shadow mode and the release gates before Flash delivery.</li></ol></div>
+    <div class="card"><h3>Repository map</h3><div class="mono">docs/                  visual architecture + sample brief
+config/                sources, models, scoring, schedules, reports
+schemas/               evidence, assessment, finding, report contracts
+policies/              tool, egress, and content-security policy
+openclaw/agents/       role-specific AGENTS.md and SOUL.md
+openclaw/workflows/    reviewed Lobster workflow skeletons
+packages/              connector, security, and scoring starter code
+apps/                   worker CLI and renderer skeleton
+infra/                  Postgres, object store, telemetry
+.github/                CI, security scans, CODEOWNERS, Dependabot
+tests/                  unit, integration, eval, injection corpora</div></div>
+  </div>
+  <div class="callout" style="margin-top:20px"><strong>Most important implementation decision:</strong> do not begin by adding more social sources or more agents. Begin by proving the safe-fetch → quarantine → sanitize → typed evidence → verified report path. Once that boundary is real, expand discovery aggressively.</div>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card"><h3>Private repo command</h3><div class="mono">scripts/create-private-repo.sh &lt;github-org&gt;</div><p style="margin-top:10px">Then configure protected branches, required reviews, environments, CODEOWNERS teams, secret scanning, pinned Actions, dependency scanning, SBOMs, and attestations.</p></div>
+    <div class="card"><h3>Final acceptance demo</h3><ul class="check"><li>Source outage still produces a truthful degraded report</li><li>Seeded precursor becomes Watch before media fixture</li><li>Hostile multi-layer injection causes zero privileged effect</li><li>Syndicated echoes collapse to one source chain</li><li>Unsupported claim is blocked</li><li>Report replays from immutable evidence</li></ul></div>
+  </div>
+</section>
+<footer class="footer"><span>OpenClaw Emerging Threat Radar • architecture starter</span><span>Generated for private implementation handoff • July 2026</span></footer>
+</div></main></div>
+</body></html>
