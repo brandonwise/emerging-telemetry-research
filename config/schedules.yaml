@@ -1,5 +1,11 @@
 version: 1
 timezone: America/New_York
+enabled: false
+enablement_requires:
+  - approved_threat_model
+  - approved_source_terms
+  - validated_openclaw_policy
+  - production_readiness_review
 
 jobs:
   structured_ingest:

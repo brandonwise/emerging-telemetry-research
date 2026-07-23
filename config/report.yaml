@@ -1,7 +1,7 @@
 version: 1
 
 discord:
-  enabled: true
+  enabled: false
   maximum_embed_findings: 5
   attach_html_report: true
   mention_roles_for_flash: []
@@ -22,6 +22,8 @@ html:
   include_evidence_timeline: true
 
 publication:
+  shadow_mode: true
+  external_delivery_enabled: false
   allow_empty_report: true
   include_degraded_source_banner: true
   require_verified_claims: true

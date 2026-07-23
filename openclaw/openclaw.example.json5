@@ -32,15 +32,7 @@
       timeoutSeconds: 600,
       maxConcurrent: 12,
       skills: [],
-      modelPolicy: {
-        allow: [
-          "openai/gpt-5.6-sol",
-          "openai/gpt-5.6-luna",
-          "anthropic/claude-haiku-4-5",
-          // Add the exact approved balanced and economical models available
-          // in this installation. Do not use an unrestricted wildcard in production.
-        ],
-      },
+      // This map is also the agent model allowlist in OpenClaw 2026.7.x.
       models: {
         "openai/gpt-5.6-sol": {
           alias: "radar-chief",
@@ -48,6 +40,7 @@
           params: { cacheRetention: "long" },
         },
         "openai/gpt-5.6-luna": { alias: "radar-utility" },
+        "openai/gpt-5.4": { alias: "radar-balanced" },
         "anthropic/claude-haiku-4-5": { alias: "radar-cheap" },
       },
       sandbox: {
@@ -83,7 +76,7 @@
         id: "radar-orchestrator",
         default: true,
         name: "Threat Radar Orchestrator",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/orchestrator",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/orchestrator",
         // Embedded Lobster is disabled in sandboxed contexts. This agent is therefore
         // unsandboxed but has no general shell/browser/channel tools. It may invoke only
         // reviewed, repository-owned Lobster workflows through the lobster tool.
@@ -92,7 +85,9 @@
         thinkingDefault: "low",
         skills: [],
         tools: {
-          allow: ["lobster", "session_status"],
+          allow: [
+            "lobster", "radar_flow_start", "radar_flow_finish", "session_status"
+          ],
           deny: [
             "exec", "process", "read", "write", "edit", "apply_patch",
             "browser", "web_search", "web_fetch", "discord", "message",
@@ -103,46 +98,68 @@
       },
 
       {
+        id: "radar-collection-planner",
+        name: "Collection Planner",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collection-planner",
+        model: "openai/gpt-5.6-luna",
+        thinkingDefault: "low",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: [
+            "browser", "web_search", "web_fetch", "exec", "process", "read",
+            "write", "edit", "discord", "message", "cron", "gateway", "nodes"
+          ],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
         id: "radar-collector-official",
-        name: "Official Advisory Collector",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/collector-official",
+        name: "Official Advisory Source Specialist",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collector-official",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: {
           mode: "all",
           scope: "agent",
           workspaceAccess: "none",
-          docker: { network: "radar-egress" },
+          docker: { network: "none" },
         },
         tools: {
-          allow: ["web_search", "web_fetch", "session_status"],
-          deny: ["exec", "process", "read", "write", "edit", "browser", "discord", "message", "cron", "gateway", "nodes"],
+          allow: ["session_status"],
+          deny: [
+            "exec", "process", "read", "write", "edit", "browser", "web_search",
+            "web_fetch", "discord", "message", "cron", "gateway", "nodes"
+          ],
         },
         subagents: { allowAgents: [], requireAgentId: true },
       },
 
       {
         id: "radar-collector-web",
-        name: "Web and Research Signal Collector",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/collector-web",
+        name: "Web and Research Source Specialist",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collector-web",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "low",
         sandbox: {
           mode: "all",
           scope: "agent",
           workspaceAccess: "none",
-          docker: { network: "radar-egress" },
+          docker: { network: "none" },
           browser: {
-            enabled: true,
-            network: "radar-browser-egress",
+            enabled: false,
             headless: true,
             allowHostControl: false,
-            autoStart: true,
+            autoStart: false,
           },
         },
         tools: {
-          allow: ["web_search", "web_fetch", "browser", "session_status"],
-          deny: ["exec", "process", "read", "write", "edit", "discord", "message", "cron", "gateway", "nodes"],
+          allow: ["session_status"],
+          deny: [
+            "exec", "process", "read", "write", "edit", "web_search",
+            "web_fetch", "browser", "discord", "message", "cron", "gateway", "nodes"
+          ],
         },
         subagents: { allowAgents: [], requireAgentId: true },
       },
@@ -150,7 +167,7 @@
       {
         id: "radar-extractor",
         name: "Structured Evidence Extractor",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/extractor",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/extractor",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -164,9 +181,9 @@
       {
         id: "radar-specialist",
         name: "Threat Intelligence Specialist",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/specialist",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/specialist",
         model: {
-          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
         },
         thinkingDefault: "high",
@@ -179,11 +196,31 @@
       },
 
       {
+        id: "radar-impact",
+        name: "Impact and Relevance Analyst",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/impact",
+        model: {
+          primary: "openai/gpt-5.4",
+          fallbacks: ["openai/gpt-5.6-luna"]
+        },
+        thinkingDefault: "high",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
+        tools: {
+          allow: ["session_status"],
+          deny: [
+            "browser", "web_search", "web_fetch", "exec", "process", "read",
+            "write", "edit", "discord", "message", "cron", "gateway", "nodes"
+          ],
+        },
+        subagents: { allowAgents: [], requireAgentId: true },
+      },
+
+      {
         id: "radar-skeptic",
         name: "Adversarial Intelligence Reviewer",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/skeptic",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/skeptic",
         model: {
-          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
         },
         thinkingDefault: "high",
@@ -198,9 +235,9 @@
       {
         id: "radar-verifier",
         name: "Claim and Citation Verifier",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/verifier",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/verifier",
         model: {
-          primary: "CONFIGURE_APPROVED_BALANCED_MODEL",
+          primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
         },
         thinkingDefault: "high",
@@ -215,7 +252,7 @@
       {
         id: "radar-chief",
         name: "Chief Emerging Threat Coordinator",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/coordinator",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/coordinator",
         model: { primary: "openai/gpt-5.6-sol", fallbacks: [] },
         // "max" is the current highest documented config enum. Confirm with
         // `openclaw config schema` if this installation exposes another label.
@@ -232,15 +269,16 @@
       {
         id: "radar-publisher",
         name: "Threat Radar Publisher",
-        workspace: "~/openclaw-emerging-threat-radar/openclaw/agents/publisher",
+        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/publisher",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
         tools: {
-          // Use a dedicated Discord account/channel binding and a narrow custom
-          // report-delivery tool in production instead of broad message authority.
-          allow: ["discord", "message", "session_status"],
-          deny: ["browser", "web_search", "web_fetch", "exec", "process", "read", "write", "edit", "cron", "gateway", "nodes"],
+          allow: ["radar_delivery_send", "session_status"],
+          deny: [
+            "browser", "web_search", "web_fetch", "exec", "process", "read",
+            "write", "edit", "discord", "message", "cron", "gateway", "nodes"
+          ],
         },
         subagents: { allowAgents: [], requireAgentId: true },
       },
@@ -248,11 +286,31 @@
   },
 
   plugins: {
+    allow: [
+      "openai", "anthropic", "codex", "llm-task", "lobster", "discord",
+      "threat-radar-boundary"
+    ],
+    load: {
+      paths: ["~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/plugins/threat-radar-boundary"],
+    },
     entries: {
       codex: { enabled: true },
       "llm-task": { enabled: true },
       // Enable the bundled Lobster plugin/tool and keep workflow files reviewed.
       lobster: { enabled: true },
+      "threat-radar-boundary": {
+        enabled: true,
+        hooks: {
+          allowPromptInjection: false,
+          allowConversationAccess: false,
+        },
+        config: {
+          reportRoot: "/opt/openclaw-emerging-threat-radar/reports/generated",
+          discordChannelId: "000000000000000000",
+          discordAccountId: "threat-radar-bot",
+          externalDeliveryEnabled: false,
+        },
+      },
     },
   },
 

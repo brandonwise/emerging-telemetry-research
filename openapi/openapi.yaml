@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: OpenClaw Emerging Threat Radar internal API
+  version: 1.0.0
+  description: Narrow service contracts. Unknown fields and routes fail closed.
+servers:
+  - url: https://radar-api.internal/v1
+security:
+  - mutualTLS: []
+x-radar-identity-forwarding:
+  trustedHeader: X-Client-Cert-SHA256
+  requirement: >-
+    A configured trusted proxy must verify mutual TLS, strip caller-supplied identity headers,
+    and inject the lowercase SHA-256 certificate fingerprint.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      x-radar-roles: [operator, orchestrator]
+      responses:
+        "200":
+          description: Service health and external-action gates
+        "503":
+          description: Identity map or durable repository is unavailable
+  /runs:
+    post:
+      operationId: createRun
+      x-radar-roles: [orchestrator]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRun"
+      responses:
+        "201":
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /artifacts:
+    post:
+      operationId: submitArtifact
+      x-radar-roles: [collector]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactSubmission"
+      responses:
+        "202":
+          description: Artifact accepted into quarantine
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /observations:
+    post:
+      operationId: submitObservation
+      x-radar-roles: [extractor]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/observation.schema.json"
+      responses:
+        "202":
+          description: Observation accepted
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /assessments:
+    post:
+      operationId: submitAssessment
+      x-radar-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/assessment.schema.json"
+      responses:
+        "202":
+          description: Assessment accepted after schema and evidence-reference validation
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /evidence/{evidenceId}:
+    get:
+      operationId: getEvidence
+      x-radar-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
+      parameters:
+        - name: evidenceId
+          in: path
+          required: true
+          schema: {type: string, pattern: "^ev_[A-Za-z0-9_-]+$"}
+      responses:
+        "200":
+          description: Bounded sanitized evidence only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoundedEvidence"
+        "404":
+          description: Evidence not found
+  /reports/render:
+    post:
+      operationId: renderReport
+      x-radar-roles: [publisher]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/report.schema.json"
+      responses:
+        "200":
+          description: Deterministically rendered report metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenderedReport"
+        "409":
+          description: Claim verification gate failed
+  /deliveries:
+    post:
+      operationId: submitDelivery
+      x-radar-roles: [publisher]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/delivery.schema.json"
+      responses:
+        "202":
+          description: Delivery accepted
+        "409":
+          description: External delivery is disabled or report is not verified
+  /source-health:
+    get:
+      operationId: getSourceHealth
+      x-radar-roles: [orchestrator, operator]
+      responses:
+        "200":
+          description: Current source health
+  /runs/{runId}/usage:
+    get:
+      operationId: getRunUsage
+      x-radar-roles: [orchestrator, operator]
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema: {type: string, pattern: "^run_[A-Za-z0-9_-]+$"}
+      responses:
+        "200":
+          description: Usage grouped by provider, model, agent, stage, source, and finding
+components:
+  securitySchemes:
+    mutualTLS:
+      type: mutualTLS
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 32, maxLength: 128}
+  responses:
+    InvalidRequest:
+      description: Invalid or schema-unknown input
+    Unauthorized:
+      description: Caller identity or role is not authorized
+  schemas:
+    CreateRun:
+      type: object
+      additionalProperties: false
+      required: [mode, edition, scheduled_for, code_revision, policy_revision]
+      properties:
+        mode: {type: string, maxLength: 100}
+        edition: {enum: [none, flash, morning, afternoon_delta, weekly]}
+        scheduled_for: {type: string, format: date-time}
+        code_revision: {type: string, minLength: 7, maxLength: 64}
+        policy_revision: {type: string, minLength: 1, maxLength: 100}
+    Run:
+      type: object
+      additionalProperties: false
+      required:
+        [run_id, mode, edition, scheduled_for, code_revision, policy_revision, status, created_at]
+      properties:
+        run_id: {type: string, pattern: "^run_[A-Za-z0-9_-]+$"}
+        mode: {type: string, maxLength: 100}
+        edition: {enum: [none, flash, morning, afternoon_delta, weekly]}
+        scheduled_for: {type: string, format: date-time}
+        code_revision: {type: string, minLength: 7, maxLength: 64}
+        policy_revision: {type: string, minLength: 1, maxLength: 100}
+        status: {type: string}
+        created_at: {type: string, format: date-time}
+    ArtifactSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        [run_id, source_id, canonical_uri, retrieved_at, content_type, content_hash, object_key]
+      properties:
+        run_id: {type: string, pattern: "^run_[A-Za-z0-9_-]+$"}
+        source_id: {type: string, maxLength: 100}
+        canonical_uri: {type: string, format: uri}
+        retrieved_at: {type: string, format: date-time}
+        published_at: {type: [string, "null"], format: date-time}
+        content_type: {type: string, maxLength: 200}
+        content_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        object_key: {type: string, minLength: 1, maxLength: 1000}
+    BoundedEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        [evidence_id, source_id, source_role, retrieved_at, content_hash, sanitized_hash, excerpt]
+      properties:
+        evidence_id: {type: string, pattern: "^ev_[A-Za-z0-9_-]+$"}
+        source_id: {type: string}
+        source_role: {type: string}
+        retrieved_at: {type: string, format: date-time}
+        published_at: {type: [string, "null"], format: date-time}
+        content_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        sanitized_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        excerpt: {type: string, maxLength: 12000}
+    RenderedReport:
+      type: object
+      additionalProperties: false
+      required: [report_id, report_json_hash, rendered_html_hash, html_path]
+      properties:
+        report_id: {type: string, pattern: "^rp_[A-Za-z0-9_-]+$"}
+        report_json_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        rendered_html_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        html_path: {type: string}

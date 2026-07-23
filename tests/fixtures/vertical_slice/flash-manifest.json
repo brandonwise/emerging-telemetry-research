@@ -1,0 +1,59 @@
+{
+  "run_id": "run_fixture_flash",
+  "generated_at": "2026-07-22T17:00:00Z",
+  "edition": "morning",
+  "window": {
+    "start": "2026-07-22T12:00:00Z",
+    "end": "2026-07-22T17:00:00Z",
+    "timezone": "America/New_York"
+  },
+  "inventory": ["Acme Widget", "PyPI:acme-widget"],
+  "sources": [
+    {
+      "source_id": "cisa-kev",
+      "file": "cisa-kev.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "retrieved_at": "2026-07-22T12:05:00Z",
+      "independence_group": "cisa-kev"
+    },
+    {
+      "source_id": "cve-list-v5",
+      "available": false,
+      "independence_group": "cve-program"
+    },
+    {
+      "source_id": "nvd-cve",
+      "file": "nvd-cve.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-9999",
+      "retrieved_at": "2026-07-22T13:05:00Z",
+      "independence_group": "nvd"
+    },
+    {
+      "source_id": "first-epss",
+      "file": "epss.csv",
+      "content_type": "text/csv",
+      "canonical_uri": "https://epss.cyentia.com/epss_scores-current.csv.gz",
+      "retrieved_at": "2026-07-22T14:05:00Z",
+      "independence_group": "first-epss"
+    },
+    {
+      "source_id": "osv",
+      "file": "osv.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://api.osv.dev/v1/vulns/OSV-2026-9999",
+      "retrieved_at": "2026-07-22T15:05:00Z",
+      "independence_group": "osv"
+    },
+    {
+      "source_id": "github-advisories",
+      "file": "github-advisories.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://api.github.com/graphql",
+      "retrieved_at": "2026-07-22T16:05:00Z",
+      "independence_group": "github-advisory"
+    }
+  ],
+  "lineage": []
+}

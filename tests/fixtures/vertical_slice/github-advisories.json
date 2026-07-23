@@ -1,0 +1,17 @@
+{
+  "data": {
+    "securityAdvisories": {
+      "nodes": [
+        {
+          "ghsaId": "GHSA-2345-6789-CFGH",
+          "publishedAt": "2026-07-22T15:00:00Z",
+          "summary": "Acme Widget remote code execution vulnerability",
+          "identifiers": [
+            {"type": "GHSA", "value": "GHSA-2345-6789-CFGH"},
+            {"type": "CVE", "value": "CVE-2026-9999"}
+          ]
+        }
+      ]
+    }
+  }
+}

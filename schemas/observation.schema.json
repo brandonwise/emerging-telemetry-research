@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://threat-radar.invalid/schemas/observation.v1.json",
+  "title": "Threat Radar Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observation_id",
+    "source_id",
+    "observed_at",
+    "source_role",
+    "claims",
+    "identifiers"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "observation_id": {"type": "string", "pattern": "^ob_[A-Za-z0-9_-]+$"},
+    "source_id": {"type": "string", "minLength": 1, "maxLength": 100},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "published_at": {"type": ["string", "null"], "format": "date-time"},
+    "source_role": {
+      "enum": [
+        "direct_artifact",
+        "authoritative_advisory",
+        "precursor",
+        "researcher_observation",
+        "independent_confirmation",
+        "media_baseline",
+        "contradiction",
+        "correction"
+      ]
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"type": "string", "minLength": 1, "maxLength": 1200}
+    },
+    "identifiers": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"type": "string", "minLength": 1, "maxLength": 500}
+    },
+    "affected": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "name"],
+        "properties": {
+          "type": {"enum": ["product", "package", "repository", "service", "platform", "sector"]},
+          "name": {"type": "string", "maxLength": 500},
+          "version_range": {"type": ["string", "null"], "maxLength": 500}
+        }
+      }
+    },
+    "cvss_base_score": {"type": ["number", "null"], "minimum": 0, "maximum": 10},
+    "epss_probability": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "known_exploited": {"type": "boolean"},
+    "fixed_versions": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"type": "string", "maxLength": 200}
+    }
+  }
+}

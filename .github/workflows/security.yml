@@ -11,16 +11,19 @@ permissions:
 jobs:
   secrets-and-dependencies:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4 # Pin to a reviewed commit SHA before production.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2 # Pin to a reviewed commit SHA before production.
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master # Replace with immutable reviewed SHA.
+        id: filesystem_scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           scan-type: fs
           scan-ref: .
@@ -28,8 +31,26 @@ jobs:
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          exit-code: "1"
+      - name: Build application image
+        run: docker build --tag threat-radar:ci .
+      - name: Trivy application image scan
+        id: image_scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: image
+          image-ref: threat-radar:ci
+          format: sarif
+          output: trivy-image-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3 # Pin to a reviewed commit SHA.
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         if: always()
         with:
-          sarif_file: trivy-results.sarif
+          sarif_file: .
+      - name: Enforce Trivy results
+        if: steps.filesystem_scan.outcome == 'failure' || steps.image_scan.outcome == 'failure'
+        run: exit 1

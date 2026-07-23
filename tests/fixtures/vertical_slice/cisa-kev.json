@@ -1,0 +1,18 @@
+{
+  "title": "CISA Known Exploited Vulnerabilities Catalog",
+  "catalogVersion": "2026.07.22",
+  "dateReleased": "2026-07-22T12:00:00Z",
+  "count": 1,
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2026-9999",
+      "vendorProject": "Acme",
+      "product": "Widget",
+      "vulnerabilityName": "Acme Widget remote code execution vulnerability",
+      "dateAdded": "2026-07-22",
+      "shortDescription": "An exposed service can allow remote code execution.",
+      "requiredAction": "Apply vendor mitigations or discontinue use.",
+      "dueDate": "2026-07-24"
+    }
+  ]
+}

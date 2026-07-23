@@ -1,6 +1,7 @@
 # Delivery Manifest
 
-This package is a production-oriented implementation scaffold for the OpenClaw Emerging Threat Radar.
+This package contains the security-first shadow-mode implementation of the OpenClaw Emerging Threat
+Radar vertical slice. Live collection and external delivery remain approval-gated.
 
 ## Primary handoff documents
 
@@ -23,7 +24,8 @@ This package is a production-oriented implementation scaffold for the OpenClaw E
 - `schemas/` — JSON Schemas for evidence, findings, assessments, and reports.
 - `policies/` — tool, egress, and untrusted-content gateway policies.
 - `config/` — source, model, scoring, schedule, and report configuration.
-- `apps/` and `packages/` — starter Python implementation.
+- `apps/` and `packages/` — internal API, worker CLI, pipeline, connectors, security gateway,
+  scoring, verification, delivery planning, telemetry, and storage adapters.
 - `infra/` — local observability and service topology.
 - `.github/` — CI, CodeQL, Dependabot, security, and ownership controls.
 
@@ -32,8 +34,10 @@ This package is a production-oriented implementation scaffold for the OpenClaw E
 Run:
 
 ```bash
-python scripts/validate_repo.py
-pytest -q
+uv run python scripts/validate_repo.py
+uv run pytest
+uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
+uv run python scripts/verify_restore.py --output /tmp/radar-restore
 ```
 
 Before applying the example OpenClaw configuration, validate every field against the installed version:

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://threat-radar.invalid/schemas/delivery.v1.json",
+  "title": "Threat Radar Delivery Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "delivery_id",
+    "report_id",
+    "destination",
+    "idempotency_key",
+    "summary",
+    "html_path"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "delivery_id": {"type": "string", "pattern": "^dl_[A-Za-z0-9_-]+$"},
+    "report_id": {"type": "string", "pattern": "^rp_[A-Za-z0-9_-]+$"},
+    "destination": {"type": "string", "pattern": "^discord:channel:[0-9]+$"},
+    "idempotency_key": {"type": "string", "minLength": 32, "maxLength": 128},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "html_path": {"type": "string", "minLength": 1, "maxLength": 1000}
+  }
+}

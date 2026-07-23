@@ -11,14 +11,14 @@ permissions:
   security-events: write
 jobs:
   analyze:
-    # CodeQL on a private repository may require the appropriate GitHub plan/license.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         language: [python]
     steps:
-      - uses: actions/checkout@v4 # Pin to reviewed SHA before production.
-      - uses: github/codeql-action/init@v3 # Pin to reviewed SHA before production.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           languages: ${{ matrix.language }}
-      - uses: github/codeql-action/analyze@v3 # Pin to reviewed SHA before production.
+      - uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3

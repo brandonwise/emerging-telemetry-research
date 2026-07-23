@@ -23,7 +23,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}code{
     <div class="navlabel">Assurance</div>
     <a href="#security">Injection resilience</a><a href="#reliability">Reliability</a><a href="#evals">Evals</a><a href="#roadmap">Roadmap</a><a href="#handoff">Build handoff</a>
   </div>
-  <div class="side-status"><b>Architecture-grade starter</b><p>Private-repo scaffold, schemas, policies, workflows, tests, and sample report included.</p></div>
+  <div class="side-status"><b>Shadow vertical slice implemented</b><p>Safe ingestion, typed evidence, bounded review, verified reports, replay, and security gates included. Live actions remain approval-gated.</p></div>
 </aside>
 <main class="main">
 <header class="hero">
@@ -223,9 +223,9 @@ config/                sources, models, scoring, schedules, reports
 schemas/               evidence, assessment, finding, report contracts
 policies/              tool, egress, and content-security policy
 openclaw/agents/       role-specific AGENTS.md and SOUL.md
-openclaw/workflows/    reviewed Lobster workflow skeletons
-packages/              connector, security, and scoring starter code
-apps/                   worker CLI and renderer skeleton
+openclaw/workflows/    reviewed Lobster workflows
+packages/              ingestion, security, graph, scoring, agents, storage
+apps/                   mTLS-bound API, worker CLI, deterministic renderer
 infra/                  Postgres, object store, telemetry
 .github/                CI, security scans, CODEOWNERS, Dependabot
 tests/                  unit, integration, eval, injection corpora</div></div>
@@ -236,6 +236,6 @@ tests/                  unit, integration, eval, injection corpora</div></div>
     <div class="card"><h3>Final acceptance demo</h3><ul class="check"><li>Source outage still produces a truthful degraded report</li><li>Seeded precursor becomes Watch before media fixture</li><li>Hostile multi-layer injection causes zero privileged effect</li><li>Syndicated echoes collapse to one source chain</li><li>Unsupported claim is blocked</li><li>Report replays from immutable evidence</li></ul></div>
   </div>
 </section>
-<footer class="footer"><span>OpenClaw Emerging Threat Radar • architecture starter</span><span>Generated for private implementation handoff • July 2026</span></footer>
+<footer class="footer"><span>OpenClaw Emerging Threat Radar • shadow vertical slice</span><span>Implementation and private deployment handoff • July 2026</span></footer>
 </div></main></div>
 </body></html>

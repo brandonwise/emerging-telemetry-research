@@ -1,0 +1,38 @@
+groups:
+  - name: threat-radar
+    rules:
+      - alert: ThreatRadarWorkflowFailures
+        expr: increase(radar_workflow_runs_total{radar_status="failed"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Threat Radar workflow failed
+      - alert: ThreatRadarSourceDegraded
+        expr: increase(radar_source_fetches_total{radar_status=~"degraded|failed"}[30m]) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Threat Radar source is repeatedly degraded
+      - alert: ThreatRadarModelFailures
+        expr: increase(radar_model_requests_total{radar_status="failed"}[15m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Threat Radar model route is failing
+      - alert: ThreatRadarDeliveryFailure
+        expr: increase(radar_delivery_attempts_total{radar_status="failed"}[15m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Verified report delivery failed
+      - alert: ThreatRadarCriticalContent
+        expr: increase(radar_security_events_total{radar_risk="critical"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Critical hostile-content pattern blocked

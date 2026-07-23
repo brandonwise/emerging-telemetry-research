@@ -1,0 +1,1 @@
+"""Immutable evidence storage adapters."""

@@ -17,4 +17,7 @@ def test_total_and_flash_gate() -> None:
 
 def test_missing_citation_archives() -> None:
     score = ScoreComponents(25, 20, 15, 15, 15, 10)
-    assert classify(score, citations_present=False, flash_confirmation_rule=True) == PublicationClass.ARCHIVE
+    assert (
+        classify(score, citations_present=False, flash_confirmation_rule=True)
+        == PublicationClass.ARCHIVE
+    )

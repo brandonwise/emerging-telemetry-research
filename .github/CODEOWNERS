@@ -1,8 +1,10 @@
-# Replace @your-org/security and @your-org/platform before first push.
-/SECURITY.md @your-org/security
-/THREAT_MODEL.md @your-org/security
-/policies/ @your-org/security
-/schemas/ @your-org/security @your-org/platform
-/openclaw/ @your-org/security @your-org/platform
-/.github/workflows/ @your-org/security @your-org/platform
-/infra/ @your-org/platform
+* @brandonwise
+/SECURITY.md @brandonwise
+/THREAT_MODEL.md @brandonwise
+/THREAT_MODEL_APPROVAL.md @brandonwise
+/policies/ @brandonwise
+/schemas/ @brandonwise
+/openclaw/ @brandonwise
+/.github/workflows/ @brandonwise
+/infra/ @brandonwise
+/migrations/ @brandonwise

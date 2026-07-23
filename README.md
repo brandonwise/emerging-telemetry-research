@@ -1,77 +1,106 @@
 # OpenClaw Emerging Threat Radar
 
-A production-oriented implementation blueprint and starter repository for a proactive cyber-threat early-warning capability built on OpenClaw.
+A security-first, evidence-backed cyber-threat early-warning system for OpenClaw.
 
-The system is designed to discover weak, early signals of high-impact vulnerabilities, exploitation, supply-chain compromise, malicious packages, and related security events **before they become broadly reported**, while remaining evidence-backed, prompt-injection resilient, auditable, reliable, and cost controlled.
+The implemented shadow-mode vertical slice ingests frozen CISA KEV, CVE List V5, NVD, EPSS,
+OSV, and GitHub Advisory fixtures; captures immutable evidence; sanitizes hostile content;
+normalizes CVE/package entities; builds source lineage; scores deterministically; runs bounded
+specialist, skeptic, citation-verifier, and coordinator reviews; and produces verified report JSON,
+Discord delivery plans, self-contained HTML, usage records, and a hash-chained audit log.
 
-## What this repository contains
+Live collection, schedules, and external delivery are deliberately disabled. They cannot be enabled
+until the threat model, source terms, deployment, and production-readiness gates are approved.
 
-- A detailed architecture and implementation plan
-- A direct build brief for an OpenClaw/Codex coordinator
-- A deterministic multi-agent workflow design
-- Source, model, scoring, policy, and schedule configuration
-- Strict JSON contracts for evidence and findings
-- Prompt-injection and content-security controls
-- Evaluation, red-team, reliability, and operations plans
-- A self-contained visual HTML architecture guide
-- A sample rich daily intelligence brief
-- Starter Python packages and CI/security scaffolding
+## Run it
 
-## Start here
+Requires Python 3.12 and `uv`.
 
-1. Open `docs/index.html` for the visual system guide.
-2. Read `OPENCLAW_BUILD_PROMPT.md` and provide it to the build coordinator.
-3. Review `IMPLEMENTATION_PLAN.md`, `SECURITY.md`, `THREAT_MODEL.md`, and `EVALS.md`.
-4. Copy `.env.example` to `.env`; never commit the result.
-5. Validate the scaffold with `make validate`.
-6. Create a private repository with `scripts/create-private-repo.sh <github-org>`.
-
-## System objective
-
-Produce three classes of output:
-
-- **Flash alert:** high-confidence, high-impact emerging event requiring immediate review
-- **Watch update:** promising but incomplete signal that should be rechecked frequently
-- **Daily intelligence brief:** ranked, evidence-backed findings, changes, source health, and cost telemetry
-
-The system must prefer **no alert** over an ungrounded alert. Every factual claim that reaches a user-facing report must resolve to stored evidence, a retrieval timestamp, and a source URI.
-
-## Core architectural rule
-
-> Untrusted content is data, never instructions.
-
-Raw internet content never reaches the high-privilege coordinator. Collection, sanitization, extraction, correlation, analysis, and publishing are separated by typed contracts and least-privilege tool boundaries.
-
-## High-level flow
-
-```text
-DETECT → INGEST → QUARANTINE → SANITIZE → EXTRACT → CORRELATE
-       → SCORE → CHALLENGE → VERIFY → PUBLISH → LEARN
+```bash
+uv sync --extra dev --python 3.12
+uv run python scripts/validate_repo.py
+uv run pytest
+uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
+uv run python scripts/verify_restore.py --output /tmp/radar-restore
 ```
 
-## Recommended initial stack
+Generate one complete fixture report:
 
-- OpenClaw Gateway, agents, cron, Task Flow, and Lobster workflows
-- Python 3.12 services and workers
-- PostgreSQL 16 with pgvector
-- S3-compatible immutable evidence storage
-- Optional OpenTelemetry, Prometheus, and Grafana
-- Discord embeds plus attached self-contained HTML reports
-- Email and PDF adapters after Discord is stable
+```bash
+uv run threat-radar fixture run \
+  tests/fixtures/vertical_slice/flash-manifest.json \
+  --output /tmp/radar-flash \
+  --json
+```
 
-## Production invariants
+The internal API is available with:
 
-1. No agent executes code obtained from monitored sources.
-2. No collector can send a Discord message, email, or modify schedules.
-3. No publisher can browse the internet.
-4. The coordinator receives only sanitized, schema-valid evidence packets.
-5. Every state-changing action is deterministic, policy checked, logged, and idempotent.
-6. Model output is never trusted until schema validation and deterministic checks pass.
-7. Source independence is measured; reposts do not count as corroboration.
-8. Confidence, impact, novelty, and organizational relevance are separate concepts.
-9. Costs and token usage are attributable by run, stage, model, source, and finding.
-10. A report may explicitly state that no material emerging threats were found.
+```bash
+uv run uvicorn apps.api.main:app --host 127.0.0.1 --port 8080
+```
 
-## Repository status
+It fails closed unless PostgreSQL, a trusted mTLS proxy IP, and a certificate-fingerprint-to-role
+map are configured. The proxy must terminate and verify mutual TLS, strip inbound identity headers,
+and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over an exposed route.
 
-This is an architecture-grade starter scaffold, not a finished threat-intelligence product. Connector credentials, organization-specific asset relevance, source terms, data-retention decisions, and deployment controls must be configured before production use.
+## What is enforced
+
+- External content is data, never instructions.
+- Raw source content cannot reach the chief coordinator.
+- Collectors cannot send messages, access schedules, or receive delivery credentials.
+- Publishers cannot browse and can send only through a fixed-destination OpenClaw tool.
+- Cross-agent/model payloads reject unknown fields and non-JSON wrappers.
+- Report claims require stored evidence IDs and deterministic verification.
+- Reposts and syndication collapse into one originating source chain.
+- Fetching enforces HTTPS allowlists, global-address checks, redirect/DNS revalidation, rate limits,
+  MIME and size limits, sensitive-header stripping, timeouts, and content hashing.
+- Content processing strips active/hidden markup, detects visible/encoded/delayed injection,
+  constrains archives, exposes a malware-scanner hook, and gates model access by risk.
+- PostgreSQL work claiming uses `SKIP LOCKED`; API commands and delivery plans are idempotent.
+- Raw, sanitized, evidence, report, policy, and security records are append-only where required.
+- CI actions and service images are version pinned; CI runs schema, lint, type, test, PostgreSQL,
+  replay, security, and frozen acceptance gates.
+- OpenTelemetry exposes bounded, content-free workflow/source/model/delivery/security metrics.
+
+## Architecture
+
+```text
+approved source plan
+  → centralized safe fetch
+  → immutable quarantine
+  → content-security gateway
+  → schema-bound observations
+  → entity + source-lineage graph
+  → deterministic scoring
+  → specialist → skeptic → citation verifier → coordinator
+  → verified report JSON
+  → deterministic HTML + fixed-destination Discord plan
+```
+
+OpenClaw cron and reviewed Lobster workflows own orchestration. PostgreSQL owns durable state.
+Conversation history owns neither.
+
+## Release boundaries
+
+Read [BLOCKERS.md](BLOCKERS.md) and [THREAT_MODEL_APPROVAL.md](THREAT_MODEL_APPROVAL.md). Until those
+records are resolved:
+
+- every source in `config/sources.yaml` remains disabled;
+- `config/schedules.yaml` remains globally disabled;
+- Discord and all external delivery remain disabled;
+- the live Lobster workflow exits through a blocking approval gate;
+- only frozen-fixture and shadow evaluation paths are runnable.
+
+The private GitHub repository, branch protection, browser-rendered UI review, live source
+authorization, and Discord destination are operator actions and are intentionally not performed by
+the local build.
+
+## Documentation
+
+- `docs/index.html` — visual architecture and implementation guide
+- `docs/sample-daily-brief.html` — report design sample
+- `reports/samples/frozen-flash/` — generated report, immutable inputs, and audit log
+- `docs/MILESTONE_ACCEPTANCE.md` — design notes, acceptance evidence, and remaining gates
+- `ARCHITECTURE.md`, `SECURITY.md`, `THREAT_MODEL.md`, `EVALS.md` — controlling specifications
+- `RUNBOOK.md` — operations, incident, replay, restore, and rollback procedures
+- `openapi/openapi.yaml` — versioned internal service contract
+- `docs/adr/` — architecture decisions and security deviations

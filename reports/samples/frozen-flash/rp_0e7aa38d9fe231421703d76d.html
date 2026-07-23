@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Threat Radar — Morning</title>
+  <style>
+    :root { color-scheme: light; --ink:#14202b; --muted:#56616c; --line:#d8dee4; --panel:#f5f7f9; --accent:#174f7a; --warn:#8a3b12; --ok:#216e39; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#fff; font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:36px 0 72px; }
+    h1,h2,h3 { line-height:1.2; margin:0; }
+    h1 { font-size:clamp(1.8rem,4vw,2.8rem); }
+    h2 { font-size:1.35rem; margin-top:2rem; }
+    h3 { font-size:1.15rem; }
+    p { margin:.55rem 0; }
+    .eyebrow { color:var(--accent); font-size:.78rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+    .meta,.muted { color:var(--muted); }
+    .summary,.finding,.empty,.degraded { border:1px solid var(--line); border-radius:10px; padding:18px; margin-top:18px; }
+    .summary,.empty { background:var(--panel); }
+    .degraded { border-color:#d8a278; background:#fff7ed; color:var(--warn); }
+    .finding { border-left:5px solid var(--accent); }
+    .finding.flash { border-left-color:#b42318; }
+    .finding.watch { border-left-color:#b7791f; }
+    .score { display:inline-block; min-width:3.4rem; margin-right:.5rem; padding:.25rem .5rem; border-radius:6px; background:#e7eef4; font-weight:750; text-align:center; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-top:14px; }
+    .metric { background:var(--panel); border-radius:8px; padding:12px; }
+    .metric dt { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+    .metric dd { margin:.2rem 0 0; font-weight:700; }
+    ul { padding-left:1.25rem; }
+    li + li { margin-top:.35rem; }
+    code { overflow-wrap:anywhere; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.92rem; }
+    th,td { border-bottom:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:.75rem; letter-spacing:.04em; text-transform:uppercase; }
+    .verified { color:var(--ok); font-weight:700; }
+    footer { border-top:1px solid var(--line); margin-top:36px; padding-top:16px; color:var(--muted); font-size:.85rem; }
+    @media (max-width:640px) { main { width:min(100% - 20px,1120px); padding-top:20px; } .summary,.finding,.empty,.degraded { padding:14px; } table { display:block; overflow-x:auto; } }
+    @media print { main { width:100%; padding:0; } .finding { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">OpenClaw Emerging Threat Radar</div>
+    <h1>Morning</h1>
+    <p class="meta">2026-07-22T12:00:00Z through 2026-07-22T17:00:00Z · America/New_York</p>
+  </header>
+
+  
+  <section class="degraded" aria-label="Degraded source coverage">
+    <strong>Coverage gap:</strong> cve-list-v5 did not complete. The report continued with the remaining evidence.
+  </section>
+  
+
+  <section class="summary">
+    <h2>Signal summary</h2>
+    <p>One flash finding met the shadow publication gate. Priority score: 90.5.</p>
+  </section>
+
+  <section aria-labelledby="findings-heading">
+    <h2 id="findings-heading">Findings</h2>
+    
+      
+      <article class="finding flash">
+        <h3><span class="score">90.5</span>Active exploitation signal for CVE-2026-9999</h3>
+        <p>Authoritative exploitation evidence and independent technical records converged before a media baseline was present.</p>
+        <dl class="grid">
+          <div class="metric"><dt>Class</dt><dd>Flash</dd></div>
+          <div class="metric"><dt>Confidence</dt><dd>High · 90%</dd></div>
+          <div class="metric"><dt>Stage</dt><dd>Confirmed</dd></div>
+          <div class="metric"><dt>Next check</dt><dd>2026-07-22T18:00:00Z</dd></div>
+        </dl>
+        <h3>Known</h3>
+        <ul><li>CVE-2026-9999 appears in CISA&#39;s Known Exploited Vulnerabilities catalog. The remediation due date is 2026-07-24.</li><li>NVD reports a CVSS base score of 9.8 for CVE-2026-9999.</li><li>FIRST EPSS assigns CVE-2026-9999 a probability of 0.9100.</li><li>OSV advisory OSV-2026-9999 references CVE-2026-9999.</li><li>GitHub advisory GHSA-2345-6789-CFGH references CVE-2026-9999.</li></ul>
+        
+        <h3>Unknown</h3>
+        <ul><li>The fixture does not establish exposure outside the listed affected product or package.</li></ul>
+        
+        <p><strong>Skeptic review:</strong> Source lineage and chronology were checked for duplicate amplification.</p>
+        
+        <h3>Defensive checks</h3>
+        <ul><li>Today: Check inventory for the cited product or package and review vendor guidance.</li></ul>
+        
+        <h3>Verified claims</h3>
+        <table>
+          <thead><tr><th>Claim</th><th>Evidence</th><th>Status</th></tr></thead>
+          <tbody>
+          
+            <tr><td>CVE-2026-9999 appears in CISA&#39;s Known Exploited Vulnerabilities catalog. The remediation due date is 2026-07-24.</td><td><code>ev_f96ed73226676c01e65c0cac</code></td><td class="verified">verified</td></tr>
+          
+            <tr><td>NVD reports a CVSS base score of 9.8 for CVE-2026-9999.</td><td><code>ev_65cef54dd30270aaac5bd3e5</code></td><td class="verified">verified</td></tr>
+          
+            <tr><td>FIRST EPSS assigns CVE-2026-9999 a probability of 0.9100.</td><td><code>ev_e79203afa5ed1a51b052e7f1</code></td><td class="verified">verified</td></tr>
+          
+            <tr><td>OSV advisory OSV-2026-9999 references CVE-2026-9999.</td><td><code>ev_e9221d72379126595bd72000</code></td><td class="verified">verified</td></tr>
+          
+            <tr><td>GitHub advisory GHSA-2345-6789-CFGH references CVE-2026-9999.</td><td><code>ev_6af75db915e01805afc0a920</code></td><td class="verified">verified</td></tr>
+          
+          </tbody>
+        </table>
+      </article>
+      
+    
+  </section>
+
+  <section>
+    <h2>Source coverage</h2>
+    <table>
+      <thead><tr><th>Source</th><th>Status</th><th>Last success</th><th>Error rate</th></tr></thead>
+      <tbody><tr><td>cisa-kev</td><td>healthy</td><td>2026-07-22T17:00:00Z</td><td>0.0%</td></tr><tr><td>cve-list-v5</td><td>failed</td><td>none</td><td>100.0%</td></tr><tr><td>first-epss</td><td>healthy</td><td>2026-07-22T17:00:00Z</td><td>0.0%</td></tr><tr><td>github-advisories</td><td>healthy</td><td>2026-07-22T17:00:00Z</td><td>0.0%</td></tr><tr><td>nvd-cve</td><td>healthy</td><td>2026-07-22T17:00:00Z</td><td>0.0%</td></tr><tr><td>osv</td><td>healthy</td><td>2026-07-22T17:00:00Z</td><td>0.0%</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Usage and estimated cost</h2>
+    <table>
+      <thead><tr><th>Stage</th><th>Provider / model</th><th>Requests</th><th>Tokens</th><th>Estimated cost</th></tr></thead>
+      <tbody><tr><td>deterministic_pipeline</td><td>local / deterministic-code</td><td>0</td><td>0</td><td>$0.0000</td></tr><tr><td>shadow_review_chain</td><td>fixture / deterministic-shadow-fixture</td><td>4</td><td>0</td><td>$0.0000</td></tr></tbody>
+    </table>
+  </section>
+
+  <footer>
+    Report rp_0e7aa38d9fe231421703d76d · Schema 1.0 · Template report-v1 · Claims verified by verifier-v1
+  </footer>
+</main>
+</body>
+</html>

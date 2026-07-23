@@ -1,0 +1,27 @@
+{
+  "vulns": [
+    {
+      "id": "OSV-2026-9999",
+      "aliases": ["CVE-2026-9999"],
+      "published": "2026-07-22T14:00:00Z",
+      "summary": "Acme Widget remote code execution vulnerability",
+      "affected": [
+        {
+          "package": {
+            "ecosystem": "PyPI",
+            "name": "acme-widget"
+          },
+          "ranges": [
+            {
+              "type": "ECOSYSTEM",
+              "events": [
+                {"introduced": "0"},
+                {"fixed": "4.2.1"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

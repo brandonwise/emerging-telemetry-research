@@ -1,0 +1,65 @@
+version: 1
+default_status: pending
+collection_prohibited_until_approved: true
+
+sources:
+  cisa-kev:
+    status: pending
+    retention_days: 365
+    license: public-domain-review-required
+  cve-list-v5:
+    status: pending
+    retention_days: 365
+    license: cve-terms-review-required
+  nvd-cve:
+    status: pending
+    retention_days: 365
+    license: nvd-terms-review-required
+  first-epss:
+    status: pending
+    retention_days: 365
+    license: epss-terms-review-required
+  osv:
+    status: pending
+    retention_days: 365
+    license: osv-terms-review-required
+  github-advisories:
+    status: pending
+    retention_days: 365
+    license: github-api-terms-review-required
+  openssf-malicious-packages:
+    status: pending
+    retention_days: 365
+    license: openssf-data-license-review-required
+  vendor-csaf:
+    status: pending
+    retention_days: 365
+    license: per-provider-terms-review-required
+  github-precursors:
+    status: pending
+    retention_days: 180
+    license: github-api-terms-review-required
+  package-ecosystems:
+    status: pending
+    retention_days: 180
+    license: per-registry-terms-review-required
+  certificate-transparency:
+    status: pending
+    retention_days: 180
+    license: provider-terms-review-required
+  x-researchers:
+    status: pending
+    retention_days: 90
+    license: x-api-terms-review-required
+  reddit-security:
+    status: pending
+    retention_days: 90
+    license: reddit-api-terms-review-required
+  brave-web:
+    status: pending
+    retention_days: 90
+    license: brave-api-terms-review-required
+  media-baseline:
+    status: pending
+    retention_days: 90
+    license: per-publisher-terms-review-required

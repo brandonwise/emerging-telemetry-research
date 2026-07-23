@@ -1,21 +1,48 @@
 from __future__ import annotations
 
-import html
-import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
-def render_minimal_report(report: dict[str, Any], output_path: Path) -> Path:
-    """Safe fallback renderer; production uses reviewed Jinja templates."""
-    title = html.escape(str(report.get("title", "Threat Radar Report")))
-    payload = html.escape(json.dumps(report, indent=2, sort_keys=True))
-    document = f"""<!doctype html>
-<html lang=\"en\"><head><meta charset=\"utf-8\">
-<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">
-<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-<title>{title}</title><style>body{{font-family:system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f4f6;padding:1rem;border-radius:.5rem}}</style></head>
-<body><h1>{title}</h1><pre>{payload}</pre></body></html>"""
+from packages.common.canonical import canonical_json_bytes, sha256_hex
+from packages.contracts.validation import validate_payload
+from packages.verification.claims import require_verified_report
+
+TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
+TEMPLATE_REVISION = "report-v1"
+
+
+@dataclass(frozen=True, slots=True)
+class RenderedReport:
+    path: Path
+    report_json_hash: str
+    rendered_html_hash: str
+    template_revision: str
+
+
+def render_report(report: dict[str, Any], output_path: Path) -> RenderedReport:
+    validate_payload("report.schema.json", report)
+    require_verified_report(report)
+    environment = Environment(
+        loader=FileSystemLoader(TEMPLATE_ROOT),
+        autoescape=select_autoescape(enabled_extensions=("html", "j2"), default=True),
+        undefined=StrictUndefined,
+        keep_trailing_newline=True,
+        newline_sequence="\n",
+    )
+    template = environment.get_template("report_v1.html.j2")
+    document = template.render(report=report, template_revision=TEMPLATE_REVISION)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(document, encoding="utf-8")
-    return output_path
+    return RenderedReport(
+        path=output_path,
+        report_json_hash=sha256_hex(canonical_json_bytes(report)),
+        rendered_html_hash=sha256_hex(document),
+        template_revision=TEMPLATE_REVISION,
+    )
+
+
+def render_minimal_report(report: dict[str, Any], output_path: Path) -> Path:
+    return render_report(report, output_path).path

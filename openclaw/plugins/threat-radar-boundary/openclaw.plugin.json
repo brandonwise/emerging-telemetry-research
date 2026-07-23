@@ -1,0 +1,37 @@
+{
+  "id": "threat-radar-boundary",
+  "activation": {
+    "onStartup": true
+  },
+  "enabledByDefault": false,
+  "name": "Threat Radar Boundary",
+  "description": "Narrow TaskFlow lifecycle and verified Discord report delivery.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "reportRoot",
+      "discordChannelId",
+      "discordAccountId",
+      "externalDeliveryEnabled"
+    ],
+    "properties": {
+      "reportRoot": {
+        "type": "string",
+        "pattern": "^/"
+      },
+      "discordChannelId": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "discordAccountId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "externalDeliveryEnabled": {
+        "type": "boolean",
+        "default": false
+      }
+    }
+  }
+}

@@ -1,5 +1,33 @@
 # Operations Runbook
 
+## Safety preflight
+
+Run before any deployment or configuration change:
+
+```bash
+uv sync --frozen --extra dev
+uv run python scripts/validate_repo.py
+uv run ruff check .
+uv run mypy apps packages scripts/run_acceptance.py scripts/verify_restore.py
+uv run pytest
+uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
+uv run python scripts/verify_restore.py --output /tmp/radar-restore
+```
+
+Stop if a command fails. Do not enable a source, schedule, model fallback, or delivery channel to
+work around a failed gate.
+
+Before live collection, confirm all of the following:
+
+- `THREAT_MODEL_APPROVAL.md` contains an immutable approval reference, approver, timestamp, commit,
+  source IDs, environment, and residual-risk acceptance.
+- Every enabled source has `status: approved` in `config/source-terms.yaml`.
+- `scripts/validate_repo.py` passes after the source/config change.
+- Egress allowlists contain only source-specific hostnames.
+- The malware-scanner hook reports `clean`, not `not_configured`.
+- PostgreSQL restore, object-lock restore, OpenClaw deep audit, and alert delivery evidence are
+  attached to the production-readiness review.
+
 ## Daily operator review
 
 - Confirm morning and afternoon runs completed
@@ -64,10 +92,72 @@
 - Fall back to the approved email/file channel only when policy allows
 - Alert an operator after the configured retry window
 
+## Dead-letter replay
+
+1. Identify the `dead_letter_id`, original run/step, input reference/hash, redacted error, and policy
+   revision that will be used for replay.
+2. Resolve the cause without changing stored input. If the fix broadens egress, tool rights, source
+   terms, or retention, stop for a separate security review.
+3. Claim rows through `claim_dead_letters(worker_id, maximum_items)`. Never update arbitrary rows
+   directly.
+4. Build the replay step from the original input hash and reviewed policy revision. The resulting
+   idempotency key must be deterministic.
+5. Execute through the normal workflow boundary, not an operator shell shortcut.
+6. Mark the dead letter replayed only after the new step is durable. Retain the original record.
+7. Verify the report/audit hashes or document the intentional version difference.
+
 ## Backup and restore
 
-- Daily database backup and point-in-time recovery where available
-- Object-store versioning and retention policy
-- Weekly automated restore test into an isolated environment
-- Verify that a frozen report can be replayed from restored evidence
-- Protect backups with independent credentials and access logging
+Production requirements:
+
+- Daily encrypted PostgreSQL backup with point-in-time recovery.
+- Object-store versioning, retention policy, and object lock where supported.
+- Independent backup credentials and access logging.
+- Weekly automated restore into an isolated account/network.
+
+Restore drill:
+
+1. Create an isolated database and object-store bucket with no delivery credentials.
+2. Restore PostgreSQL to the selected recovery point.
+3. Restore object versions and verify stored content hashes against `raw_artifacts`.
+4. Run frozen replay against the restored inputs and the original code/policy/template revisions.
+5. Compare report JSON, HTML, and audit bytes.
+6. Run referential-integrity checks across evidence, claim, report, usage, and delivery records.
+7. Record duration, recovery point, mismatches, and operator identity.
+8. Destroy the isolated environment through the approved infrastructure workflow.
+
+The local immutable-evidence drill is:
+
+```bash
+uv run python scripts/verify_restore.py --output /tmp/radar-restore
+```
+
+It does not replace the production PostgreSQL/object-lock drill.
+
+## Partial report
+
+- Continue when one source fails and remaining evidence can still support every claim.
+- Mark the source `degraded` or `failed`, preserve the error category, and show the coverage gap.
+- Recompute independence using only available originating chains.
+- Never retain a Flash classification that no longer satisfies its deterministic confirmation rule.
+- Hold publication when evidence lineage or verification is incomplete.
+
+## Rollback
+
+1. Disable schedules and external delivery first; do not delete evidence.
+2. Pin the last approved code, policy, schema, and template revisions.
+3. Drain or dead-letter claimed work; preserve idempotency keys.
+4. Roll back application services. Apply a database rollback only if a reviewed forward-compatible
+   migration is impossible.
+5. Replay one frozen fixture and one restored production run in shadow mode.
+6. Re-enable collection by approved source class, then schedules, then delivery.
+7. Record the rollback decision, approver, hashes, affected runs, and residual risk.
+
+## Internal API identity failure
+
+- Confirm the request arrived only from the configured mTLS proxy IP.
+- Confirm the proxy verified the client certificate and stripped caller-supplied identity headers.
+- Compare the injected SHA-256 fingerprint with the configured role map.
+- Return 401 for an untrusted proxy/certificate, 403 for a valid identity with the wrong role, and
+  503 when the identity map or durable repository is unavailable.
+- Never make the API externally reachable to repair identity propagation.

@@ -3,46 +3,47 @@
 ## P0 — Foundation and safety boundary
 
 - [ ] Create private GitHub repository and configure protected `main`
-- [ ] Replace placeholder CODEOWNERS teams
-- [ ] Pin every GitHub Action to a reviewed commit SHA
-- [ ] Run `openclaw config schema` and adapt `openclaw.example.json5`
-- [ ] Create ADRs for database, queue, object storage, egress, retention, and model providers
+- [x] Replace placeholder CODEOWNERS teams
+- [x] Pin every GitHub Action to a reviewed commit SHA
+- [x] Run `openclaw config schema` and adapt `openclaw.example.json5`
+- [x] Create ADRs for database, queue, object storage, egress, retention, and model providers
 - [ ] Implement secret-store integration and per-role identities
-- [ ] Implement strict OpenAPI contract and generated clients
-- [ ] Create PostgreSQL migrations and immutable artifact records
-- [ ] Implement centralized safe-fetch gateway and SSRF tests
-- [ ] Implement raw object store and content hashing
-- [ ] Implement run/step state machine and idempotency
-- [ ] Implement source registry, cursor, health, terms, and retention records
+- [x] Implement strict OpenAPI contract
+- [ ] Generate language-specific clients when a deployment consumer requires them
+- [x] Create PostgreSQL migrations and immutable artifact records
+- [x] Implement centralized safe-fetch gateway and SSRF tests
+- [x] Implement raw object store and content hashing
+- [x] Implement run/step state machine and idempotency
+- [x] Implement source registry, cursor, health, terms, and retention records
 
 ## P0 — Content security
 
 - [ ] Isolated parser workers with CPU/memory/time/file limits
-- [ ] HTML active-content and hidden-text removal
-- [ ] Unicode and encoding canonicalization
-- [ ] Archive depth/ratio/member controls
+- [x] HTML active-content and hidden-text removal
+- [x] Unicode and encoding canonicalization
+- [x] Archive depth/ratio/member controls
 - [ ] PDF/document/image safe extraction strategy
 - [ ] Malware scanning and YARA integration
-- [ ] Prompt-injection risk classifier and security event records
-- [ ] Bounded evidence excerpt creation
-- [ ] Cross-agent JSON Schema validation and unknown-field rejection
-- [ ] No raw content route to analytical agents
+- [x] Prompt-injection risk classifier and security event records
+- [x] Bounded evidence excerpt creation
+- [x] Cross-agent JSON Schema validation and unknown-field rejection
+- [x] No raw content route to analytical agents
 
 ## P0 — First vertical slice
 
-- [ ] CISA KEV connector
-- [ ] CVE List V5 connector
-- [ ] NVD connector
-- [ ] EPSS enrichment
-- [ ] OSV connector
-- [ ] GitHub Advisory connector
-- [ ] CVE/package/entity normalization
-- [ ] Evidence ledger and source-lineage graph
-- [ ] Deterministic scoring
-- [ ] Specialist, skeptic, verifier, and chief coordinator execution
-- [ ] Report JSON, HTML renderer, Discord delivery
-- [ ] Usage and estimated cost attribution
-- [ ] Replay test from frozen artifacts
+- [x] CISA KEV connector
+- [x] CVE List V5 connector
+- [x] NVD connector
+- [x] EPSS enrichment
+- [x] OSV connector
+- [x] GitHub Advisory connector
+- [x] CVE/package/entity normalization
+- [x] Evidence ledger and source-lineage graph
+- [x] Deterministic scoring
+- [x] Bounded specialist, skeptic, verifier, and chief shadow chain
+- [x] Report JSON, HTML renderer, and fixed-destination Discord delivery plan
+- [x] Usage and estimated cost attribution
+- [x] Replay test from frozen artifacts
 
 ## P1 — Emerging precursor coverage
 
@@ -56,15 +57,15 @@
 - [ ] Brave freshness query planner
 - [ ] Curated X researcher adapter
 - [ ] Curated Reddit adapter
-- [ ] Media-baseline and lead-time calculation
+- [x] Media-baseline and lead-time calculation
 
 ## P1 — Analytics and quality
 
 - [ ] 15m/1h/6h/24h/7d feature windows
 - [ ] EWMA and CUSUM burst features
-- [ ] Independent-source classification
+- [x] Independent-source classification
 - [ ] Historical source reliability calibration
-- [ ] Organization relevance plug-in and demo inventory
+- [x] Organization relevance plug-in and demo inventory
 - [ ] Confidence calibration
 - [ ] Correction/downgrade workflow
 - [ ] Analyst feedback UI/API
@@ -72,13 +73,13 @@
 ## P1 — Reliability and operations
 
 - [ ] Task Flow integration and gateway-restart recovery
-- [ ] Dead-letter queue and replay tooling
+- [x] Dead-letter queue and deterministic replay primitive
 - [ ] Model/provider and source circuit breakers
-- [ ] Partial-report behavior
-- [ ] Delivery idempotency and receipts
+- [x] Partial-report behavior
+- [x] Delivery idempotency and receipts
 - [ ] Backup/restore automation and test
-- [ ] OpenTelemetry metrics, traces, and redacted logs
-- [ ] SLO dashboards and operator alerts
+- [x] OpenTelemetry metrics/traces with bounded content-free attributes
+- [x] Prometheus operator alert rules
 - [ ] Incident runbooks exercised
 
 ## P1 — Evaluation and launch

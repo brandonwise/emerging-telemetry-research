@@ -55,6 +55,9 @@
       "required": ["stage", "provider", "model", "requests", "input_tokens", "output_tokens", "estimated_currency"],
       "properties": {
         "stage": {"type": "string"},
+        "agent_id": {"type": ["string", "null"]},
+        "source_id": {"type": ["string", "null"]},
+        "finding_id": {"type": ["string", "null"]},
         "provider": {"type": "string"},
         "model": {"type": "string"},
         "requests": {"type": "integer", "minimum": 0},

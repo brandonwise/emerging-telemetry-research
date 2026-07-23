@@ -1,0 +1,30 @@
+{
+  "run_id": "run_fixture_early_watch",
+  "generated_at": "2026-07-22T13:30:00Z",
+  "edition": "morning",
+  "window": {
+    "start": "2026-07-22T12:00:00Z",
+    "end": "2026-07-22T13:30:00Z",
+    "timezone": "America/New_York"
+  },
+  "inventory": ["Acme Widget"],
+  "sources": [
+    {
+      "source_id": "cisa-kev",
+      "file": "cisa-kev.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "retrieved_at": "2026-07-22T12:05:00Z",
+      "independence_group": "cisa-kev"
+    },
+    {
+      "source_id": "nvd-cve",
+      "file": "nvd-cve.json",
+      "content_type": "application/json",
+      "canonical_uri": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-9999",
+      "retrieved_at": "2026-07-22T13:05:00Z",
+      "independence_group": "nvd"
+    }
+  ],
+  "lineage": []
+}
