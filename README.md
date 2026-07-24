@@ -84,17 +84,19 @@ Start on loopback:
 scripts/run-portal.sh
 ```
 
-Expose it to private systems on the same network:
+On the production OpenClaw macOS host, install the persistent Keychain-backed private-LAN service:
 
 ```bash
-export RADAR_PORTAL_ACCESS_TOKEN="$(openssl rand -hex 24)"
-scripts/run-portal.sh --lan
+scripts/install-portal-service.sh
+scripts/portal-status.sh
 ```
 
 LAN mode binds `0.0.0.0` but accepts only configured private networks and refuses to start without
 a 20+ character access token. Use `--certfile` and `--keyfile` for TLS; otherwise use only a trusted
 LAN or an encrypted overlay such as Tailscale. The portal is read-only and includes responsive
 overview, report search/detail, trends, source health, print styling, and CSV/JSON/HTML exports.
+The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
+Keychain without writing it to the plist or logs.
 
 ## Platform onboarding
 

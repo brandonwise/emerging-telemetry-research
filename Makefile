@@ -1,4 +1,4 @@
-.PHONY: validate test lint typecheck acceptance restore-test api analytics portal stack-up stack-down
+.PHONY: validate test lint typecheck acceptance restore-test api analytics portal portal-install portal-status portal-uninstall stack-up stack-down
 
 validate:
 	python scripts/validate_repo.py
@@ -26,6 +26,15 @@ analytics:
 
 portal:
 	scripts/run-portal.sh
+
+portal-install:
+	scripts/install-portal-service.sh
+
+portal-status:
+	scripts/portal-status.sh
+
+portal-uninstall:
+	scripts/uninstall-portal-service.sh
 
 stack-up:
 	docker compose -f infra/docker-compose.yml up -d

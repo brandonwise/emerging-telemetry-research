@@ -182,6 +182,28 @@ uv run threat-radar improve rollback \
 The rollback refuses to run if the active scoring policy changed after apply or if the snapshot hash
 does not match the receipt.
 
+## Portal service
+
+The local OpenClaw host runs the read-only portal as a per-user LaunchAgent:
+
+```bash
+scripts/install-portal-service.sh
+scripts/portal-status.sh
+```
+
+The installer creates the portal access token in macOS Keychain if absent, installs
+`ai.openclaw.threat-radar-portal`, verifies `/health`, and records a bounded analytics event. It
+never prints the token. Service logs are `~/.openclaw/logs/threat-radar-portal*.log`.
+
+Rollback is recoverable and preserves data:
+
+```bash
+scripts/uninstall-portal-service.sh
+```
+
+This boots out the service and moves its plist to Trash. It preserves the token unless
+`--purge-token` is explicit. It never deletes `state/radar.db`, reports, evidence, or exports.
+
 ## Rollback
 
 1. Disable schedules and external delivery first; do not delete evidence.

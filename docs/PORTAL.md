@@ -15,6 +15,24 @@ optional because the operating-system boundary already restricts access.
 
 ## Private-LAN mode
 
+For this OpenClaw host, install the persistent Keychain-backed LaunchAgent:
+
+```bash
+scripts/install-portal-service.sh
+scripts/portal-status.sh
+```
+
+The service starts at login, restarts after failure, stores no token in its plist or environment,
+and writes logs under `~/.openclaw/logs`. Remove it without deleting analytics or the access token:
+
+```bash
+scripts/uninstall-portal-service.sh
+```
+
+Add `--purge-token` only when the Keychain token should also be deleted.
+
+For an interactive foreground process instead:
+
 ```bash
 export RADAR_PORTAL_ACCESS_TOKEN="$(openssl rand -hex 24)"
 scripts/run-portal.sh --lan --port 8088
