@@ -36,7 +36,7 @@ def check_release_gates(failures: list[str]) -> None:
     report = load_yaml("config/report.yaml")
     terms = load_yaml("config/source-terms.yaml")
     approval_text = (ROOT / "THREAT_MODEL_APPROVAL.md").read_text(encoding="utf-8")
-    approval_pending = "Status: pending" in approval_text
+    approval_pending = "Status: approved" not in approval_text
 
     source_items = sources.get("sources", [])
     if not isinstance(source_items, list):
@@ -62,8 +62,14 @@ def check_release_gates(failures: list[str]) -> None:
         failures.append("Threat model is pending but external delivery is enabled")
     if approval_pending and discord.get("enabled") is not False:
         failures.append("Threat model is pending but Discord delivery is enabled")
-    if publication.get("shadow_mode") is not True:
-        failures.append("First deployment must remain in shadow mode")
+    if approval_pending and publication.get("shadow_mode") is not True:
+        failures.append("Unapproved deployments must remain in shadow mode")
+    if (
+        not approval_pending
+        and publication.get("external_delivery_enabled") is True
+        and publication.get("shadow_mode") is not False
+    ):
+        failures.append("Approved external delivery cannot be labeled shadow mode")
 
     source_terms = terms.get("sources", {})
     default_terms_status = terms.get("default_status")
@@ -80,6 +86,8 @@ def check_release_gates(failures: list[str]) -> None:
         if not isinstance(source, dict) or source.get("enabled") is not True:
             continue
         source_id = str(source.get("id"))
+        if not source.get("collection_approval_id"):
+            failures.append(f"Enabled source {source_id} has no approval reference")
         record = source_terms.get(source_id, {}) if isinstance(source_terms, dict) else {}
         status_value = record.get("status", default_terms_status)
         if status_value != "approved":

@@ -7,7 +7,8 @@
 - [x] Pin every GitHub Action to a reviewed commit SHA
 - [x] Run `openclaw config schema` and adapt `openclaw.example.json5`
 - [x] Create ADRs for database, queue, object storage, egress, retention, and model providers
-- [ ] Implement secret-store integration and per-role identities
+- [x] Implement macOS Keychain secret integration for the local production runner
+- [ ] Implement portable per-role workload identities for non-local deployments
 - [x] Implement strict OpenAPI contract
 - [ ] Generate language-specific clients when a deployment consumer requires them
 - [x] Create PostgreSQL migrations and immutable artifact records
@@ -54,8 +55,8 @@
 - [ ] Typosquat/homoglyph detection
 - [ ] Certificate transparency and suspicious domain adapter
 - [ ] Vendor CSAF 2.1/VEX feed directory
-- [ ] Brave freshness query planner
-- [ ] Curated X researcher adapter
+- [x] Brave freshness query planner
+- [x] Curated X researcher adapter through xAI server-side X Search
 - [ ] Curated Reddit adapter
 - [x] Media-baseline and lead-time calculation
 
@@ -72,12 +73,14 @@
 
 ## P1 — Reliability and operations
 
-- [ ] Task Flow integration and gateway-restart recovery
+- [x] Lobster workflow and isolated OpenClaw cron integration
+- [ ] Durable mid-run resume across gateway restarts
 - [x] Dead-letter queue and deterministic replay primitive
 - [ ] Model/provider and source circuit breakers
 - [x] Partial-report behavior
 - [x] Delivery idempotency and receipts
-- [ ] Backup/restore automation and test
+- [x] Local immutable-evidence restore test
+- [ ] Off-host PostgreSQL PITR and object-store disaster-recovery automation
 - [x] OpenTelemetry metrics/traces with bounded content-free attributes
 - [x] Prometheus operator alert rules
 - [ ] Incident runbooks exercised
@@ -89,10 +92,10 @@
 - [ ] Injection corpus across all parsers
 - [ ] Chaos/failure test suite
 - [ ] Precision, lead-time, calibration, cost, and citation dashboards
-- [ ] Shadow mode
-- [ ] Human release review
-- [ ] OpenClaw deep security audit
-- [ ] Production readiness review
+- [x] Frozen shadow evaluation path
+- [x] Human approval for the bounded local daily brief
+- [ ] Accumulate Flash-release shadow metrics
+- [ ] Complete off-host production readiness review
 
 ## P2 — Expansion
 

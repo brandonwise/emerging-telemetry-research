@@ -81,6 +81,54 @@ async def test_redirect_to_private_address_is_rejected_before_second_request() -
 
 
 @pytest.mark.asyncio
+async def test_cross_origin_redirect_strips_all_credential_headers() -> None:
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if request.url.host == "feed.example":
+            return httpx.Response(
+                302,
+                headers={"Location": "https://cdn.example/data"},
+                request=request,
+            )
+        assert "authorization" not in request.headers
+        assert "x-subscription-token" not in request.headers
+        assert "x-api-key" not in request.headers
+        return httpx.Response(
+            200,
+            headers={"Content-Type": "application/json"},
+            content=b'{"ok":true}',
+            request=request,
+        )
+
+    resolver = SequenceResolver(
+        {
+            "feed.example": iter([("93.184.216.34",)]),
+            "cdn.example": iter([("93.184.216.35",), ("93.184.216.35",)]),
+        }
+    )
+    result = await SafeFetchService(
+        resolver=resolver,
+        transport=httpx.MockTransport(handler),
+    ).fetch(
+        SafeFetchRequest(
+            source_id="fixture",
+            url="https://feed.example/data",
+            allowed_hosts=("feed.example", "cdn.example"),
+            allowed_content_types=("application/json",),
+            headers={
+                "Authorization": "secret",
+                "X-Subscription-Token": "secret",
+                "X-Api-Key": "secret",
+            },
+        )
+    )
+    assert result.final_url == "https://cdn.example/data"
+    assert len(calls) == 2
+
+
+@pytest.mark.asyncio
 async def test_response_size_limit_is_enforced() -> None:
     resolver = SequenceResolver({"feed.example": iter([("93.184.216.34",)])})
     service = SafeFetchService(
@@ -122,3 +170,31 @@ async def test_nonpositive_rate_limit_is_rejected_before_network_access() -> Non
                 rate_limit_per_minute=0,
             )
         )
+
+
+@pytest.mark.asyncio
+async def test_explicit_expected_not_found_response_is_returned() -> None:
+    resolver = SequenceResolver(
+        {"feed.example": iter([("93.184.216.34",), ("93.184.216.34",)])}
+    )
+    result = await SafeFetchService(
+        resolver=resolver,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                404,
+                headers={"Content-Type": "application/json"},
+                content=b'{"message":"not found"}',
+                request=request,
+            )
+        ),
+    ).fetch(
+        SafeFetchRequest(
+            source_id="fixture",
+            url="https://feed.example/data",
+            allowed_hosts=("feed.example",),
+            allowed_content_types=("application/json",),
+            accepted_status_codes=(404,),
+        )
+    )
+    assert result.status_code == 404
+    assert result.content == b'{"message":"not found"}'

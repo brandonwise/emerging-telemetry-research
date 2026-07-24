@@ -16,7 +16,8 @@ sources:
     name: CISA Known Exploited Vulnerabilities
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: cisa_kev
     schedule: "*/15 * * * *"
     rate_limit_per_minute: 4
@@ -26,7 +27,8 @@ sources:
     name: CVE List V5
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: cve_v5
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 4
@@ -36,7 +38,8 @@ sources:
     name: NVD CVE API
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: nvd
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 5
@@ -46,7 +49,8 @@ sources:
     name: FIRST EPSS
     class: exploit_probability
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: epss
     schedule: "17 */6 * * *"
     rate_limit_per_minute: 4
@@ -56,7 +60,8 @@ sources:
     name: Open Source Vulnerabilities
     class: ecosystem_advisory
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: osv
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 10
@@ -66,7 +71,8 @@ sources:
     name: GitHub Global Security Advisories
     class: ecosystem_advisory
     trust_tier: 0
-    enabled: false
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
     adapter: github_advisory
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 10
@@ -136,8 +142,9 @@ sources:
     name: Curated X Researcher Signals
     class: social_research
     trust_tier: 2
-    enabled: false
-    adapter: x_search
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
+    adapter: xai_x_search
     schedule: "7 * * * *"
     rate_limit_per_minute: 10
     confirmation_role: discovery
@@ -163,8 +170,9 @@ sources:
     name: Brave Web Discovery
     class: web_discovery
     trust_tier: 2
-    enabled: false
-    adapter: openclaw_brave_search
+    enabled: true
+    collection_approval_id: discord-1530156178129289346
+    adapter: brave_search_api
     schedule: "23 * * * *"
     rate_limit_per_minute: 10
     confirmation_role: discovery

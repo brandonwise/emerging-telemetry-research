@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -11,19 +12,28 @@ from uuid import uuid4
 import typer
 
 from packages.common.canonical import canonical_json_bytes
+from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.discovery.clients import BraveSearchClient, XaiXSearchClient
 from packages.evaluation.harness import run_acceptance_suite
 from packages.pipeline.frozen import run_frozen_fixture
+from packages.pipeline.live import LiveRunSettings, run_live_radar
+from packages.storage.runtime import (
+    ProductionStoreSettings,
+    initialize_production_stores,
+)
 
 app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
 fixture_app = typer.Typer(no_args_is_help=True)
 report_app = typer.Typer(no_args_is_help=True)
 eval_app = typer.Typer(no_args_is_help=True)
+live_app = typer.Typer(no_args_is_help=True)
 app.add_typer(run_app, name="run")
 app.add_typer(fixture_app, name="fixture")
 app.add_typer(report_app, name="report")
 app.add_typer(eval_app, name="eval")
+app.add_typer(live_app, name="live")
 
 
 def emit(payload: dict[str, Any], pretty: bool = False) -> None:
@@ -86,6 +96,71 @@ def fixture_run(
             "external_delivery": "disabled",
         },
         pretty=not json_output,
+    )
+
+
+@live_app.command("run")
+def live_run(
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
+    channel_id: Annotated[str, typer.Option("--channel-id")] = "1476897068885872814",
+    edition: Annotated[str, typer.Option("--edition")] = "morning",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    if not channel_id.isdigit():
+        raise typer.BadParameter("Discord channel ID must be numeric")
+    if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
+        raise typer.BadParameter("unsupported live edition")
+    stores = initialize_production_stores(
+        ProductionStoreSettings(
+            database_url=_required_env("RADAR_DATABASE_URL"),
+            s3_endpoint_url=_required_env("RADAR_S3_ENDPOINT_URL"),
+            s3_access_key_id=_required_env("RADAR_S3_ACCESS_KEY_ID"),
+            s3_secret_access_key=_required_env("RADAR_S3_SECRET_ACCESS_KEY"),
+            s3_bucket=_required_env("RADAR_S3_BUCKET"),
+            s3_region=os.environ.get("RADAR_S3_REGION", "us-east-1"),
+            server_side_encryption=_s3_encryption_mode(),
+        ),
+        migrations_root=Path("migrations"),
+    )
+    result = asyncio.run(
+        run_live_radar(
+            LiveRunSettings(
+                output_root=output,
+                discord_channel_id=channel_id,
+                edition=edition,
+            ),
+            brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
+            x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
+            official_client=OfficialSourceClient(),
+            object_store=stores.object_store,
+            repository=stores.repository,
+        )
+    )
+    emit(
+        {
+            "run_id": result.run_id,
+            "report_id": result.report["report_id"],
+            "report_json": str(result.report_json_path.resolve()),
+            "html_path": str(result.rendered.path.resolve()),
+            "delivery_plan": str(result.delivery_plan_path.resolve()),
+            "idempotency_key": result.delivery_plan["idempotency_key"],
+            "summary": result.summary,
+            "candidate_cves": list(result.candidate_cves),
+            "degraded_sources": list(result.degraded_sources),
+            "external_delivery": "ready",
+        },
+        pretty=not json_output,
+    )
+
+
+def _s3_encryption_mode() -> str | None:
+    value = os.environ.get("RADAR_S3_SERVER_SIDE_ENCRYPTION", "AES256")
+    if value == "AES256":
+        return value
+    if value == "none":
+        return None
+    raise typer.BadParameter(
+        "RADAR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none"
     )
 
 
@@ -161,6 +236,13 @@ def blocked_live_collection() -> None:
         }
     )
     raise typer.Exit(code=2)
+
+
+def _required_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise typer.BadParameter(f"{name} is required")
+    return value
 
 
 if __name__ == "__main__":

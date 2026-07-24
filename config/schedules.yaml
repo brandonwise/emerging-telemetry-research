@@ -1,6 +1,6 @@
 version: 1
 timezone: America/New_York
-enabled: false
+enabled: true
 enablement_requires:
   - approved_threat_model
   - approved_source_terms
@@ -9,36 +9,42 @@ enablement_requires:
 
 jobs:
   structured_ingest:
+    enabled: false
     cron: "*/15 * * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated
     args: ["--mode", "structured-ingest"]
 
   hourly_discovery:
+    enabled: false
     cron: "8 * * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated
     args: ["--mode", "hourly-discovery"]
 
   watch_refresh:
+    enabled: false
     cron: "22 */4 * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated
     args: ["--mode", "watch-refresh"]
 
   morning_brief:
+    enabled: true
     cron: "30 7 * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated
     args: ["--mode", "daily-brief", "--edition", "morning"]
 
   afternoon_delta:
+    enabled: false
     cron: "0 15 * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated
     args: ["--mode", "daily-brief", "--edition", "afternoon-delta"]
 
   weekly_evaluation:
+    enabled: false
     cron: "0 9 * * 1"
     workflow: openclaw/workflows/evaluation.lobster
     mode: isolated

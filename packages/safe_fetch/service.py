@@ -16,7 +16,14 @@ from packages.security_gateway.url_policy import (
 )
 
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
-SENSITIVE_HEADERS = {"authorization", "cookie", "proxy-authorization"}
+SENSITIVE_HEADERS = {
+    "authorization",
+    "cookie",
+    "proxy-authorization",
+    "x-api-key",
+    "x-auth-token",
+    "x-subscription-token",
+}
 
 
 class SafeFetchError(RuntimeError):
@@ -68,6 +75,7 @@ class SafeFetchRequest:
     max_redirects: int = 3
     timeout_seconds: float = 20
     rate_limit_per_minute: int = 60
+    accepted_status_codes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +108,8 @@ class SafeFetchService:
     async def fetch(self, request: SafeFetchRequest) -> SafeFetchResult:
         if request.max_response_bytes <= 0:
             raise SafeFetchError("response byte limit must be positive")
+        if any(code < 400 or code > 499 for code in request.accepted_status_codes):
+            raise SafeFetchError("accepted non-success statuses must be 4xx responses")
         await self.rate_limiter.acquire(request.source_id, request.rate_limit_per_minute)
         current_url = canonicalize_url(request.url)
         headers = {
@@ -139,7 +149,10 @@ class SafeFetchService:
                             redirect_chain.append(next_url)
                             current_url = next_url
                             continue
-                        if response.status_code < 200 or response.status_code >= 300:
+                        if not (
+                            200 <= response.status_code < 300
+                            or response.status_code in request.accepted_status_codes
+                        ):
                             raise SafeFetchError(f"upstream returned HTTP {response.status_code}")
                         content_type = (
                             response.headers.get("content-type", "").split(";", 1)[0].lower()

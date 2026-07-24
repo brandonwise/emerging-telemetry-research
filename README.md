@@ -2,14 +2,15 @@
 
 A security-first, evidence-backed cyber-threat early-warning system for OpenClaw.
 
-The implemented shadow-mode vertical slice ingests frozen CISA KEV, CVE List V5, NVD, EPSS,
-OSV, and GitHub Advisory fixtures; captures immutable evidence; sanitizes hostile content;
-normalizes CVE/package entities; builds source lineage; scores deterministically; runs bounded
-specialist, skeptic, citation-verifier, and coordinator reviews; and produces verified report JSON,
-Discord delivery plans, self-contained HTML, usage records, and a hash-chained audit log.
+The approved local production path uses Brave Search API and xAI server-side X Search for bounded
+discovery, then corroborates candidates with CISA KEV, CVE List V5, NVD, FIRST EPSS, OSV, and
+GitHub Global Security Advisories. It captures authoritative evidence in PostgreSQL and an
+object-locked, versioned S3-compatible store; sanitizes hostile content; normalizes entities; builds
+source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
+and delivers through a fixed-destination, idempotent OpenClaw tool.
 
-Live collection, schedules, and external delivery are deliberately disabled. They cannot be enabled
-until the threat model, source terms, deployment, and production-readiness gates are approved.
+The daily OpenClaw job runs at 7:30 AM America/New_York. Browser automation is not part of source
+collection; it is used only for report-rendering QA.
 
 ## Run it
 
@@ -31,6 +32,17 @@ uv run threat-radar fixture run \
   --output /tmp/radar-flash \
   --json
 ```
+
+Run the approved live pipeline locally:
+
+```bash
+scripts/run-live.sh
+```
+
+The script loads Brave, xAI, PostgreSQL, and MinIO credentials from macOS Keychain, verifies
+FileVault, starts the loopback-only data services when needed, applies immutable migrations and
+bucket retention, and emits one delivery-ready JSON object. It does not send Discord messages
+directly; delivery remains isolated behind `radar_delivery_send`.
 
 The internal API is available with:
 
@@ -79,20 +91,15 @@ approved source plan
 OpenClaw cron and reviewed Lobster workflows own orchestration. PostgreSQL owns durable state.
 Conversation history owns neither.
 
-## Release boundaries
+## Production boundary
 
-Read [BLOCKERS.md](BLOCKERS.md) and [THREAT_MODEL_APPROVAL.md](THREAT_MODEL_APPROVAL.md). Until those
-records are resolved:
+Read [BLOCKERS.md](BLOCKERS.md) and [THREAT_MODEL_APPROVAL.md](THREAT_MODEL_APPROVAL.md). Approval is
+limited to this local OpenClaw instance, the explicitly enabled sources, and the private fixed
+Discord destination. Browser collection, arbitrary web execution, authenticated vendor portals,
+malware detonation, organization inventory, and autonomous defensive action remain out of scope.
 
-- every source in `config/sources.yaml` remains disabled;
-- `config/schedules.yaml` remains globally disabled;
-- Discord and all external delivery remain disabled;
-- the live Lobster workflow exits through a blocking approval gate;
-- only frozen-fixture and shadow evaluation paths are runnable.
-
-The private GitHub repository, branch protection, browser-rendered UI review, live source
-authorization, and Discord destination are operator actions and are intentionally not performed by
-the local build.
+Disabled source classes stay fail-closed until their terms, credentials, and threat-model changes
+receive separate approval.
 
 ## Documentation
 

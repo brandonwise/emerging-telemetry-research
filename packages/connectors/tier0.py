@@ -37,11 +37,15 @@ def parse_tier0(
     return parser(content, observed_at)
 
 
-def _json(content: bytes) -> dict[str, Any]:
+def _json_value(content: bytes) -> object:
     try:
-        value = json.loads(content)
+        return json.loads(content)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ConnectorParseError("invalid JSON feed") from exc
+
+
+def _json(content: bytes) -> dict[str, Any]:
+    value = _json_value(content)
     if not isinstance(value, dict):
         raise ConnectorParseError("feed root must be an object")
     return value
@@ -131,7 +135,12 @@ def _parse_nvd(content: bytes, observed_at: datetime) -> tuple[ObservationDraft,
                 source_id="nvd-cve",
                 source_role="authoritative_advisory",
                 observed_at=observed_at,
-                published_at=_optional_timestamp(item.get("published")),
+                # NVD's CVE API documents these timestamps as UTC but omits the
+                # offset marker in current responses.
+                published_at=_optional_timestamp(
+                    item.get("published"),
+                    assume_utc=True,
+                ),
                 claims=(claim,),
                 identifiers=(cve,),
                 cvss_base_score=score,
@@ -141,11 +150,27 @@ def _parse_nvd(content: bytes, observed_at: datetime) -> tuple[ObservationDraft,
 
 
 def _parse_epss(content: bytes, observed_at: datetime) -> tuple[ObservationDraft, ...]:
+    if content.lstrip().startswith(b"{"):
+        root = _json(content)
+        rows = root.get("data")
+        if not isinstance(rows, list):
+            raise ConnectorParseError("invalid EPSS JSON response")
+        return _epss_rows(
+            [item for item in rows if isinstance(item, dict)],
+            observed_at,
+        )
     try:
         decoded = content.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ConnectorParseError("invalid EPSS CSV encoding") from exc
     rows = csv.DictReader(line for line in decoded.splitlines() if not line.startswith("#"))
+    return _epss_rows(list(rows), observed_at)
+
+
+def _epss_rows(
+    rows: list[dict[str, Any]],
+    observed_at: datetime,
+) -> tuple[ObservationDraft, ...]:
     results: list[ObservationDraft] = []
     for row in rows:
         cve = _cve(row.get("cve"))
@@ -224,9 +249,12 @@ def _parse_github_advisories(
     content: bytes,
     observed_at: datetime,
 ) -> tuple[ObservationDraft, ...]:
-    root = _json(content)
+    root_value = _json_value(content)
+    root = root_value if isinstance(root_value, dict) else {}
     data = root.get("data")
     advisories: list[dict[str, Any]] = []
+    if isinstance(root_value, list):
+        advisories = [item for item in root_value if isinstance(item, dict)]
     if isinstance(data, dict):
         security_advisories = data.get("securityAdvisories")
         if isinstance(security_advisories, dict):
@@ -235,7 +263,7 @@ def _parse_github_advisories(
         advisories = _object_list(root.get("advisories"))
     results: list[ObservationDraft] = []
     for item in advisories:
-        ghsa = safe_source_text(item.get("ghsaId"), 100)
+        ghsa = safe_source_text(item.get("ghsaId") or item.get("ghsa_id"), 100)
         if not ghsa:
             continue
         identifiers = [ghsa.upper()]
@@ -243,6 +271,9 @@ def _parse_github_advisories(
             value = safe_source_text(identifier.get("value"), 100)
             if value:
                 identifiers.append(value.upper())
+        cve_id = safe_source_text(item.get("cve_id"), 100)
+        if cve_id:
+            identifiers.append(cve_id.upper())
         cve_names = [value for value in identifiers if CVE_PATTERN.fullmatch(value)]
         target = cve_names[0] if cve_names else ghsa.upper()
         results.append(
@@ -250,7 +281,9 @@ def _parse_github_advisories(
                 source_id="github-advisories",
                 source_role="authoritative_advisory",
                 observed_at=observed_at,
-                published_at=_optional_timestamp(item.get("publishedAt")),
+                published_at=_optional_timestamp(
+                    item.get("publishedAt") or item.get("published_at")
+                ),
                 claims=(f"GitHub advisory {ghsa.upper()} references {target}.",),
                 identifiers=tuple(dict.fromkeys(identifiers)),
             )
@@ -277,9 +310,20 @@ def _cve(value: object) -> str | None:
     return text.upper()
 
 
-def _optional_timestamp(value: object) -> datetime | None:
+def _optional_timestamp(
+    value: object,
+    *,
+    assume_utc: bool = False,
+) -> datetime | None:
     text = safe_source_text(value, 80)
-    return parse_timestamp(text) if text else None
+    if not text:
+        return None
+    try:
+        return parse_timestamp(text)
+    except ValueError as exc:
+        if assume_utc and str(exc) == "timestamp must include an offset":
+            return parse_timestamp(f"{text}Z")
+        raise
 
 
 def _optional_date(value: object) -> datetime | None:

@@ -1,10 +1,26 @@
 # Threat model approval
 
-Status: pending
+Status: approved
 
-Collection authorization: disabled
+Collection authorization: enabled
 
-External delivery authorization: disabled
+External delivery authorization: enabled
+
+Approval reference: discord:channel:1476283808587321451:message:1530156178129289346
+
+Approver: bwise (Discord user 398959546116079616)
+
+Approval timestamp: 2026-07-24T10:14:21Z
+
+Reviewed architecture commit: 984ee9c
+
+Environment: Brandon Wise local OpenClaw production instance
+
+Residual-risk acceptance: Read-only collection from the approved sources below, bounded paid API
+usage, short-lived discovery results, immutable authoritative evidence, and verified delivery to
+the private Discord `#news` channel are accepted. Browser-based collection, arbitrary web
+execution, authenticated vendor portals, malware detonation, and autonomous defensive changes
+remain out of scope.
 
 ## Approval scope
 
@@ -16,13 +32,16 @@ initial source classes:
 - FIRST EPSS
 - OSV
 - GitHub Global Security Advisories
+- Brave Search API for discovery only; API responses are not retained as evidence
+- xAI server-side X Search against the curated account allowlist for discovery only; model output
+  and raw X posts are not promoted without authoritative corroboration
 
-Approval does not cover browser-based discovery, social platforms, authenticated vendor portals,
-Tor, malware detonation, or organization inventory.
+Approval does not cover browser-based collection, unrestricted social search, authenticated vendor
+portals, Tor, malware detonation, or organization inventory.
 
 ## Required sign-off record
 
-Before collection is enabled, replace `pending` with an immutable approval reference containing:
+This approval record contains:
 
 - approver identity
 - approval timestamp
@@ -31,5 +50,5 @@ Before collection is enabled, replace `pending` with an immutable approval refer
 - approved environment
 - residual-risk acceptance
 
-An approval does not enable collection by itself. Configuration, egress, credentials, source terms,
-and production-readiness gates must also pass.
+Configuration, egress, credentials, source terms, and production-readiness gates must also pass
+before the first external delivery.

@@ -1,7 +1,8 @@
 # Delivery Manifest
 
-This package contains the security-first shadow-mode implementation of the OpenClaw Emerging Threat
-Radar vertical slice. Live collection and external delivery remain approval-gated.
+This package contains the security-first OpenClaw Emerging Threat Radar implementation. The
+approved local deployment performs live Brave and X discovery, authoritative corroboration, and
+fixed-destination Discord delivery; unapproved source classes remain fail-closed.
 
 ## Primary handoff documents
 

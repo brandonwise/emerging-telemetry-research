@@ -79,10 +79,19 @@ class LocalImmutableObjectStore:
 
 
 class S3ImmutableObjectStore:
-    def __init__(self, client: Any, bucket: str, prefix: str = "raw") -> None:
+    def __init__(
+        self,
+        client: Any,
+        bucket: str,
+        prefix: str = "raw",
+        server_side_encryption: str | None = "AES256",
+    ) -> None:
+        if server_side_encryption not in {None, "AES256"}:
+            raise ValueError("unsupported S3 server-side encryption mode")
         self.client = client
         self.bucket = bucket
         self.prefix = prefix.strip("/")
+        self.server_side_encryption = server_side_encryption
 
     def put(self, content: bytes, metadata: dict[str, str]) -> StoredObject:
         content_hash = sha256_hex(content)
@@ -103,13 +112,17 @@ class S3ImmutableObjectStore:
                 size=int(response["ContentLength"]),
                 version_id=response.get("VersionId"),
             )
+        put_options: dict[str, Any] = {
+            "Bucket": self.bucket,
+            "Key": key,
+            "Body": content,
+            "ContentType": "application/octet-stream",
+            "Metadata": {**metadata, "content_hash": content_hash},
+        }
+        if self.server_side_encryption is not None:
+            put_options["ServerSideEncryption"] = self.server_side_encryption
         response = self.client.put_object(
-            Bucket=self.bucket,
-            Key=key,
-            Body=content,
-            ContentType="application/octet-stream",
-            Metadata={**metadata, "content_hash": content_hash},
-            ServerSideEncryption="AES256",
+            **put_options,
         )
         return StoredObject(
             key=key,

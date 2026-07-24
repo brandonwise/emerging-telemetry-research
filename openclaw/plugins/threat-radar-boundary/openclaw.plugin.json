@@ -6,6 +6,13 @@
   "enabledByDefault": false,
   "name": "Threat Radar Boundary",
   "description": "Narrow TaskFlow lifecycle and verified Discord report delivery.",
+  "contracts": {
+    "tools": [
+      "radar_flow_start",
+      "radar_flow_finish",
+      "radar_delivery_send"
+    ]
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

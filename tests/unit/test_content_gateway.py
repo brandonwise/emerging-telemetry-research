@@ -7,6 +7,7 @@ import pytest
 from packages.security_gateway.gateway import (
     ContentGatewayError,
     ContentSecurityGateway,
+    TextArtifactMalwareScanner,
     validate_zip_archive,
 )
 
@@ -47,3 +48,13 @@ def test_zip_traversal_and_bomb_ratio_are_rejected() -> None:
 def test_executable_mime_is_rejected() -> None:
     with pytest.raises(ContentGatewayError, match="content type"):
         ContentSecurityGateway().process(b"MZ", "application/x-msdownload")
+
+
+def test_live_text_scanner_rejects_executables_and_eicar() -> None:
+    scanner = TextArtifactMalwareScanner()
+    assert scanner.scan(b'{"safe":true}') == "clean"
+    assert scanner.scan(b"MZ" + b"\x00" * 20) == "forbidden_executable"
+    assert (
+        scanner.scan(b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE")
+        == "malicious"
+    )

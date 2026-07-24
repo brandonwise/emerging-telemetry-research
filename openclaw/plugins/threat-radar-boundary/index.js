@@ -1,7 +1,8 @@
 import path from "node:path";
-import { readFile, realpath, stat } from "node:fs/promises";
+import { mkdir, readFile, realpath, rename, stat, writeFile } from "node:fs/promises";
 
-import { definePluginEntry, jsonResult } from "openclaw/plugin-sdk";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+import { jsonResult } from "openclaw/plugin-sdk/tool-results";
 
 const FLOW_START_PARAMETERS = {
   type: "object",
@@ -134,25 +135,56 @@ function deliveryTool(api) {
       if (!config.externalDeliveryEnabled) {
         return jsonResult({ ok: false, code: "EXTERNAL_DELIVERY_DISABLED" });
       }
-      const validated = await validateReportFiles(config.reportRoot, params);
+      const validated = await validateReportFiles(config, params);
       if (!validated.ok) return jsonResult(validated);
-      const store = api.runtime.state.openKeyedStore({
-        namespace: "threat-radar-deliveries",
-        maxEntries: 10000
-      });
-      const existing = await store.lookup(params.idempotency_key);
+      const send = (await api.runtime.channel.outbound.loadAdapter("discord"))?.sendMedia;
+      if (!send) {
+        return jsonResult({ ok: false, code: "DISCORD_ADAPTER_UNAVAILABLE" });
+      }
+      const receiptDirectory = path.join(validated.reportRoot, ".delivery-receipts");
+      await mkdir(receiptDirectory, { recursive: true, mode: 0o700 });
+      const receiptPath = path.join(receiptDirectory, `${params.idempotency_key}.json`);
+      const existing = await readReceipt(receiptPath);
       if (existing) {
+        if (!sameDelivery(existing, params, config.discordChannelId)) {
+          return jsonResult({ ok: false, code: "DELIVERY_IDEMPOTENCY_CONFLICT" });
+        }
+        if (existing.status !== "delivered") {
+          return jsonResult({ ok: false, code: "DELIVERY_STATUS_UNKNOWN" });
+        }
         return jsonResult({
           ok: true,
           duplicate: true,
           delivery: existing
         });
       }
-      const send = (await api.runtime.channel.outbound.loadAdapter("discord"))?.sendMedia;
-      if (!send) {
-        return jsonResult({ ok: false, code: "DISCORD_ADAPTER_UNAVAILABLE" });
-      }
       const target = `channel:${config.discordChannelId}`;
+      const pending = {
+        status: "pending",
+        report_id: params.report_id,
+        destination: `discord:${target}`,
+        idempotency_key: params.idempotency_key,
+        created_at: new Date().toISOString()
+      };
+      try {
+        await writeFile(receiptPath, `${JSON.stringify(pending)}\n`, {
+          encoding: "utf8",
+          flag: "wx",
+          mode: 0o600
+        });
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw error;
+        const raced = await readReceipt(receiptPath);
+        if (!raced || !sameDelivery(raced, params, config.discordChannelId)) {
+          return jsonResult({ ok: false, code: "DELIVERY_IDEMPOTENCY_CONFLICT" });
+        }
+        return jsonResult({
+          ok: raced.status === "delivered",
+          duplicate: raced.status === "delivered",
+          code: raced.status === "delivered" ? undefined : "DELIVERY_STATUS_UNKNOWN",
+          delivery: raced
+        });
+      }
       await send({
         cfg: api.config,
         to: target,
@@ -162,23 +194,48 @@ function deliveryTool(api) {
         accountId: config.discordAccountId
       });
       const receipt = {
+        status: "delivered",
         report_id: params.report_id,
         destination: `discord:${target}`,
         idempotency_key: params.idempotency_key,
         delivered_at: new Date().toISOString()
       };
-      await store.register(params.idempotency_key, receipt);
+      const stagedReceiptPath = `${receiptPath}.${process.pid}.${Date.now()}.tmp`;
+      await writeFile(stagedReceiptPath, `${JSON.stringify(receipt)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600
+      });
+      await rename(stagedReceiptPath, receiptPath);
       return jsonResult({ ok: true, duplicate: false, delivery: receipt });
     }
   };
 }
 
-async function validateReportFiles(reportRootInput, params) {
-  if (!reportRootInput) return { ok: false, code: "REPORT_ROOT_NOT_CONFIGURED" };
+async function readReceipt(receiptPath) {
+  try {
+    const value = JSON.parse(await readFile(receiptPath, "utf8"));
+    return value && typeof value === "object" ? value : null;
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function sameDelivery(receipt, params, discordChannelId) {
+  return (
+    receipt.report_id === params.report_id &&
+    receipt.idempotency_key === params.idempotency_key &&
+    receipt.destination === `discord:channel:${discordChannelId}`
+  );
+}
+
+async function validateReportFiles(config, params) {
+  if (!config.reportRoot) return { ok: false, code: "REPORT_ROOT_NOT_CONFIGURED" };
   let reportRoot;
   let htmlPath;
   try {
-    reportRoot = await realpath(reportRootInput);
+    reportRoot = await realpath(config.reportRoot);
     htmlPath = await realpath(params.html_path);
   } catch {
     return { ok: false, code: "REPORT_PATH_NOT_FOUND" };
@@ -200,6 +257,25 @@ async function validateReportFiles(reportRootInput, params) {
   }
   if (report.report_id !== params.report_id) {
     return { ok: false, code: "REPORT_ID_MISMATCH" };
+  }
+  const deliveryPlanPath = htmlPath.slice(0, -5) + ".delivery.json";
+  let deliveryPlan;
+  let plannedHtmlPath;
+  try {
+    deliveryPlan = JSON.parse(await readFile(deliveryPlanPath, "utf8"));
+    plannedHtmlPath = await realpath(deliveryPlan.html_path);
+  } catch {
+    return { ok: false, code: "DELIVERY_PLAN_INVALID" };
+  }
+  const expectedDestination = `discord:channel:${config.discordChannelId}`;
+  if (
+    deliveryPlan.report_id !== params.report_id ||
+    deliveryPlan.idempotency_key !== params.idempotency_key ||
+    deliveryPlan.summary !== params.summary ||
+    plannedHtmlPath !== htmlPath ||
+    deliveryPlan.destination !== expectedDestination
+  ) {
+    return { ok: false, code: "DELIVERY_PLAN_MISMATCH" };
   }
   if (
     report.verification?.all_claims_cited !== true ||

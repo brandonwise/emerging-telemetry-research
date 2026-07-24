@@ -17,6 +17,16 @@ uv run python scripts/verify_restore.py --output /tmp/radar-restore
 Stop if a command fails. Do not enable a source, schedule, model fallback, or delivery channel to
 work around a failed gate.
 
+For the approved local daily brief, run:
+
+```bash
+scripts/run-live.sh
+```
+
+The runner loads secrets from macOS Keychain, verifies FileVault, starts the loopback-only
+PostgreSQL and MinIO services, and emits delivery metadata as JSON. Send only through the reviewed
+OpenClaw `radar_delivery_send` tool; never bypass it with a generic message or Discord client.
+
 Before live collection, confirm all of the following:
 
 - `THREAT_MODEL_APPROVAL.md` contains an immutable approval reference, approver, timestamp, commit,

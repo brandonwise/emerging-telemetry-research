@@ -9,6 +9,11 @@ def test_boundary_plugin_manifest_and_javascript_are_valid() -> None:
     manifest = json.loads((root / "openclaw.plugin.json").read_text(encoding="utf-8"))
     assert manifest["id"] == "threat-radar-boundary"
     assert manifest["enabledByDefault"] is False
+    assert manifest["contracts"]["tools"] == [
+        "radar_flow_start",
+        "radar_flow_finish",
+        "radar_delivery_send",
+    ]
     node = shutil.which("node")
     assert node
     completed = subprocess.run(  # noqa: S603
@@ -22,9 +27,22 @@ def test_boundary_plugin_manifest_and_javascript_are_valid() -> None:
 
 def test_delivery_tool_has_no_destination_parameter() -> None:
     source = Path("openclaw/plugins/threat-radar-boundary/index.js").read_text(encoding="utf-8")
+    assert 'from "openclaw/plugin-sdk/plugin-entry"' in source
+    assert 'from "openclaw/plugin-sdk/tool-results"' in source
     delivery_block = source.split("const DELIVERY_PARAMETERS", 1)[1].split(
         "function pluginConfig",
         1,
     )[0]
     assert "destination" not in delivery_block
     assert "discordChannelId" not in delivery_block
+    assert 'htmlPath.slice(0, -5) + ".delivery.json"' in source
+    assert "deliveryPlan.idempotency_key !== params.idempotency_key" in source
+    assert "deliveryPlan.summary !== params.summary" in source
+    assert "deliveryPlan.destination !== expectedDestination" in source
+    assert 'code: "DELIVERY_PLAN_MISMATCH"' in source
+    assert "openKeyedStore" not in source
+    assert '".delivery-receipts"' in source
+    assert 'flag: "wx"' in source
+    assert 'status: "pending"' in source
+    assert 'status: "delivered"' in source
+    assert '"DELIVERY_STATUS_UNKNOWN"' in source

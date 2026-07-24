@@ -27,7 +27,7 @@ from packages.normalization.entities import normalize_entities
 from packages.scoring.engine import PublicationClass, ScoreComponents, classify
 from packages.scoring.features import ClusterSignals, compute_score
 from packages.security_gateway.gateway import ContentSecurityGateway
-from packages.storage.object_store import LocalImmutableObjectStore
+from packages.storage.object_store import ImmutableObjectStore, LocalImmutableObjectStore
 from packages.telemetry.runtime import RadarTelemetry
 from packages.verification.claims import verify_report_claims
 
@@ -39,6 +39,7 @@ class FrozenRunResult:
     report: dict[str, Any]
     evidence_packet: dict[str, Any]
     assessments: tuple[dict[str, Any], ...]
+    observations: tuple[dict[str, Any], ...]
     rendered: RenderedReport
     audit_path: Path
     report_json_path: Path
@@ -49,6 +50,10 @@ def run_frozen_fixture(
     output_root: Path,
     *,
     object_store_root: Path | None = None,
+    object_store: ImmutableObjectStore | None = None,
+    content_gateway: ContentSecurityGateway | None = None,
+    identifier_filter: frozenset[str] | None = None,
+    shadow_mode: bool = True,
 ) -> FrozenRunResult:
     manifest = _load_manifest(manifest_path)
     run_id = str(manifest["run_id"])
@@ -56,8 +61,8 @@ def run_frozen_fixture(
     generated_text = format_timestamp(generated_at)
     ledger = AuditLedger(run_id=run_id, timestamp=generated_text)
     telemetry = RadarTelemetry.current("threat-radar-frozen-pipeline")
-    store = LocalImmutableObjectStore(object_store_root or output_root / "objects")
-    gateway = ContentSecurityGateway()
+    store = object_store or LocalImmutableObjectStore(object_store_root or output_root / "objects")
+    gateway = content_gateway or ContentSecurityGateway()
     observations: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
     source_health: list[dict[str, Any]] = []
@@ -134,6 +139,15 @@ def run_frozen_fixture(
             source_health.append(_source_health(source_id, "degraded", generated_text, 1.0))
             continue
         parsed = parse_tier0(source_id, raw, retrieved_at)
+        if identifier_filter is not None:
+            normalized_filter = {item.upper() for item in identifier_filter}
+            parsed = tuple(
+                draft
+                for draft in parsed
+                if normalized_filter.intersection(
+                    identifier.upper() for identifier in draft.identifiers
+                )
+            )
         for draft in parsed:
             contract = draft.to_contract()
             validate_payload("observation.schema.json", contract)
@@ -152,7 +166,7 @@ def run_frozen_fixture(
                 "published_at": contract["published_at"],
                 "content_hash": decision.original_hash,
                 "sanitized_hash": decision.sanitized_hash,
-                "excerpt": decision.bounded_excerpt,
+                "excerpt": "\n".join(str(item) for item in contract["claims"])[:12_000],
                 "claims_supported": contract["claims"],
                 "injection_risk": decision.content_risk,
                 "independence_group": str(source["independence_group"]),
@@ -261,6 +275,7 @@ def run_frozen_fixture(
         publication_class=publication_class,
         generated_at=generated_at,
         assessments=assessments,
+        shadow_mode=shadow_mode,
     )
     report = _build_report(
         manifest=manifest,
@@ -268,6 +283,7 @@ def run_frozen_fixture(
         finding=finding,
         source_health=source_health,
         degraded_sources=degraded_sources,
+        shadow_mode=shadow_mode,
     )
     verification = verify_report_claims(report, packet, verifier_revision="verifier-v1")
     if not verification.passed:
@@ -295,18 +311,23 @@ def run_frozen_fixture(
         input_hash=rendered.report_json_hash,
         output_hash=rendered.rendered_html_hash,
         decision="allow",
-        reason_code="shadow_mode_no_external_delivery",
+        reason_code=(
+            "shadow_mode_no_external_delivery"
+            if shadow_mode
+            else "verified_live_report_ready"
+        ),
     )
     audit_path = output_root / f"{run_id}.audit.jsonl"
     _write_immutable(audit_path, ledger.json_lines())
     telemetry.workflow_run(
-        mode="frozen_fixture",
+        mode="frozen_fixture" if shadow_mode else "live_candidate",
         status="degraded" if degraded_sources else "ok",
     )
     return FrozenRunResult(
         report=report,
         evidence_packet=packet,
         assessments=assessments,
+        observations=tuple(observations),
         rendered=rendered,
         audit_path=audit_path,
         report_json_path=report_json_path,
@@ -369,6 +390,7 @@ def _build_finding(
     publication_class: PublicationClass,
     generated_at: Any,
     assessments: tuple[dict[str, Any], ...],
+    shadow_mode: bool,
 ) -> dict[str, Any]:
     claims = [
         {
@@ -411,15 +433,29 @@ def _build_finding(
         "schema_version": "1.0",
         "finding_id": stable_id("fd", cluster_id),
         "cluster_id": cluster_id,
-        "title": f"Active exploitation signal for {cve}",
-        "why_now": (
-            "Authoritative exploitation evidence and independent technical records converged "
-            "before a media baseline was present."
-            if signals.media_baseline_at is None
-            else "Authoritative exploitation evidence remains material, but broad reporting now "
-            "reduces the novelty score."
+        "title": (
+            f"Known exploitation signal for {cve}"
+            if signals.known_exploited
+            else f"Emerging vulnerability signal for {cve}"
         ),
-        "category": "active_exploitation",
+        "why_now": (
+            (
+                "Authoritative exploitation evidence and independent technical records "
+                "converged before a media baseline was present."
+                if signals.media_baseline_at is None
+                else "Authoritative exploitation evidence remains material, but broad "
+                "reporting now reduces the novelty score."
+            )
+            if shadow_mode
+            else (
+                "Fresh web or X discovery signals triggered verification against CISA and "
+                "independent authoritative vulnerability records."
+                if signals.media_baseline_at is not None
+                else "Recent authoritative source updates triggered independent verification "
+                "across vulnerability and exploitability records."
+            )
+        ),
+        "category": "active_exploitation" if signals.known_exploited else "vulnerability",
         "emergence_stage": "confirmed" if signals.known_exploited else "credible_emerging",
         "publication_class": publication_class.value,
         "priority_score": score.total,
@@ -448,14 +484,27 @@ def _build_finding(
         "affected": list(affected_map.values()),
         "exploit_status": "known_exploited" if signals.known_exploited else "unknown",
         "organization_relevance": (
-            "The demo inventory contains a matching product or package."
+            (
+                "The demo inventory contains a matching product or package."
+                if shadow_mode
+                else "The configured inventory contains a matching product or package."
+            )
             if signals.organization_match
-            else "No demo-inventory match was found."
+            else (
+                "No demo-inventory match was found."
+                if shadow_mode
+                else "No configured inventory match was found."
+            )
         ),
         "known": known,
         "unknown": [
-            "The fixture does not establish exposure outside the listed affected "
-            "product or package."
+            (
+                "The fixture does not establish exposure outside the listed affected "
+                "product or package."
+                if shadow_mode
+                else "The collected evidence does not establish exposure outside the "
+                "listed affected product or package."
+            )
         ],
         "contradictions": [],
         "defensive_actions": [
@@ -483,6 +532,7 @@ def _build_report(
     finding: dict[str, Any],
     source_health: list[dict[str, Any]],
     degraded_sources: list[str],
+    shadow_mode: bool,
 ) -> dict[str, Any]:
     window = manifest["window"]
     report_id = stable_id("rp", str(manifest["run_id"]), str(manifest["edition"]))
@@ -497,7 +547,8 @@ def _build_report(
             "timezone": str(window["timezone"]),
         },
         "executive_summary": (
-            f"One {finding['publication_class']} finding met the shadow publication gate. "
+            f"One {finding['publication_class']} finding met the "
+            f"{'shadow' if shadow_mode else 'verified'} publication gate. "
             f"Priority score: {finding['priority_score']:.1f}."
         ),
         "findings": [finding],
@@ -517,12 +568,20 @@ def _build_report(
                 "estimated_currency": 0,
             },
             {
-                "stage": "shadow_review_chain",
+                "stage": (
+                    "shadow_review_chain"
+                    if shadow_mode
+                    else "deterministic_review_chain"
+                ),
                 "agent_id": "specialist-skeptic-verifier-coordinator",
                 "source_id": None,
                 "finding_id": finding["finding_id"],
-                "provider": "fixture",
-                "model": "deterministic-shadow-fixture",
+                "provider": "fixture" if shadow_mode else "local",
+                "model": (
+                    "deterministic-shadow-fixture"
+                    if shadow_mode
+                    else "deterministic-review-v1"
+                ),
                 "requests": 4,
                 "input_tokens": 0,
                 "output_tokens": 0,

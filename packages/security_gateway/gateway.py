@@ -46,6 +46,26 @@ class NoopMalwareScanner:
         return "not_configured"
 
 
+class TextArtifactMalwareScanner:
+    """Fail-closed scanner for the text-only source classes used by the live radar."""
+
+    _EXECUTABLE_MAGICS = (
+        b"MZ",
+        b"\x7fELF",
+        b"\xcf\xfa\xed\xfe",
+        b"\xce\xfa\xed\xfe",
+        b"\xca\xfe\xba\xbe",
+    )
+    _EICAR_MARKER = b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE"
+
+    def scan(self, content: bytes) -> str:
+        if self._EICAR_MARKER in content:
+            return "malicious"
+        if any(content.startswith(magic) for magic in self._EXECUTABLE_MAGICS):
+            return "forbidden_executable"
+        return "clean"
+
+
 @dataclass(frozen=True, slots=True)
 class GatewayDecision:
     original_hash: str
