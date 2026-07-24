@@ -96,7 +96,6 @@ if [[ "${radar_bootstrapped}" != "true" ]]; then
   /bin/launchctl bootstrap "gui/${radar_uid}" "${radar_plist}"
   exit 1
 fi
-/bin/launchctl kickstart -k "gui/${radar_uid}/${radar_label}"
 
 radar_status=""
 for _radar_attempt in $(seq 1 30); do

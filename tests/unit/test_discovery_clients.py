@@ -74,6 +74,7 @@ async def test_xai_x_search_accepts_only_allowed_handles_and_x_urls() -> None:
                 "source_handle": "CISAgov",
                 "post_url": "https://x.com/CISAgov/status/123",
                 "published_date": "2026-07-24",
+                "source_excerpt": "A source post reports exploitation activity.",
                 "why_emerging": "New exploitation signal.",
             },
             {
@@ -82,7 +83,17 @@ async def test_xai_x_search_accepts_only_allowed_handles_and_x_urls() -> None:
                 "source_handle": "NotAllowed",
                 "post_url": "https://x.com/NotAllowed/status/456",
                 "published_date": "2026-07-24",
+                "source_excerpt": "An untrusted post excerpt.",
                 "why_emerging": "Should be removed.",
+            },
+            {
+                "title": "Pre-CVE supply-chain signal",
+                "cve": None,
+                "source_handle": "CISAgov",
+                "post_url": "https://x.com/CISAgov/status/789",
+                "published_date": "2026-07-24",
+                "source_excerpt": "A newly observed package is malicious.",
+                "why_emerging": "A concrete malicious-package report without a CVE.",
             },
         ]
     }
@@ -116,7 +127,10 @@ async def test_xai_x_search_accepts_only_allowed_handles_and_x_urls() -> None:
         to_date=date(2026, 7, 24),
         allowed_handles=("CISAgov",),
     )
-    assert len(result.signals) == 1
+    assert len(result.signals) == 2
     assert result.signals[0].source_handle == "CISAgov"
+    assert result.signals[0].summary == "A source post reports exploitation activity."
+    assert result.signals[0].rationale == "New exploitation signal."
+    assert result.signals[1].identifiers == ()
     assert result.usage.estimated_currency == 0.25
     assert result.usage.tool_calls == 2

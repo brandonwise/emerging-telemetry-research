@@ -5,13 +5,19 @@ brave:
   maximum_results_per_query: 20
   queries:
     - >-
-      (cybersecurity OR vulnerability OR exploit) (zero-day OR actively exploited)
-      (CVE OR advisory)
+      (cybersecurity OR vulnerability OR exploit) (zero-day OR actively exploited
+      OR exploited-in-the-wild OR exploit-chain)
     - >-
       (software supply-chain OR malicious package OR dependency confusion)
       (attack OR campaign OR compromise)
     - >-
       (ransomware OR intrusion campaign) (new exploit OR vulnerability OR initial access)
+    - >-
+      (AI security OR LLM security OR model poisoning OR prompt injection OR MCP security)
+      (attack OR compromise OR vulnerability OR abuse)
+    - >-
+      (identity attack OR credential theft OR cloud compromise OR vendor incident)
+      (emerging OR newly observed OR active campaign)
 
 x_search:
   model: grok-4.5
@@ -32,5 +38,6 @@ x_search:
 
 promotion:
   maximum_candidates_per_run: 6
+  maximum_signal_candidates_per_run: 8
   maximum_report_findings: 5
   minimum_publication_class: daily

@@ -40,6 +40,20 @@ CSV_FIELDS = (
     "degraded_source_count",
     "estimated_cost",
 )
+CSV_FINDING_FIELDS = (
+    "generated_at",
+    "report_id",
+    "finding_id",
+    "title",
+    "category",
+    "tags",
+    "source_types",
+    "emergence_stage",
+    "publication_class",
+    "priority_score",
+    "confidence_level",
+    "confidence_probability",
+)
 
 
 class PortalSettings(BaseSettings):
@@ -241,6 +255,39 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             edition=safe_edition or "",
         )
 
+    @application.get("/findings", response_class=HTMLResponse)
+    async def findings(
+        request: Request,
+        q: str | None = None,
+        category: str | None = None,
+        tag: str | None = None,
+        source: str | None = None,
+    ) -> HTMLResponse:
+        safe_query = q.strip()[:120] if q else None
+        options = store.taxonomy_options()
+        safe_category = category if category in options["categories"] else None
+        safe_tag = tag if tag in options["tags"] else None
+        safe_source = source if source in options["source_types"] else None
+        return _render(
+            templates,
+            "findings.html",
+            request=request,
+            settings=portal_settings,
+            active="findings",
+            findings=store.list_findings(
+                limit=500,
+                query=safe_query,
+                category=safe_category,
+                tag=safe_tag,
+                source_type=safe_source,
+            ),
+            options=options,
+            q=safe_query or "",
+            category=safe_category or "",
+            tag=safe_tag or "",
+            source=safe_source or "",
+        )
+
     @application.get("/reports/{report_id}", response_class=HTMLResponse)
     async def report_detail(request: Request, report_id: str) -> HTMLResponse:
         report = store.get_report(report_id)
@@ -270,6 +317,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             max_findings=max((int(item["findings"]) for item in trend), default=1),
             source_health=store.source_health(),
             events=store.event_summary(days=bounded_days),
+            taxonomy=store.taxonomy_counts(days=bounded_days),
             days=bounded_days,
         )
 
@@ -302,6 +350,45 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             json.dumps(store.export_rows(), indent=2, sort_keys=True),
             media_type="application/json",
             headers={"Content-Disposition": 'attachment; filename="threat-radar-reports.json"'},
+        )
+
+    @application.get("/exports/findings.csv")
+    async def export_findings_csv() -> Response:
+        output = io.StringIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=CSV_FINDING_FIELDS,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        for row in store.export_finding_rows():
+            export_row = dict(row)
+            export_row["tags"] = "|".join(str(item) for item in row.get("tags", []))
+            export_row["source_types"] = "|".join(
+                str(item) for item in row.get("source_types", [])
+            )
+            writer.writerow(
+                {
+                    key: _safe_csv(export_row.get(key))
+                    for key in CSV_FINDING_FIELDS
+                }
+            )
+        return Response(
+            output.getvalue(),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": 'attachment; filename="threat-radar-findings.csv"'
+            },
+        )
+
+    @application.get("/exports/findings.json")
+    async def export_findings_json() -> Response:
+        return Response(
+            json.dumps(store.export_finding_rows(), indent=2, sort_keys=True),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": 'attachment; filename="threat-radar-findings.json"'
+            },
         )
 
     @application.get("/exports/reports/{report_id}.json")

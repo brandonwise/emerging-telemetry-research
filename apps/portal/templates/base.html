@@ -16,6 +16,7 @@
     </a>
     <nav aria-label="Primary navigation">
       <a href="/" {% if active == "overview" %}aria-current="page"{% endif %}>Overview</a>
+      <a href="/findings" {% if active == "findings" %}aria-current="page"{% endif %}>Findings</a>
       <a href="/reports" {% if active == "reports" %}aria-current="page"{% endif %}>Reports</a>
       <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>Trends</a>
       <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Setup</a>

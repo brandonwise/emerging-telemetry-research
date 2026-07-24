@@ -11,7 +11,7 @@ from packages.contracts.validation import validate_payload
 from packages.verification.claims import require_verified_report
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
-TEMPLATE_REVISION = "report-v1"
+TEMPLATE_REVISION = "report-v2"
 
 
 @dataclass(frozen=True, slots=True)

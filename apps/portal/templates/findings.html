@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Findings · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div>
+    <p class="eyebrow">Signal archive</p>
+    <h1>Findings</h1>
+    <p class="lede">Filter CVEs and pre-CVE source-native signals by type, tag, or discovery channel.</p>
+  </div>
+  <div class="button-group">
+    <a class="secondary-button" href="/exports/findings.csv">CSV</a>
+    <a class="secondary-button" href="/exports/findings.json">JSON</a>
+  </div>
+</section>
+<form class="filter-bar taxonomy-filter" method="get">
+  <label><span>Search</span><input name="q" value="{{ q }}" placeholder="Title or finding ID"></label>
+  <label><span>Category</span><select name="category">
+    <option value="">All categories</option>
+    {% for item in options.categories %}<option value="{{ item }}" {% if item == category %}selected{% endif %}>{{ item|replace("_", " ")|title }}</option>{% endfor %}
+  </select></label>
+  <label><span>Tag</span><select name="tag">
+    <option value="">All tags</option>
+    {% for item in options.tags %}<option value="{{ item }}" {% if item == tag %}selected{% endif %}>{{ item|replace("_", " ")|title }}</option>{% endfor %}
+  </select></label>
+  <label><span>Discovered via</span><select name="source">
+    <option value="">All sources</option>
+    {% for item in options.source_types %}<option value="{{ item }}" {% if item == source %}selected{% endif %}>{{ item|replace("_", " ")|title }}</option>{% endfor %}
+  </select></label>
+  <button class="primary-button" type="submit">Filter</button>
+</form>
+<section class="finding-index" aria-label="Filtered findings">
+  {% for finding in findings %}
+  <a class="finding-row" href="/reports/{{ finding.report_id }}#{{ finding.finding_id }}">
+    <div class="finding-row-head">
+      <span class="classification {{ finding.publication_class }}">{{ finding.publication_class }}</span>
+      <span class="large-score">{{ "%.1f"|format(finding.priority_score) }}</span>
+    </div>
+    <div>
+      <p class="eyebrow">{{ finding.category|replace("_", " ") }} · {{ finding.generated_at|compact_date }}</p>
+      <h2>{{ finding.title }}</h2>
+    </div>
+    <div class="tag-list">
+      {% for item in finding.tags %}<span class="tag">{{ item|replace("_", " ") }}</span>{% endfor %}
+      {% for item in finding.source_types %}<span class="tag source-tag">{{ item|replace("_", " ") }}</span>{% endfor %}
+    </div>
+  </a>
+  {% else %}
+  <div class="empty-state"><strong>No findings match these filters.</strong><span>Clear one or more filters and try again.</span></div>
+  {% endfor %}
+</section>
+{% endblock %}

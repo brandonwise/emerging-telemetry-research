@@ -4,8 +4,10 @@ A security-first, evidence-backed cyber-threat early-warning system with optiona
 Claude Code, Codex, and generic automation adapters.
 
 The approved local production path uses Brave Search API and xAI server-side X Search for bounded
-discovery, then corroborates candidates with CISA KEV, CVE List V5, NVD, FIRST EPSS, OSV, and
-GitHub Global Security Advisories. It captures authoritative evidence in PostgreSQL and an
+source-native discovery, including pre-CVE supply-chain, malicious-package, campaign, identity,
+cloud, vendor, and AI/LLM activity. When identifiers exist, it corroborates CVEs with CISA KEV,
+CVE List V5, NVD, FIRST EPSS, OSV, and GitHub Global Security Advisories. It captures evidence in
+PostgreSQL and an
 object-locked, versioned S3-compatible store; sanitizes hostile content; normalizes entities; builds
 source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
 and delivers through a fixed-destination, idempotent OpenClaw tool.
@@ -95,8 +97,9 @@ LAN mode binds `0.0.0.0` but accepts only configured private networks and requir
 access token by default. Trusted-network deployments can explicitly use
 `scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
-as Tailscale. The portal is read-only and includes responsive
-overview, report search/detail, trends, source health, print styling, and CSV/JSON/HTML exports.
+as Tailscale. The portal is read-only and includes a filterable findings archive, categories and
+tags, source-native website/X excerpts and links, taxonomy trends, report search/detail, source
+health, print styling, and finding/report CSV/JSON/HTML exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
 Keychain without writing it to the plist or logs.
 

@@ -35,6 +35,13 @@ from packages.discovery.clients import (
     XaiXSearchClient,
     candidate_cves,
 )
+from packages.discovery.emerging import (
+    build_emerging_finding,
+    cluster_non_cve_signals,
+    enrich_cve_finding,
+    prepare_discovery_signals,
+    referenced_discovery_records,
+)
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
 from packages.scoring.engine import PublicationThresholds, load_thresholds
 from packages.security_gateway.gateway import (
@@ -68,6 +75,7 @@ class LiveRunResult:
     summary: str
     candidate_cves: tuple[str, ...]
     degraded_sources: tuple[str, ...]
+    emerging_signal_count: int = 0
 
 
 async def run_live_radar(
@@ -96,6 +104,9 @@ async def run_live_radar(
     queries = _string_tuple(brave_config, "queries")
     allowed_handles = _string_tuple(x_config, "allowed_handles")
     maximum_candidates = int(promotion.get("maximum_candidates_per_run", 6))
+    maximum_signal_candidates = int(
+        promotion.get("maximum_signal_candidates_per_run", 8)
+    )
     maximum_findings = int(promotion.get("maximum_report_findings", 5))
     minimum_class = str(promotion.get("minimum_publication_class", "daily"))
     thresholds = load_thresholds(settings.scoring_config)
@@ -158,6 +169,11 @@ async def run_live_radar(
             healthy=False,
         )
 
+    prepared_signals = prepare_discovery_signals(
+        signals,
+        generated_at=generated_at,
+        object_store=object_store,
+    )
     cisa_artifact: LiveSourceArtifact | None = None
     try:
         cisa_artifact = await official_client.fetch(cisa_kev_spec())
@@ -194,17 +210,48 @@ async def run_live_radar(
         if result is not None:
             candidate_results.append(result)
 
+    cve_findings: list[dict[str, Any]] = []
+    for result in candidate_results:
+        if not result.report.get("findings"):
+            continue
+        finding = result.report["findings"][0]
+        finding_cve = _finding_cve(finding)
+        if finding_cve is None:
+            continue
+        enriched = enrich_cve_finding(
+            finding,
+            cve=finding_cve,
+            signals=prepared_signals,
+        )
+        enriched["source_evidence"] = _dedupe_source_evidence(
+            [
+                *enriched.get("source_evidence", []),
+                *_candidate_source_evidence(result),
+            ]
+        )
+        cve_findings.append(enriched)
+    emerging_findings = [
+        build_emerging_finding(
+            cluster,
+            generated_at=generated_at,
+            thresholds=thresholds,
+        )
+        for cluster in cluster_non_cve_signals(prepared_signals)[:maximum_signal_candidates]
+    ]
     findings = sorted(
         (
-            result.report["findings"][0]
-            for result in candidate_results
-            if result.report.get("findings")
-            and PUBLICATION_RANK[str(result.report["findings"][0]["publication_class"])]
+            finding
+            for finding in [*cve_findings, *emerging_findings]
+            if PUBLICATION_RANK[str(finding["publication_class"])]
             >= PUBLICATION_RANK[minimum_class]
         ),
         key=lambda item: float(item["priority_score"]),
         reverse=True,
     )[:maximum_findings]
+    discovery_evidence, discovery_artifacts = referenced_discovery_records(
+        findings,
+        prepared_signals,
+    )
     usage.append(
         _usage_record(
             stage="deterministic_pipeline",
@@ -242,6 +289,8 @@ async def run_live_radar(
         run_id=run_id,
         report=report,
         candidate_results=candidate_results,
+        discovery_evidence=discovery_evidence,
+        discovery_artifacts=discovery_artifacts,
         delivery_plan=delivery_plan,
     )
     summary = str(delivery_plan["summary"])
@@ -255,6 +304,15 @@ async def run_live_radar(
         summary=summary,
         candidate_cves=candidates,
         degraded_sources=tuple(sorted(degraded)),
+        emerging_signal_count=sum(
+            1
+            for finding in findings
+            if not any(
+                str(mapping.get("scheme")) == "CVE"
+                for mapping in finding.get("mappings", [])
+                if isinstance(mapping, dict)
+            )
+        ),
     )
 
 
@@ -331,6 +389,16 @@ def _existing_morning_result(
                     candidate_cves=identifiers,
                     degraded_sources=tuple(
                         sorted(str(item) for item in report.get("degraded_sources", []))
+                    ),
+                    emerging_signal_count=sum(
+                        1
+                        for finding in report.get("findings", [])
+                        if isinstance(finding, dict)
+                        and not any(
+                            isinstance(mapping, dict)
+                            and mapping.get("scheme") == "CVE"
+                            for mapping in finding.get("mappings", [])
+                        )
                     ),
                 ),
             )
@@ -479,6 +547,62 @@ def _discovery_baselines(
     return baselines
 
 
+def _finding_cve(finding: dict[str, Any]) -> str | None:
+    for mapping in finding.get("mappings", []):
+        if (
+            isinstance(mapping, dict)
+            and mapping.get("scheme") == "CVE"
+            and isinstance(mapping.get("identifier"), str)
+        ):
+            return str(mapping["identifier"]).upper()
+    return None
+
+
+def _candidate_source_evidence(result: FrozenRunResult) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for evidence in result.evidence_packet.get("evidence", []):
+        if not isinstance(evidence, dict):
+            continue
+        excerpt = str(evidence.get("excerpt", "")).strip()[:1200]
+        if not excerpt:
+            continue
+        source_id = str(evidence.get("source_id", "source"))
+        source_role = str(evidence.get("source_role", ""))
+        source_type = (
+            "advisory"
+            if source_role in {"direct_artifact", "authoritative_advisory"}
+            else "database"
+        )
+        sources.append(
+            {
+                "evidence_id": str(evidence["evidence_id"]),
+                "source_id": source_id,
+                "source_type": source_type,
+                "title": f"{source_id.replace('-', ' ').title()} evidence",
+                "url": str(evidence["canonical_uri"]),
+                "published_at": evidence.get("published_at"),
+                "retrieved_at": str(evidence["retrieved_at"]),
+                "excerpt": excerpt,
+                "source_handle": None,
+            }
+        )
+    return sources
+
+
+def _dedupe_source_evidence(
+    sources: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for source in sources:
+        evidence_id = str(source.get("evidence_id", ""))
+        if not evidence_id or evidence_id in seen:
+            continue
+        seen.add(evidence_id)
+        result.append(source)
+    return result[:20]
+
+
 def _aggregate_report(
     *,
     run_id: str,
@@ -531,6 +655,8 @@ async def _persist_run(
     run_id: str,
     report: dict[str, Any],
     candidate_results: list[FrozenRunResult],
+    discovery_evidence: list[dict[str, Any]],
+    discovery_artifacts: list[dict[str, Any]],
     delivery_plan: dict[str, Any],
 ) -> None:
     if not await repository.available():
@@ -558,6 +684,20 @@ async def _persist_run(
                 str(assessment["assessment_id"]),
                 assessment,
             )
+    for artifact in discovery_artifacts:
+        await _put(
+            repository,
+            "artifacts",
+            str(artifact["artifact_id"]),
+            artifact,
+        )
+    for evidence in discovery_evidence:
+        await _put(
+            repository,
+            "evidence",
+            str(evidence["evidence_id"]),
+            evidence,
+        )
     await _put(repository, "reports", str(report["report_id"]), report)
     await _put(
         repository,

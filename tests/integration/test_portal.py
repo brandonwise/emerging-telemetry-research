@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -30,6 +31,23 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
         Path("tests/fixtures/vertical_slice/early-manifest.json"),
         tmp_path / "reports" / "run_fixture_early",
     )
+    report = json.loads(result.report_json_path.read_text(encoding="utf-8"))
+    report["findings"][0]["tags"] = ["ai", "supply_chain"]
+    report["findings"][0]["source_evidence"] = [
+        {
+            "evidence_id": "ev_portal_discovery",
+            "source_id": "x-researchers",
+            "source_type": "x_post",
+            "title": "Researcher source post",
+            "url": "https://x.com/researcher/status/123",
+            "published_at": "2026-07-22T10:00:00Z",
+            "retrieved_at": "2026-07-22T11:00:00Z",
+            "excerpt": "The original source-native discovery excerpt.",
+            "source_handle": "researcher",
+        }
+    ]
+    finding_category = report["findings"][0]["category"]
+    result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
     client = TestClient(
         create_app(_settings(tmp_path)),
         client=("127.0.0.1", 50000),
@@ -38,9 +56,14 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     dashboard = client.get("/")
     reports = client.get("/reports?q=CVE-2026")
     detail = client.get(f"/reports/{result.report['report_id']}")
+    findings = client.get(
+        f"/findings?category={finding_category}&tag=ai&source=x_post"
+    )
     trends = client.get("/trends")
     csv_export = client.get("/exports/reports.csv")
     json_export = client.get("/exports/reports.json")
+    finding_csv_export = client.get("/exports/findings.csv")
+    finding_json_export = client.get("/exports/findings.json")
 
     assert dashboard.status_code == 200
     assert "Emerging threat radar" in dashboard.text
@@ -49,11 +72,23 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert result.report["report_id"] in reports.text
     assert detail.status_code == 200
     assert "Defensive checks" in detail.text
+    assert "Where this was discovered" in detail.text
+    assert "Researcher source post" in detail.text
+    assert findings.status_code == 200
+    assert "Supply Chain" in findings.text
+    assert "X Post" in findings.text
     assert trends.status_code == 200
+    assert "Cross-cutting themes" in trends.text
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
     assert json_export.headers["content-disposition"].endswith(
         '"threat-radar-reports.json"'
+    )
+    assert finding_csv_export.status_code == 200
+    assert "supply_chain" in finding_csv_export.text
+    assert finding_json_export.status_code == 200
+    assert finding_json_export.headers["content-disposition"].endswith(
+        '"threat-radar-findings.json"'
     )
     assert dashboard.headers["x-frame-options"] == "DENY"
 

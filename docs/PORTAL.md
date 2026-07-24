@@ -75,12 +75,16 @@ CIDR allowlist.
 ## Capabilities
 
 - overview KPIs for reports, findings, severity, source gaps, usage, and cost
+- finding-level search and filters for category, tag, and discovery source type
+- source-native website and X-post excerpts with original links and timestamps
+- category and tag trend summaries
 - daily publication trends across configurable windows
 - workflow, feedback, and self-improvement event summaries
 - report search and edition filters
 - verified report detail and defensive checks
 - latest source-health snapshots
 - CSV and JSON archive exports
+- finding-level CSV and JSON exports with tags and discovery-source types
 - per-report JSON and deterministic HTML exports
 - responsive and print layouts
 

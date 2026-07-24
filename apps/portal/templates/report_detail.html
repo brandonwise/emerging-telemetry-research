@@ -18,13 +18,18 @@
 {% endif %}
 <section class="finding-stack">
   {% for finding in report.findings %}
-  <article class="finding-card">
+  <article class="finding-card" id="{{ finding.finding_id }}">
     <div class="finding-head">
       <span class="classification {{ finding.publication_class }}">{{ finding.publication_class }}</span>
       <span class="large-score">{{ "%.1f"|format(finding.priority_score) }}</span>
     </div>
     <h2>{{ finding.title }}</h2>
     <p>{{ finding.why_now }}</p>
+    {% if finding.get("tags", []) %}
+    <div class="tag-list" aria-label="Finding tags">
+      {% for item in finding.get("tags", []) %}<a class="tag" href="/findings?tag={{ item }}">{{ item|replace("_", " ") }}</a>{% endfor %}
+    </div>
+    {% endif %}
     <dl class="detail-grid">
       <div><dt>Confidence</dt><dd>{{ finding.confidence.level|title }} · {{ "%.0f%%"|format(finding.confidence.probability * 100) }}</dd></div>
       <div><dt>Stage</dt><dd>{{ finding.emergence_stage|replace("_", " ")|title }}</dd></div>
@@ -38,6 +43,22 @@
     {% if finding.defensive_actions %}
     <h3>Defensive checks</h3>
     <ul>{% for action in finding.defensive_actions %}<li><strong>{{ action.priority|title }}:</strong> {{ action.action }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if finding.get("source_evidence", []) %}
+    <h3>Where this was discovered</h3>
+    <div class="source-grid">
+      {% for source in finding.get("source_evidence", []) %}
+      <article class="source-card">
+        <div class="source-meta">
+          <span>{{ source.source_type|replace("_", " ") }}</span>
+          {% if source.source_handle %}<span>@{{ source.source_handle }}</span>{% endif %}
+          {% if source.published_at %}<time datetime="{{ source.published_at }}">{{ source.published_at|compact_date }}</time>{% endif %}
+        </div>
+        <h4><a href="{{ source.url }}" target="_blank" rel="noreferrer noopener">{{ source.title }}</a></h4>
+        <p>{{ source.excerpt }}</p>
+      </article>
+      {% endfor %}
+    </div>
     {% endif %}
   </article>
   {% else %}

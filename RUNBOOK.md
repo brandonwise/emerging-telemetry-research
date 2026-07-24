@@ -199,6 +199,10 @@ Authentication is required by default. For a trusted, private network, reinstall
 `scripts/install-portal-service.sh --auth disabled`. The private-CIDR boundary remains active and
 the token stays in Keychain. Restore authentication with `--auth required`.
 
+The Findings view separates CVE-backed findings from pre-CVE source-native signals through
+categories, tags, and source-type filters. Early signals intentionally preserve the cited source's
+language and confidence boundary; `reported` does not mean the underlying event is confirmed.
+
 Rollback is recoverable and preserves data:
 
 ```bash

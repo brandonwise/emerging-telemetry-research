@@ -9,6 +9,7 @@ from typing import Any
 
 from packages.common.canonical import canonical_json_bytes, sha256_hex, stable_id
 from packages.contracts.validation import validate_payload
+from packages.discovery.emerging import classify_taxonomy
 from packages.verification.claims import require_verified_report
 
 
@@ -81,6 +82,11 @@ class AnalyticsStore:
             if existing is not None:
                 if str(existing["report_hash"]) != report_hash:
                     raise ValueError(f"immutable analytics conflict for {report_id}")
+                _index_finding_dimensions(
+                    connection,
+                    report_id=report_id,
+                    findings=findings,
+                )
                 connection.commit()
                 return IndexResult(report_id, False, len(findings))
             connection.execute(
@@ -94,30 +100,11 @@ class AnalyticsStore:
                 """,
                 row,
             )
-            for finding in findings:
-                confidence = finding.get("confidence", {})
-                connection.execute(
-                    """
-                    INSERT INTO analytics_findings (
-                      finding_id, report_id, title, category, emergence_stage,
-                      publication_class, priority_score, confidence_level,
-                      confidence_probability, first_observed_at, lead_time_hours
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        str(finding["finding_id"]),
-                        report_id,
-                        str(finding["title"]),
-                        str(finding["category"]),
-                        str(finding["emergence_stage"]),
-                        str(finding["publication_class"]),
-                        float(finding["priority_score"]),
-                        str(confidence.get("level", "low")),
-                        float(confidence.get("probability", 0)),
-                        str(finding["first_observed_at"]),
-                        finding.get("lead_time_hours"),
-                    ),
-                )
+            _index_finding_dimensions(
+                connection,
+                report_id=report_id,
+                findings=findings,
+            )
             for source in source_health:
                 connection.execute(
                     """
@@ -322,6 +309,126 @@ class AnalyticsStore:
         value = json.loads(str(row["report_json"]))
         return value if isinstance(value, dict) else None
 
+    def list_findings(
+        self,
+        *,
+        limit: int = 200,
+        query: str | None = None,
+        category: str | None = None,
+        tag: str | None = None,
+        source_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        parameters: list[Any] = []
+        if query:
+            clauses.append("(f.finding_id LIKE ? OR f.title LIKE ?)")
+            pattern = f"%{query}%"
+            parameters.extend((pattern, pattern))
+        if category:
+            clauses.append("f.category = ?")
+            parameters.append(category)
+        if tag:
+            clauses.append(
+                "EXISTS (SELECT 1 FROM analytics_finding_tags ft "
+                "WHERE ft.report_id = f.report_id AND ft.finding_id = f.finding_id "
+                "AND ft.tag = ?)"
+            )
+            parameters.append(tag)
+        if source_type:
+            clauses.append(
+                "EXISTS (SELECT 1 FROM analytics_finding_sources fs "
+                "WHERE fs.report_id = f.report_id AND fs.finding_id = f.finding_id "
+                "AND fs.source_type = ?)"
+            )
+            parameters.append(source_type)
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        parameters.append(max(1, min(limit, 1000)))
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT f.finding_id, f.report_id, f.title, f.category,
+                       f.emergence_stage, f.publication_class, f.priority_score,
+                       f.confidence_level, f.confidence_probability,
+                       f.first_observed_at, f.lead_time_hours,
+                       r.generated_at, r.edition,
+                       COALESCE((
+                         SELECT GROUP_CONCAT(tag, '|')
+                         FROM (
+                           SELECT ft.tag AS tag
+                           FROM analytics_finding_tags ft
+                           WHERE ft.report_id = f.report_id
+                             AND ft.finding_id = f.finding_id
+                           ORDER BY ft.tag
+                         )
+                       ), '') AS tags,
+                       COALESCE((
+                         SELECT GROUP_CONCAT(source_type, '|')
+                         FROM (
+                           SELECT DISTINCT fs.source_type AS source_type
+                           FROM analytics_finding_sources fs
+                           WHERE fs.report_id = f.report_id
+                             AND fs.finding_id = f.finding_id
+                           ORDER BY fs.source_type
+                         )
+                       ), '') AS source_types
+                FROM analytics_findings f
+                JOIN analytics_reports r ON r.report_id = f.report_id
+                {where}
+                ORDER BY r.generated_at DESC, f.priority_score DESC, f.finding_id
+                LIMIT ?
+                """,  # noqa: S608 -- clauses are fixed application strings
+                parameters,
+            ).fetchall()
+        return [_finding_row(row) for row in rows]
+
+    def taxonomy_options(self) -> dict[str, list[str]]:
+        with self._connect() as connection:
+            categories = connection.execute(
+                "SELECT DISTINCT category FROM analytics_findings ORDER BY category"
+            ).fetchall()
+            tags = connection.execute(
+                "SELECT DISTINCT tag FROM analytics_finding_tags ORDER BY tag"
+            ).fetchall()
+            source_types = connection.execute(
+                "SELECT DISTINCT source_type FROM analytics_finding_sources "
+                "ORDER BY source_type"
+            ).fetchall()
+        return {
+            "categories": [str(row["category"]) for row in categories],
+            "tags": [str(row["tag"]) for row in tags],
+            "source_types": [str(row["source_type"]) for row in source_types],
+        }
+
+    def taxonomy_counts(self, *, days: int = 30) -> dict[str, list[dict[str, Any]]]:
+        since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        with self._connect() as connection:
+            categories = connection.execute(
+                """
+                SELECT f.category AS name, COUNT(*) AS findings
+                FROM analytics_findings f
+                JOIN analytics_reports r ON r.report_id = f.report_id
+                WHERE r.generated_at >= ?
+                GROUP BY f.category
+                ORDER BY findings DESC, name
+                """,
+                (since,),
+            ).fetchall()
+            tags = connection.execute(
+                """
+                SELECT t.tag AS name, COUNT(*) AS findings
+                FROM analytics_finding_tags t
+                JOIN analytics_reports r ON r.report_id = t.report_id
+                WHERE r.generated_at >= ?
+                GROUP BY t.tag
+                ORDER BY findings DESC, name
+                """,
+                (since,),
+            ).fetchall()
+        return {
+            "categories": [dict(row) for row in categories],
+            "tags": [dict(row) for row in tags],
+        }
+
     def daily_trend(self, *, days: int = 30) -> list[dict[str, Any]]:
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
         with self._connect() as connection:
@@ -378,6 +485,9 @@ class AnalyticsStore:
     def export_rows(self) -> list[dict[str, Any]]:
         return self.list_reports(limit=500)
 
+    def export_finding_rows(self) -> list[dict[str, Any]]:
+        return self.list_findings(limit=1000)
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             connection.executescript(
@@ -387,7 +497,7 @@ class AnalyticsStore:
                   value TEXT NOT NULL
                 );
                 INSERT OR IGNORE INTO analytics_meta (key, value)
-                  VALUES ('schema_version', '1');
+                  VALUES ('schema_version', '2');
                 CREATE TABLE IF NOT EXISTS analytics_reports (
                   report_id TEXT PRIMARY KEY,
                   generated_at TEXT NOT NULL,
@@ -427,6 +537,31 @@ class AnalyticsStore:
                 );
                 CREATE INDEX IF NOT EXISTS analytics_findings_score_idx
                   ON analytics_findings (priority_score DESC);
+                CREATE INDEX IF NOT EXISTS analytics_findings_category_idx
+                  ON analytics_findings (category, priority_score DESC);
+                CREATE TABLE IF NOT EXISTS analytics_finding_tags (
+                  report_id TEXT NOT NULL,
+                  finding_id TEXT NOT NULL,
+                  tag TEXT NOT NULL,
+                  PRIMARY KEY (report_id, finding_id, tag),
+                  FOREIGN KEY (report_id, finding_id)
+                    REFERENCES analytics_findings (report_id, finding_id)
+                );
+                CREATE INDEX IF NOT EXISTS analytics_finding_tags_tag_idx
+                  ON analytics_finding_tags (tag, report_id);
+                CREATE TABLE IF NOT EXISTS analytics_finding_sources (
+                  report_id TEXT NOT NULL,
+                  finding_id TEXT NOT NULL,
+                  evidence_id TEXT NOT NULL,
+                  source_id TEXT NOT NULL,
+                  source_type TEXT NOT NULL,
+                  source_url TEXT NOT NULL,
+                  PRIMARY KEY (report_id, finding_id, evidence_id),
+                  FOREIGN KEY (report_id, finding_id)
+                    REFERENCES analytics_findings (report_id, finding_id)
+                );
+                CREATE INDEX IF NOT EXISTS analytics_finding_sources_type_idx
+                  ON analytics_finding_sources (source_type, report_id);
                 CREATE TABLE IF NOT EXISTS analytics_source_health (
                   report_id TEXT NOT NULL REFERENCES analytics_reports(report_id),
                   source_id TEXT NOT NULL,
@@ -452,7 +587,14 @@ class AnalyticsStore:
             version = connection.execute(
                 "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
             ).fetchone()
-            if version is None or str(version["value"]) != "1":
+            if version is not None and str(version["value"]) == "1":
+                connection.execute(
+                    "UPDATE analytics_meta SET value = '2' WHERE key = 'schema_version'"
+                )
+                version = connection.execute(
+                    "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
+                ).fetchone()
+            if version is None or str(version["value"]) != "2":
                 raise RuntimeError("unsupported analytics schema")
 
     def _connect(self) -> sqlite3.Connection:
@@ -469,3 +611,94 @@ def _run_id_from_path(path: Path) -> str | None:
         if part.startswith("run_"):
             return part
     return None
+
+
+def _index_finding_dimensions(
+    connection: sqlite3.Connection,
+    *,
+    report_id: str,
+    findings: list[dict[str, Any]],
+) -> None:
+    for finding in findings:
+        confidence = finding.get("confidence", {})
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO analytics_findings (
+              finding_id, report_id, title, category, emergence_stage,
+              publication_class, priority_score, confidence_level,
+              confidence_probability, first_observed_at, lead_time_hours
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(finding["finding_id"]),
+                report_id,
+                str(finding["title"]),
+                str(finding["category"]),
+                str(finding["emergence_stage"]),
+                str(finding["publication_class"]),
+                float(finding["priority_score"]),
+                str(confidence.get("level", "low")),
+                float(confidence.get("probability", 0)),
+                str(finding["first_observed_at"]),
+                finding.get("lead_time_hours"),
+            ),
+        )
+        raw_tags = finding.get("tags")
+        if isinstance(raw_tags, list):
+            tags = [item for item in raw_tags if isinstance(item, str)]
+        else:
+            identifiers = tuple(
+                str(mapping["identifier"])
+                for mapping in finding.get("mappings", [])
+                if isinstance(mapping, dict)
+                and isinstance(mapping.get("identifier"), str)
+            )
+            taxonomy = classify_taxonomy(
+                str(finding.get("title", "")),
+                "\n".join(
+                    [
+                        str(finding.get("why_now", "")),
+                        *(str(item) for item in finding.get("known", [])),
+                    ]
+                ),
+                identifiers=identifiers,
+            )
+            tags = list(taxonomy.tags)
+        for tag in tags:
+            if isinstance(tag, str):
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO analytics_finding_tags (
+                      report_id, finding_id, tag
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (report_id, str(finding["finding_id"]), tag),
+                )
+        for source in finding.get("source_evidence", []):
+            if not isinstance(source, dict):
+                continue
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO analytics_finding_sources (
+                  report_id, finding_id, evidence_id, source_id,
+                  source_type, source_url
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    report_id,
+                    str(finding["finding_id"]),
+                    str(source["evidence_id"]),
+                    str(source["source_id"]),
+                    str(source["source_type"]),
+                    str(source["url"]),
+                ),
+            )
+
+
+def _finding_row(row: sqlite3.Row) -> dict[str, Any]:
+    value = dict(row)
+    value["tags"] = [item for item in str(value["tags"]).split("|") if item]
+    value["source_types"] = [
+        item for item in str(value["source_types"]).split("|") if item
+    ]
+    return value

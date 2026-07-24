@@ -17,6 +17,24 @@
     <button type="submit">Apply</button>
   </form>
 </section>
+<section class="taxonomy-grid">
+  <article class="panel">
+    <div class="panel-heading"><div><p class="eyebrow">Finding types</p><h2>Categories</h2></div></div>
+    <div class="taxonomy-list">
+      {% for item in taxonomy.categories %}
+      <a href="/findings?category={{ item.name }}"><span>{{ item.name|replace("_", " ")|title }}</span><strong>{{ item.findings }}</strong></a>
+      {% else %}<span class="muted">No categorized findings in this period.</span>{% endfor %}
+    </div>
+  </article>
+  <article class="panel">
+    <div class="panel-heading"><div><p class="eyebrow">Cross-cutting themes</p><h2>Tags</h2></div></div>
+    <div class="tag-cloud">
+      {% for item in taxonomy.tags %}
+      <a class="tag" href="/findings?tag={{ item.name }}">{{ item.name|replace("_", " ") }} <strong>{{ item.findings }}</strong></a>
+      {% else %}<span class="muted">Tags will appear as new reports are indexed.</span>{% endfor %}
+    </div>
+  </article>
+</section>
 <section class="metric-grid compact">
   <article class="metric-card"><span>Reports</span><strong>{{ overview.reports }}</strong></article>
   <article class="metric-card"><span>Findings</span><strong>{{ overview.findings }}</strong></article>
