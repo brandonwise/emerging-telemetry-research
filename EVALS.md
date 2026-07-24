@@ -145,3 +145,24 @@ Measure:
 - Injection/manipulation suspected
 
 Feedback should update calibration and evaluation datasets through a reviewed process. It must never directly teach the system to trust a source without evidence.
+
+## Self-improvement controller gates
+
+The weekly controller evaluates one champion and at most two adjacent daily-threshold challengers.
+It does not optimize Flash or Watch behavior.
+
+Required anchors:
+
+- The complete frozen acceptance suite passes before selection.
+- At least 20 findings have analyst labels, including at least eight positive and five negative.
+- Precision remains at or above 80%.
+- Recall regression is no greater than five percentage points.
+- False-alert rate cannot regress.
+- Weighted precision/recall utility improves by at least two percentage points.
+- A stricter threshold is rejected when missing-source feedback exceeds ten percent.
+- Any injection/manipulation label blocks policy promotion pending security review.
+- Unknown report or finding references block the cycle.
+- Apply and rollback both verify immutable policy hashes.
+
+The controller's output is a proposal, never a publication. Production mutation requires a Lobster
+approval checkpoint and creates an immutable apply receipt plus rollback snapshot.

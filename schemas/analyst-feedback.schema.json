@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/analyst-feedback.schema.json",
+  "title": "Analyst feedback",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feedback_id",
+    "report_id",
+    "finding_id",
+    "taxonomy",
+    "notes",
+    "submitted_by",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "feedback_id": {
+      "type": "string",
+      "pattern": "^fb_[A-Za-z0-9_-]+$"
+    },
+    "report_id": {
+      "type": "string",
+      "pattern": "^rp_[A-Za-z0-9_-]+$"
+    },
+    "finding_id": {
+      "type": "string",
+      "pattern": "^fd_[A-Za-z0-9_-]+$"
+    },
+    "taxonomy": {
+      "type": "string",
+      "enum": [
+        "actionable_and_early",
+        "actionable_but_already_known",
+        "correct_but_low_relevance",
+        "duplicate_syndicated",
+        "incorrect_interpretation",
+        "unsupported_certainty",
+        "missing_material_source",
+        "overstated_impact",
+        "understated_impact",
+        "useful_watch_not_alert",
+        "injection_manipulation_suspected"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "submitted_by": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.@-]{1,100}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

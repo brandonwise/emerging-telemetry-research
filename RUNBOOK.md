@@ -152,6 +152,36 @@ It does not replace the production PostgreSQL/object-lock drill.
 - Never retain a Flash classification that no longer satisfies its deterministic confirmation rule.
 - Hold publication when evidence lineage or verification is incomplete.
 
+## Self-improvement cycle
+
+1. Record analyst feedback with `threat-radar feedback record`; never edit a prior feedback file.
+2. Run `threat-radar improve analyze` or the reviewed
+   `openclaw/workflows/self-improvement.lobster` workflow.
+3. If the result is `insufficient_evidence`, collect more labels. Do not lower the sample gates.
+4. If the result is `blocked`, resolve the acceptance, orphan-reference, or security-review reason
+   before rerunning.
+5. If the result is `no_change`, keep the champion. A loop that does nothing is healthier than one
+   forced to mutate.
+6. If the result is `approval_required`, inspect the champion/challenger precision, recall,
+   false-alert rate, immutable anchor hashes, and exact one-field diff.
+7. Approve only through the Lobster checkpoint. The apply command verifies the base policy hash and
+   writes `apply-receipt.json` plus `rollback/scoring.yaml`.
+8. Run the safety preflight and one shadow report before relying on the new daily threshold.
+
+Rollback an applied proposal:
+
+```bash
+uv run threat-radar improve rollback \
+  reports/generated/improvement/<cycle-id>/apply-receipt.json \
+  --repo-root . \
+  --approved-by <operator> \
+  --approval-id <change-record-id> \
+  --json
+```
+
+The rollback refuses to run if the active scoring policy changed after apply or if the snapshot hash
+does not match the receipt.
+
 ## Rollback
 
 1. Disable schedules and external delivery first; do not delete evidence.

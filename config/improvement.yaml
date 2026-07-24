@@ -1,0 +1,42 @@
+version: 1
+enabled: true
+mode: proposal_only
+cadence: weekly
+
+objective:
+  precision_weight: 0.55
+  recall_weight: 0.35
+  false_alert_weight: 0.10
+
+gates:
+  minimum_labeled_findings: 20
+  minimum_positive_findings: 8
+  minimum_negative_findings: 5
+  minimum_precision: 0.80
+  maximum_recall_regression: 0.05
+  maximum_false_alert_regression: 0.00
+  minimum_utility_gain: 0.02
+  maximum_missing_source_rate: 0.10
+
+mutable_parameters:
+  thresholds.daily:
+    minimum: 40
+    maximum: 60
+    step: 5
+    maximum_steps_per_cycle: 1
+
+protected_parameters:
+  - thresholds.flash
+  - thresholds.watch
+  - hard_rules
+  - confirmation_rules
+  - source_terms
+  - egress_policy
+  - content_security_policy
+  - delivery_destination
+
+promotion:
+  automatic_apply: false
+  requires_lobster_approval: true
+  rollback_snapshot_required: true
+  frozen_acceptance_required: true

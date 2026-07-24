@@ -24,7 +24,13 @@ from packages.lineage.graph import (
     validate_lineage,
 )
 from packages.normalization.entities import normalize_entities
-from packages.scoring.engine import PublicationClass, ScoreComponents, classify
+from packages.scoring.engine import (
+    DEFAULT_THRESHOLDS,
+    PublicationClass,
+    PublicationThresholds,
+    ScoreComponents,
+    classify,
+)
 from packages.scoring.features import ClusterSignals, compute_score
 from packages.security_gateway.gateway import ContentSecurityGateway
 from packages.storage.object_store import ImmutableObjectStore, LocalImmutableObjectStore
@@ -54,6 +60,7 @@ def run_frozen_fixture(
     content_gateway: ContentSecurityGateway | None = None,
     identifier_filter: frozenset[str] | None = None,
     shadow_mode: bool = True,
+    thresholds: PublicationThresholds = DEFAULT_THRESHOLDS,
 ) -> FrozenRunResult:
     manifest = _load_manifest(manifest_path)
     run_id = str(manifest["run_id"])
@@ -225,7 +232,11 @@ def run_frozen_fixture(
     )
     score = compute_score(signals)
     flash_confirmation = signals.known_exploited and independent_count >= 2
-    publication_class = classify(score, flash_confirmation_rule=flash_confirmation)
+    publication_class = classify(
+        score,
+        flash_confirmation_rule=flash_confirmation,
+        thresholds=thresholds,
+    )
     packet = {
         "schema_version": "1.0",
         "packet_id": stable_id("ep", cluster_id, run_id),

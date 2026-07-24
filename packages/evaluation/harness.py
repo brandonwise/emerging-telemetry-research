@@ -8,26 +8,37 @@ from typing import Any
 from packages.common.canonical import canonical_json_bytes, sha256_hex
 from packages.lineage.graph import LineageEdge, independent_source_count
 from packages.pipeline.frozen import run_frozen_fixture
+from packages.scoring.engine import load_thresholds
 from packages.security_gateway.gateway import ContentSecurityGateway
 from packages.verification.claims import verify_report_claims
 
 
-def run_acceptance_suite(fixture_root: Path, output_root: Path) -> dict[str, Any]:
+def run_acceptance_suite(
+    fixture_root: Path,
+    output_root: Path,
+    *,
+    scoring_config: Path = Path("config/scoring.yaml"),
+) -> dict[str, Any]:
+    thresholds = load_thresholds(scoring_config)
     flash = run_frozen_fixture(
         fixture_root / "flash-manifest.json",
         output_root / "flash",
+        thresholds=thresholds,
     )
     early = run_frozen_fixture(
         fixture_root / "early-manifest.json",
         output_root / "early",
+        thresholds=thresholds,
     )
     late = run_frozen_fixture(
         fixture_root / "late-manifest.json",
         output_root / "late",
+        thresholds=thresholds,
     )
     replay = run_frozen_fixture(
         fixture_root / "flash-manifest.json",
         output_root / "replay",
+        thresholds=thresholds,
     )
     hostile = (fixture_root.parents[1] / "evals/injection_corpus/hostile.html").read_bytes()
     injection_results = _evaluate_injection_variants(hostile)

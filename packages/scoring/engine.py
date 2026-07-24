@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 class PublicationClass(StrEnum):
@@ -15,6 +19,42 @@ class PublicationClass(StrEnum):
     WATCH = "watch"
     DAILY = "daily"
     ARCHIVE = "archive"
+
+
+@dataclass(frozen=True, slots=True)
+class PublicationThresholds:
+    flash: float = 85.0
+    watch: float = 65.0
+    daily: float = 45.0
+
+    def validate(self) -> None:
+        if not 0 <= self.daily < self.watch < self.flash <= 100:
+            raise ValueError(
+                "publication thresholds must satisfy 0 <= daily < watch < flash <= 100"
+            )
+
+    @classmethod
+    def from_mapping(cls, value: dict[str, Any]) -> PublicationThresholds:
+        thresholds = cls(
+            flash=float(value["flash"]),
+            watch=float(value["watch"]),
+            daily=float(value["daily"]),
+        )
+        thresholds.validate()
+        return thresholds
+
+
+DEFAULT_THRESHOLDS = PublicationThresholds()
+
+
+def load_thresholds(path: Path) -> PublicationThresholds:
+    value = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("scoring configuration must be an object")
+    raw_thresholds = value.get("thresholds")
+    if not isinstance(raw_thresholds, dict):
+        raise ValueError("scoring configuration omitted thresholds")
+    return PublicationThresholds.from_mapping(raw_thresholds)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,16 +103,18 @@ def classify(
     direct_critical_rule: bool = False,
     citations_present: bool = True,
     flash_confirmation_rule: bool = False,
+    thresholds: PublicationThresholds = DEFAULT_THRESHOLDS,
 ) -> PublicationClass:
     """Classify a finding while enforcing non-model policy gates."""
+    thresholds.validate()
     if not citations_present:
         return PublicationClass.ARCHIVE
 
     total = score.total
-    if (total >= 85 or direct_critical_rule) and flash_confirmation_rule:
+    if (total >= thresholds.flash or direct_critical_rule) and flash_confirmation_rule:
         return PublicationClass.FLASH
-    if total >= 65:
+    if total >= thresholds.watch:
         return PublicationClass.WATCH
-    if total >= 45:
+    if total >= thresholds.daily:
         return PublicationClass.DAILY
     return PublicationClass.ARCHIVE

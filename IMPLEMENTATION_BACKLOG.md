@@ -70,6 +70,9 @@
 - [ ] Confidence calibration
 - [ ] Correction/downgrade workflow
 - [ ] Analyst feedback UI/API
+- [x] Append-only analyst feedback CLI contract
+- [x] Approval-gated champion/challenger improvement graph
+- [x] Hash-checked scoring-policy apply and rollback
 
 ## P1 — Reliability and operations
 
@@ -92,6 +95,7 @@
 - [ ] Injection corpus across all parsers
 - [ ] Chaos/failure test suite
 - [ ] Precision, lead-time, calibration, cost, and citation dashboards
+- [x] Multi-metric improvement controller with counter-metric gates
 - [x] Frozen shadow evaluation path
 - [x] Human approval for the bounded local daily brief
 - [ ] Accumulate Flash-release shadow metrics

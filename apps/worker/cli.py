@@ -16,6 +16,13 @@ from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
 from packages.discovery.clients import BraveSearchClient, XaiXSearchClient
 from packages.evaluation.harness import run_acceptance_suite
+from packages.improvement.controller import (
+    ALL_TAXONOMIES,
+    apply_proposal,
+    record_feedback,
+    rollback_proposal,
+    run_improvement_cycle,
+)
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.pipeline.live import LiveRunSettings, run_live_radar
 from packages.storage.runtime import (
@@ -29,11 +36,15 @@ fixture_app = typer.Typer(no_args_is_help=True)
 report_app = typer.Typer(no_args_is_help=True)
 eval_app = typer.Typer(no_args_is_help=True)
 live_app = typer.Typer(no_args_is_help=True)
+feedback_app = typer.Typer(no_args_is_help=True)
+improve_app = typer.Typer(no_args_is_help=True)
 app.add_typer(run_app, name="run")
 app.add_typer(fixture_app, name="fixture")
 app.add_typer(report_app, name="report")
 app.add_typer(eval_app, name="eval")
 app.add_typer(live_app, name="live")
+app.add_typer(feedback_app, name="feedback")
+app.add_typer(improve_app, name="improve")
 
 
 def emit(payload: dict[str, Any], pretty: bool = False) -> None:
@@ -223,6 +234,152 @@ def eval_acceptance(
     emit(result, pretty=not json_output)
     if result["passed"] is not True:
         raise typer.Exit(code=1)
+
+
+@feedback_app.command("record")
+def feedback_record(
+    report_json: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    finding_id: str,
+    taxonomy: str,
+    submitted_by: Annotated[str, typer.Option("--submitted-by")],
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/feedback"),
+    notes: Annotated[str | None, typer.Option("--notes")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    if taxonomy not in ALL_TAXONOMIES:
+        raise typer.BadParameter(
+            "taxonomy must be one of: " + ", ".join(sorted(ALL_TAXONOMIES))
+        )
+    feedback, path = record_feedback(
+        report_path=report_json,
+        finding_id=finding_id,
+        taxonomy=taxonomy,
+        submitted_by=submitted_by,
+        output_root=output,
+        notes=notes,
+    )
+    emit(
+        {
+            "feedback_id": feedback["feedback_id"],
+            "feedback_path": str(path.resolve()),
+            "status": "recorded",
+        },
+        pretty=not json_output,
+    )
+
+
+@improve_app.command("analyze")
+def improve_analyze(
+    reports: Annotated[Path, typer.Option("--reports")] = Path("reports/generated"),
+    feedback: Annotated[Path, typer.Option("--feedback")] = Path("reports/feedback"),
+    output: Annotated[Path, typer.Option("--output")] = Path(
+        "reports/generated/improvement"
+    ),
+    fixtures: Annotated[
+        Path,
+        typer.Option("--fixtures", exists=True, file_okay=False, readable=True),
+    ] = Path("tests/fixtures/vertical_slice"),
+    scoring_config: Annotated[
+        Path,
+        typer.Option(
+            "--scoring-config",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = Path("config/scoring.yaml"),
+    improvement_config: Annotated[
+        Path,
+        typer.Option(
+            "--improvement-config",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = Path("config/improvement.yaml"),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    result = run_improvement_cycle(
+        reports_root=reports,
+        feedback_root=feedback,
+        output_root=output,
+        fixture_root=fixtures,
+        scoring_config=scoring_config,
+        improvement_config=improvement_config,
+    )
+    emit(result, pretty=not json_output)
+
+
+@improve_app.command("apply")
+def improve_apply(
+    proposal: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    approved_by: Annotated[str, typer.Option("--approved-by")],
+    approval_id: Annotated[str, typer.Option("--approval-id")],
+    repo_root: Annotated[
+        Path,
+        typer.Option("--repo-root", exists=True, file_okay=False, writable=True),
+    ] = Path("."),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    result = apply_proposal(
+        proposal,
+        repo_root=repo_root,
+        approved_by=approved_by,
+        approval_id=approval_id,
+    )
+    emit(result, pretty=not json_output)
+
+
+@improve_app.command("apply-stdin")
+def improve_apply_stdin(
+    approved_by: Annotated[str, typer.Option("--approved-by")],
+    approval_id: Annotated[str, typer.Option("--approval-id")],
+    repo_root: Annotated[
+        Path,
+        typer.Option("--repo-root", exists=True, file_okay=False, writable=True),
+    ] = Path("."),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    payload = read_stdin_json()
+    proposal_path = payload.get("proposal_path")
+    if payload.get("status") != "approval_required" or not isinstance(proposal_path, str):
+        raise typer.BadParameter("stdin does not contain an approval-ready proposal")
+    result = apply_proposal(
+        Path(proposal_path),
+        repo_root=repo_root,
+        approved_by=approved_by,
+        approval_id=approval_id,
+    )
+    emit(result, pretty=not json_output)
+
+
+@improve_app.command("rollback")
+def improve_rollback(
+    receipt: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    approved_by: Annotated[str, typer.Option("--approved-by")],
+    approval_id: Annotated[str, typer.Option("--approval-id")],
+    repo_root: Annotated[
+        Path,
+        typer.Option("--repo-root", exists=True, file_okay=False, writable=True),
+    ] = Path("."),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    result = rollback_proposal(
+        receipt,
+        repo_root=repo_root,
+        approved_by=approved_by,
+        approval_id=approval_id,
+    )
+    emit(result, pretty=not json_output)
 
 
 @run_app.command("blocked-live-collection")

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/improvement-proposal.schema.json",
+  "title": "Improvement proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proposal_id",
+    "cycle_id",
+    "status",
+    "target_path",
+    "base_sha256",
+    "changes",
+    "reason",
+    "baseline_metrics",
+    "challenger_metrics",
+    "safety_anchor_sha256",
+    "rollback",
+    "automatic_apply",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^ip_[A-Za-z0-9_-]+$"
+    },
+    "cycle_id": {
+      "type": "string",
+      "pattern": "^ic_[A-Za-z0-9_-]+$"
+    },
+    "status": {
+      "const": "approval_required"
+    },
+    "target_path": {
+      "const": "config/scoring.yaml"
+    },
+    "base_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "changes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "path": {
+            "const": "thresholds.daily"
+          },
+          "from": {
+            "type": "number",
+            "minimum": 40,
+            "maximum": 60
+          },
+          "to": {
+            "type": "number",
+            "minimum": 40,
+            "maximum": 60
+          }
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "baseline_metrics": {
+      "type": "object"
+    },
+    "challenger_metrics": {
+      "type": "object"
+    },
+    "safety_anchor_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_path",
+        "expected_base_sha256"
+      ],
+      "properties": {
+        "snapshot_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_base_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "automatic_apply": {
+      "const": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

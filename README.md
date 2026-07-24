@@ -91,6 +91,53 @@ approved source plan
 OpenClaw cron and reviewed Lobster workflows own orchestration. PostgreSQL owns durable state.
 Conversation history owns neither.
 
+## Grounded self-improvement
+
+The daily production graph is wrapped by a separate weekly champion/challenger loop. It reads
+immutable reports and append-only analyst feedback, evaluates the current daily publication
+threshold and bounded challengers in parallel, runs the frozen acceptance anchors, and either stops
+or emits a proposal requiring a resumable Lobster approval.
+
+It cannot change Flash or Watch thresholds, confirmation rules, source terms, content security,
+egress, or the fixed Discord destination. It never publishes a report. Approved changes are
+hash-checked, limited to one five-point daily-threshold step, and ship with an immutable rollback
+snapshot and receipt.
+
+Record one analyst label:
+
+```bash
+uv run threat-radar feedback record \
+  reports/generated/<run-id>/<report-id>.json \
+  <finding-id> \
+  actionable_and_early \
+  --submitted-by operator \
+  --json
+```
+
+Run one proposal-only cycle:
+
+```bash
+uv run threat-radar improve analyze \
+  --reports reports/generated \
+  --feedback reports/feedback \
+  --output reports/generated/improvement \
+  --json
+```
+
+Run the reviewed workflow through the OpenClaw Lobster tool with this payload:
+
+```json
+{
+  "action": "run",
+  "pipeline": "openclaw/workflows/self-improvement.lobster",
+  "cwd": "workspace/openclaw-emerging-threat-radar"
+}
+```
+
+The workflow currently stops with `insufficient_evidence` until at least 20 grounded labels,
+including positive and negative outcomes, exist. The weekly schedule is intentionally disabled
+until that feedback corpus is real.
+
 ## Production boundary
 
 Read [BLOCKERS.md](BLOCKERS.md) and [THREAT_MODEL_APPROVAL.md](THREAT_MODEL_APPROVAL.md). Approval is
@@ -111,3 +158,4 @@ receive separate approval.
 - `RUNBOOK.md` — operations, incident, replay, restore, and rollback procedures
 - `openapi/openapi.yaml` — versioned internal service contract
 - `docs/adr/` — architecture decisions and security deviations
+- `docs/adr/0008-grounded-self-improvement-graph.md` — loop, graph, approval, and rollback design

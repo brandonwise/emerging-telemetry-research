@@ -1,4 +1,9 @@
-from packages.scoring.engine import PublicationClass, ScoreComponents, classify
+from packages.scoring.engine import (
+    PublicationClass,
+    PublicationThresholds,
+    ScoreComponents,
+    classify,
+)
 
 
 def test_total_and_flash_gate() -> None:
@@ -19,5 +24,17 @@ def test_missing_citation_archives() -> None:
     score = ScoreComponents(25, 20, 15, 15, 15, 10)
     assert (
         classify(score, citations_present=False, flash_confirmation_rule=True)
+        == PublicationClass.ARCHIVE
+    )
+
+
+def test_daily_threshold_is_configurable_but_ordered() -> None:
+    score = ScoreComponents(10, 10, 10, 10, 7, 0)
+    assert classify(score) == PublicationClass.DAILY
+    assert (
+        classify(
+            score,
+            thresholds=PublicationThresholds(flash=85, watch=65, daily=50),
+        )
         == PublicationClass.ARCHIVE
     )

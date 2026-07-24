@@ -35,6 +35,7 @@ from packages.discovery.clients import (
     candidate_cves,
 )
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
+from packages.scoring.engine import PublicationThresholds, load_thresholds
 from packages.security_gateway.gateway import (
     ContentSecurityGateway,
     TextArtifactMalwareScanner,
@@ -52,6 +53,7 @@ class LiveRunSettings:
     edition: str = "morning"
     timezone: str = "America/New_York"
     discovery_config: Path = Path("config/discovery.yaml")
+    scoring_config: Path = Path("config/scoring.yaml")
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +97,7 @@ async def run_live_radar(
     maximum_candidates = int(promotion.get("maximum_candidates_per_run", 6))
     maximum_findings = int(promotion.get("maximum_report_findings", 5))
     minimum_class = str(promotion.get("minimum_publication_class", "daily"))
+    thresholds = load_thresholds(settings.scoring_config)
     if minimum_class not in PUBLICATION_RANK:
         raise ValueError("invalid minimum publication class")
 
@@ -183,6 +186,7 @@ async def run_live_radar(
             official_client=official_client,
             object_store=object_store,
             discovery_baseline_at=discovery_baselines.get(cve),
+            thresholds=thresholds,
         )
         degraded.update(candidate_degraded)
         source_health.update(candidate_health)
@@ -336,6 +340,7 @@ async def _run_candidate(
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
     discovery_baseline_at: datetime | None,
+    thresholds: PublicationThresholds,
 ) -> tuple[FrozenRunResult | None, set[str], dict[str, dict[str, Any]]]:
     candidate_root = run_root / "candidates" / cve
     inputs_root = candidate_root / "inputs"
@@ -405,6 +410,7 @@ async def _run_candidate(
             ),
             identifier_filter=frozenset({cve}),
             shadow_mode=False,
+            thresholds=thresholds,
         )
     except ValueError as exc:
         if "requires at least one CVE" in str(exc):

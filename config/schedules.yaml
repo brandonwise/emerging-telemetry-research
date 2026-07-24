@@ -49,3 +49,10 @@ jobs:
     workflow: openclaw/workflows/evaluation.lobster
     mode: isolated
     args: ["--suite", "weekly-production-retrospective"]
+
+  weekly_self_improvement:
+    enabled: false
+    cron: "30 9 * * 1"
+    workflow: openclaw/workflows/self-improvement.lobster
+    mode: isolated
+    args: []
