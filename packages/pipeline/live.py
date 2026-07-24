@@ -36,11 +36,13 @@ from packages.discovery.clients import (
     candidate_cves,
 )
 from packages.discovery.emerging import (
+    PreparedSignal,
     build_emerging_finding,
     cluster_non_cve_signals,
     enrich_cve_finding,
     prepare_discovery_signals,
     referenced_discovery_records,
+    related_cves,
 )
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
 from packages.scoring.engine import PublicationThresholds, load_thresholds
@@ -76,6 +78,8 @@ class LiveRunResult:
     candidate_cves: tuple[str, ...]
     degraded_sources: tuple[str, ...]
     emerging_signal_count: int = 0
+    qualified_emerging_count: int = 0
+    source_native_signal_count: int = 0
 
 
 async def run_live_radar(
@@ -104,11 +108,12 @@ async def run_live_radar(
     queries = _string_tuple(brave_config, "queries")
     allowed_handles = _string_tuple(x_config, "allowed_handles")
     maximum_candidates = int(promotion.get("maximum_candidates_per_run", 6))
-    maximum_signal_candidates = int(
-        promotion.get("maximum_signal_candidates_per_run", 8)
-    )
+    maximum_signal_candidates = int(promotion.get("maximum_signal_candidates_per_run", 8))
     maximum_findings = int(promotion.get("maximum_report_findings", 5))
+    minimum_emerging_findings = int(promotion.get("minimum_emerging_findings_per_report", 0))
     minimum_class = str(promotion.get("minimum_publication_class", "daily"))
+    if not 0 <= minimum_emerging_findings <= maximum_findings:
+        raise ValueError("minimum emerging findings must be between zero and the report maximum")
     thresholds = load_thresholds(settings.scoring_config)
     if minimum_class not in PUBLICATION_RANK:
         raise ValueError("invalid minimum publication class")
@@ -210,6 +215,23 @@ async def run_live_radar(
         if result is not None:
             candidate_results.append(result)
 
+    available_cves = {
+        finding_cve
+        for result in candidate_results
+        if result.report.get("findings")
+        for finding_cve in [_finding_cve(result.report["findings"][0])]
+        if finding_cve is not None
+    }
+    related_signals_by_cve: dict[str, list[PreparedSignal]] = {}
+    emerging_clusters: list[tuple[PreparedSignal, ...]] = []
+    for cluster in cluster_non_cve_signals(prepared_signals):
+        matches = set(related_cves(cluster, prepared_signals)).intersection(available_cves)
+        if len(matches) == 1:
+            cve = matches.pop()
+            related_signals_by_cve.setdefault(cve, []).extend(cluster)
+        else:
+            emerging_clusters.append(cluster)
+
     cve_findings: list[dict[str, Any]] = []
     for result in candidate_results:
         if not result.report.get("findings"):
@@ -222,6 +244,7 @@ async def run_live_radar(
             finding,
             cve=finding_cve,
             signals=prepared_signals,
+            related_signals=tuple(related_signals_by_cve.get(finding_cve, [])),
         )
         enriched["source_evidence"] = _dedupe_source_evidence(
             [
@@ -236,18 +259,19 @@ async def run_live_radar(
             generated_at=generated_at,
             thresholds=thresholds,
         )
-        for cluster in cluster_non_cve_signals(prepared_signals)[:maximum_signal_candidates]
+        for cluster in emerging_clusters[:maximum_signal_candidates]
     ]
-    findings = sorted(
-        (
-            finding
-            for finding in [*cve_findings, *emerging_findings]
-            if PUBLICATION_RANK[str(finding["publication_class"])]
-            >= PUBLICATION_RANK[minimum_class]
-        ),
-        key=lambda item: float(item["priority_score"]),
-        reverse=True,
-    )[:maximum_findings]
+    qualified_emerging_count = sum(
+        PUBLICATION_RANK[str(finding["publication_class"])] >= PUBLICATION_RANK[minimum_class]
+        for finding in emerging_findings
+    )
+    findings = _select_report_findings(
+        cve_findings=cve_findings,
+        emerging_findings=emerging_findings,
+        minimum_class=minimum_class,
+        maximum_findings=maximum_findings,
+        minimum_emerging_findings=minimum_emerging_findings,
+    )
     discovery_evidence, discovery_artifacts = referenced_discovery_records(
         findings,
         prepared_signals,
@@ -313,6 +337,46 @@ async def run_live_radar(
                 if isinstance(mapping, dict)
             )
         ),
+        qualified_emerging_count=qualified_emerging_count,
+        source_native_signal_count=sum(
+            not candidate_cves((item.signal,)) for item in prepared_signals
+        ),
+    )
+
+
+def _select_report_findings(
+    *,
+    cve_findings: list[dict[str, Any]],
+    emerging_findings: list[dict[str, Any]],
+    minimum_class: str,
+    maximum_findings: int,
+    minimum_emerging_findings: int,
+) -> list[dict[str, Any]]:
+    minimum_rank = PUBLICATION_RANK[minimum_class]
+    eligible_cves = [
+        finding
+        for finding in cve_findings
+        if PUBLICATION_RANK[str(finding["publication_class"])] >= minimum_rank
+    ]
+    eligible_emerging = sorted(
+        (
+            finding
+            for finding in emerging_findings
+            if PUBLICATION_RANK[str(finding["publication_class"])] >= minimum_rank
+        ),
+        key=lambda item: float(item["priority_score"]),
+        reverse=True,
+    )
+    reserved = eligible_emerging[:minimum_emerging_findings]
+    remaining = sorted(
+        [*eligible_cves, *eligible_emerging[minimum_emerging_findings:]],
+        key=lambda item: float(item["priority_score"]),
+        reverse=True,
+    )
+    return sorted(
+        [*reserved, *remaining[: max(0, maximum_findings - len(reserved))]],
+        key=lambda item: float(item["priority_score"]),
+        reverse=True,
     )
 
 
@@ -395,8 +459,25 @@ def _existing_morning_result(
                         for finding in report.get("findings", [])
                         if isinstance(finding, dict)
                         and not any(
-                            isinstance(mapping, dict)
-                            and mapping.get("scheme") == "CVE"
+                            isinstance(mapping, dict) and mapping.get("scheme") == "CVE"
+                            for mapping in finding.get("mappings", [])
+                        )
+                    ),
+                    qualified_emerging_count=sum(
+                        1
+                        for finding in report.get("findings", [])
+                        if isinstance(finding, dict)
+                        and not any(
+                            isinstance(mapping, dict) and mapping.get("scheme") == "CVE"
+                            for mapping in finding.get("mappings", [])
+                        )
+                    ),
+                    source_native_signal_count=sum(
+                        len(finding.get("source_evidence", []))
+                        for finding in report.get("findings", [])
+                        if isinstance(finding, dict)
+                        and not any(
+                            isinstance(mapping, dict) and mapping.get("scheme") == "CVE"
                             for mapping in finding.get("mappings", [])
                         )
                     ),
@@ -486,9 +567,7 @@ async def _run_candidate(
             manifest_path,
             candidate_root / "report",
             object_store=object_store,
-            content_gateway=ContentSecurityGateway(
-                malware_scanner=TextArtifactMalwareScanner()
-            ),
+            content_gateway=ContentSecurityGateway(malware_scanner=TextArtifactMalwareScanner()),
             identifier_filter=frozenset({cve}),
             shadow_mode=False,
             thresholds=thresholds,
@@ -805,8 +884,10 @@ def _mapping(value: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _string_tuple(value: dict[str, Any], key: str) -> tuple[str, ...]:
     items = value.get(key)
-    if not isinstance(items, list) or not items or not all(
-        isinstance(item, str) and item for item in items
+    if (
+        not isinstance(items, list)
+        or not items
+        or not all(isinstance(item, str) and item for item in items)
     ):
         raise ValueError(f"discovery configuration {key} must be a non-empty string list")
     return tuple(items)

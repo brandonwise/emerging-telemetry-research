@@ -109,6 +109,26 @@ def test_sync_skips_candidate_reports(tmp_path: Path) -> None:
     assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1}
 
 
+def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
+    report_root = tmp_path / "reports"
+    result = run_frozen_fixture(
+        Path("tests/fixtures/vertical_slice/early-manifest.json"),
+        report_root / "run_fixture_early",
+    )
+    evaluation = report_root / "evaluation" / "early"
+    evaluation.mkdir(parents=True)
+    mutated = json.loads(result.report_json_path.read_text(encoding="utf-8"))
+    mutated["executive_summary"] = "Conflicting evaluation-only copy."
+    (evaluation / result.report_json_path.name).write_text(
+        json.dumps(mutated),
+        encoding="utf-8",
+    )
+
+    synced = AnalyticsStore(tmp_path / "radar.db").sync_reports(report_root)
+
+    assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1}
+
+
 def test_analytics_migrates_v1_to_taxonomy_schema(tmp_path: Path) -> None:
     database = tmp_path / "radar.db"
     with sqlite3.connect(database) as connection:

@@ -158,6 +158,7 @@ class AnalyticsStore:
             relative_parts = path.relative_to(reports_root).parts
             if (
                 path.name.endswith(".delivery.json")
+                or not relative_parts[0].startswith("run_")
                 or "candidates" in relative_parts
                 or "improvement" in relative_parts
             ):

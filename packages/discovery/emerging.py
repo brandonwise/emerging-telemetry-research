@@ -210,34 +210,61 @@ CATEGORY_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 STOP_WORDS = {
     "about",
+    "active",
     "after",
     "against",
+    "and",
+    "are",
     "attack",
     "attacker",
     "attacks",
     "before",
     "being",
+    "critical",
     "could",
     "cyber",
     "cybersecurity",
+    "discovered",
     "emerging",
+    "exploit",
+    "exploited",
+    "exploitation",
+    "flaw",
+    "for",
     "from",
+    "has",
     "have",
+    "how",
     "into",
+    "its",
     "latest",
     "more",
     "new",
+    "not",
+    "over",
     "report",
     "reported",
     "researchers",
     "security",
     "signal",
+    "than",
     "that",
+    "the",
     "their",
+    "they",
     "this",
     "threat",
+    "through",
+    "under",
+    "vulnerability",
+    "vulnerabilities",
+    "was",
+    "were",
+    "will",
     "using",
     "with",
+    "you",
+    "your",
 }
 
 
@@ -304,11 +331,7 @@ def prepare_discovery_signals(
         origin = _origin(signal)
         taxonomy = classify_taxonomy(
             signal.title,
-            "\n".join(
-                item
-                for item in (signal.summary, signal.rationale)
-                if item is not None
-            ),
+            "\n".join(item for item in (signal.summary, signal.rationale) if item is not None),
             identifiers=signal.identifiers,
         )
         excerpt = signal.summary[:1200]
@@ -342,18 +365,21 @@ def prepare_discovery_signals(
                 "canonical_uri": signal.url,
             },
         )
-        artifact_id = stable_id("ra", signal.source_id, signal.url, stored.content_hash)
+        retrieved_at = format_timestamp(generated_at)
+        artifact_id = stable_id(
+            "ra",
+            signal.source_id,
+            signal.url,
+            stored.content_hash,
+            retrieved_at,
+        )
         evidence_id = stable_id("ev", artifact_id, claim)
         evidence = {
             "evidence_id": evidence_id,
             "source_id": signal.source_id,
-            "source_role": (
-                "researcher_observation"
-                if source_type == "x_post"
-                else "precursor"
-            ),
+            "source_role": ("researcher_observation" if source_type == "x_post" else "precursor"),
             "canonical_uri": signal.url,
-            "retrieved_at": format_timestamp(generated_at),
+            "retrieved_at": retrieved_at,
             "published_at": published_at,
             "content_hash": stored.content_hash,
             "sanitized_hash": sha256_hex(f"{signal.title}\n{excerpt}"),
@@ -369,7 +395,7 @@ def prepare_discovery_signals(
             "title": signal.title,
             "url": signal.url,
             "published_at": published_at,
-            "retrieved_at": format_timestamp(generated_at),
+            "retrieved_at": retrieved_at,
             "excerpt": excerpt,
             "source_handle": signal.source_handle,
         }
@@ -378,7 +404,7 @@ def prepare_discovery_signals(
             "artifact_id": artifact_id,
             "source_id": signal.source_id,
             "canonical_uri": signal.url,
-            "retrieved_at": format_timestamp(generated_at),
+            "retrieved_at": retrieved_at,
             "content_hash": stored.content_hash,
             "object_key": stored.key,
             "size": stored.size,
@@ -409,7 +435,9 @@ def cluster_non_cve_signals(
         ),
     ):
         for cluster in clusters:
-            if any(_related(signal, existing) for existing in cluster):
+            # Complete-link clustering prevents a generic middle item from joining
+            # otherwise unrelated stories into one high-confidence mega-cluster.
+            if all(_related(signal, existing) for existing in cluster):
                 cluster.append(signal)
                 break
         else:
@@ -512,9 +540,7 @@ def build_emerging_finding(
         "last_updated_at": format_timestamp(generated_at),
         "affected": [],
         "exploit_status": (
-            "exploitation_suspected"
-            if "active_exploitation" in tags
-            else "unknown"
+            "exploitation_suspected" if "active_exploitation" in tags else "unknown"
         ),
         "organization_relevance": (
             "No deterministic inventory match is available yet; validate exposure against "
@@ -541,13 +567,33 @@ def build_emerging_finding(
     }
 
 
+def related_cves(
+    cluster: tuple[PreparedSignal, ...],
+    signals: tuple[PreparedSignal, ...],
+) -> tuple[str, ...]:
+    matches: set[str] = set()
+    for candidate in signals:
+        candidate_cves = _cves(candidate.signal)
+        if candidate_cves and any(_related(item, candidate) for item in cluster):
+            matches.update(candidate_cves)
+    return tuple(sorted(matches))
+
+
 def enrich_cve_finding(
     finding: dict[str, Any],
     *,
     cve: str,
     signals: tuple[PreparedSignal, ...],
+    related_signals: tuple[PreparedSignal, ...] = (),
 ) -> dict[str, Any]:
-    matching = [item for item in signals if cve in _cves(item.signal)]
+    matching_by_evidence_id = {
+        str(item.evidence["evidence_id"]): item
+        for item in [
+            *(item for item in signals if cve in _cves(item.signal)),
+            *related_signals,
+        ]
+    }
+    matching = list(matching_by_evidence_id.values())
     combined_text = "\n".join(
         [
             str(finding.get("title", "")),
@@ -575,14 +621,10 @@ def referenced_discovery_records(
         if isinstance(source, dict) and source.get("evidence_id")
     }
     evidence = [
-        item.evidence
-        for item in signals
-        if str(item.evidence["evidence_id"]) in evidence_ids
+        item.evidence for item in signals if str(item.evidence["evidence_id"]) in evidence_ids
     ]
     artifacts = [
-        item.artifact
-        for item in signals
-        if str(item.evidence["evidence_id"]) in evidence_ids
+        item.artifact for item in signals if str(item.evidence["evidence_id"]) in evidence_ids
     ]
     return evidence, artifacts
 
@@ -667,22 +709,24 @@ def _defensive_action(category: str) -> dict[str, Any]:
 def _related(left: PreparedSignal, right: PreparedSignal) -> bool:
     if left.signal.url == right.signal.url:
         return True
-    left_tokens = _topic_tokens(left.signal)
-    right_tokens = _topic_tokens(right.signal)
+    categories = {left.taxonomy.category, right.taxonomy.category}
+    if len(categories) > 1 and categories != {"active_exploitation", "vulnerability"}:
+        return False
+    left_tokens = _title_tokens(left.signal)
+    right_tokens = _title_tokens(right.signal)
     intersection = left_tokens.intersection(right_tokens)
     union = left_tokens.union(right_tokens)
-    if len(intersection) >= 3:
-        return True
+    smaller = min(len(left_tokens), len(right_tokens))
     return (
-        left.taxonomy.category == right.taxonomy.category
-        and left.taxonomy.category != "other"
+        "other" not in categories
         and len(intersection) >= 2
-        and len(intersection) / max(len(union), 1) >= 0.2
+        and len(intersection) / max(smaller, 1) >= 0.5
+        and len(intersection) / max(len(union), 1) >= 0.25
     )
 
 
-def _topic_tokens(signal: DiscoverySignal) -> set[str]:
-    text = f"{signal.title} {signal.summary}".lower()
+def _title_tokens(signal: DiscoverySignal) -> set[str]:
+    text = signal.title.lower()
     return {
         token
         for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", text)
@@ -699,9 +743,7 @@ def _origin(signal: DiscoverySignal) -> str:
 
 def _cves(signal: DiscoverySignal) -> set[str]:
     return {
-        identifier.upper()
-        for identifier in signal.identifiers
-        if CVE_PATTERN.fullmatch(identifier)
+        identifier.upper() for identifier in signal.identifiers if CVE_PATTERN.fullmatch(identifier)
     }
 
 

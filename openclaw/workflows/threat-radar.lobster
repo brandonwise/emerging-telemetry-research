@@ -3,7 +3,7 @@ args:
   mode:
     default: "structured-ingest"
   edition:
-    default: "none"
+    default: "morning"
 steps:
   - id: validate_mode
     command: >-

@@ -63,6 +63,13 @@ FileVault, starts the loopback-only data services when needed, applies immutable
 bucket retention, and emits one delivery-ready JSON object. It does not send Discord messages
 directly; delivery remains isolated behind `radar_delivery_send`.
 
+Live output reports `source_native_signal_count`, `qualified_emerging_count`, and
+`emerging_signal_count` so operators can distinguish discovery volume from qualified and
+published pre-CVE intelligence. The five-item brief reserves two slots for qualifying source-native
+findings. Strong title-level matches are clustered with complete-link agreement, and source-native
+coverage that maps to exactly one CVE established in the same run is reconciled into that CVE
+finding instead of appearing twice.
+
 ## Analytics and reports
 
 Every live run is indexed into a portable SQLite analytics store. It captures report snapshots,

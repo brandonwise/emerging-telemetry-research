@@ -3,6 +3,7 @@ set -euo pipefail
 
 radar_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 radar_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
+radar_edition="${LOBSTER_ARG_EDITION:-morning}"
 
 if [[ ! -x "${radar_keychain_helper}" ]]; then
   echo "OpenClaw Keychain helper is unavailable" >&2
@@ -68,5 +69,5 @@ cd "${radar_repo_root}"
 exec uv run threat-radar live run \
   --output "${radar_repo_root}/reports/generated" \
   --channel-id "1476897068885872814" \
-  --edition "morning" \
+  --edition "${radar_edition}" \
   --json

@@ -17,6 +17,7 @@ from packages.pipeline.live import (
     LiveRunSettings,
     _discovery_baselines,
     _existing_morning_result,
+    _select_report_findings,
     run_live_radar,
 )
 from packages.storage.object_store import LocalImmutableObjectStore
@@ -47,6 +48,42 @@ def test_discovery_baseline_uses_first_current_signal_per_cve() -> None:
     assert _discovery_baselines(signals, generated_at) == {
         "CVE-2026-12345": datetime(2026, 7, 24, 9, tzinfo=UTC)
     }
+
+
+def test_report_reserves_slots_for_qualifying_pre_cve_findings() -> None:
+    cve_findings = [
+        {
+            "finding_id": f"fd_cve_{index}",
+            "publication_class": "watch",
+            "priority_score": 90.0 - index,
+        }
+        for index in range(5)
+    ]
+    emerging_findings = [
+        {
+            "finding_id": "fd_emerging_one",
+            "publication_class": "daily",
+            "priority_score": 55.0,
+        },
+        {
+            "finding_id": "fd_emerging_two",
+            "publication_class": "daily",
+            "priority_score": 50.0,
+        },
+    ]
+
+    selected = _select_report_findings(
+        cve_findings=cve_findings,
+        emerging_findings=emerging_findings,
+        minimum_class="daily",
+        maximum_findings=5,
+        minimum_emerging_findings=2,
+    )
+
+    assert {finding["finding_id"] for finding in selected}.issuperset(
+        {"fd_emerging_one", "fd_emerging_two"}
+    )
+    assert len(selected) == 5
 
 
 def test_existing_morning_run_is_reused_for_same_local_day(tmp_path: Path) -> None:
@@ -213,9 +250,9 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
     assert result.emerging_signal_count == 1
     assert result.report["findings"][0]["category"] == "malicious_package"
     assert result.report["findings"][0]["mappings"] == []
-    assert {
-        item["source_type"]
-        for item in result.report["findings"][0]["source_evidence"]
-    } == {"website", "x_post"}
+    assert {item["source_type"] for item in result.report["findings"][0]["source_evidence"]} == {
+        "website",
+        "x_post",
+    }
     assert len(repository.evidence) == 2
     assert len(repository.artifacts) == 2

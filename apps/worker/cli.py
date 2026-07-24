@@ -177,6 +177,8 @@ def live_run(
             "summary": result.summary,
             "candidate_cves": list(result.candidate_cves),
             "emerging_signal_count": result.emerging_signal_count,
+            "qualified_emerging_count": result.qualified_emerging_count,
+            "source_native_signal_count": result.source_native_signal_count,
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(analytics_db.resolve()),
             "analytics_indexed": indexed.inserted,
@@ -223,6 +225,8 @@ def portable_run(
             "delivery_destination": result.delivery_plan["destination"],
             "candidate_cves": list(result.candidate_cves),
             "emerging_signal_count": result.emerging_signal_count,
+            "qualified_emerging_count": result.qualified_emerging_count,
+            "source_native_signal_count": result.source_native_signal_count,
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(database.resolve()),
             "analytics_indexed": indexed.inserted,
@@ -273,8 +277,7 @@ def analytics_event(
     """Record one bounded, content-free operational telemetry event."""
     dimensions = json.loads(dimensions_json)
     if not isinstance(dimensions, dict) or not all(
-        isinstance(key, str) and isinstance(item, str)
-        for key, item in dimensions.items()
+        isinstance(key, str) and isinstance(item, str) for key, item in dimensions.items()
     ):
         raise typer.BadParameter("dimensions must be a JSON object of string values")
     event_id = AnalyticsStore(database).record_event(
@@ -315,9 +318,7 @@ def setup_generate(
 ) -> None:
     """Generate a safe OpenClaw, Claude Code, Codex, or generic project adapter."""
     if platform not in SUPPORTED_PLATFORMS:
-        raise typer.BadParameter(
-            "platform must be one of: " + ", ".join(SUPPORTED_PLATFORMS)
-        )
+        raise typer.BadParameter("platform must be one of: " + ", ".join(SUPPORTED_PLATFORMS))
     try:
         result = generate_setup(
             platform=platform,
@@ -348,9 +349,7 @@ def _s3_encryption_mode() -> str | None:
         return value
     if value == "none":
         return None
-    raise typer.BadParameter(
-        "RADAR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none"
-    )
+    raise typer.BadParameter("RADAR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none")
 
 
 @report_app.command("delivery-plan")
@@ -429,9 +428,7 @@ def feedback_record(
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     if taxonomy not in ALL_TAXONOMIES:
-        raise typer.BadParameter(
-            "taxonomy must be one of: " + ", ".join(sorted(ALL_TAXONOMIES))
-        )
+        raise typer.BadParameter("taxonomy must be one of: " + ", ".join(sorted(ALL_TAXONOMIES)))
     feedback, path = record_feedback(
         report_path=report_json,
         finding_id=finding_id,
@@ -465,9 +462,7 @@ def feedback_record(
 def improve_analyze(
     reports: Annotated[Path, typer.Option("--reports")] = Path("reports/generated"),
     feedback: Annotated[Path, typer.Option("--feedback")] = Path("reports/feedback"),
-    output: Annotated[Path, typer.Option("--output")] = Path(
-        "reports/generated/improvement"
-    ),
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/generated/improvement"),
     fixtures: Annotated[
         Path,
         typer.Option("--fixtures", exists=True, file_okay=False, readable=True),

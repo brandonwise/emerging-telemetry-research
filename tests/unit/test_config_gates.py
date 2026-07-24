@@ -53,3 +53,11 @@ def test_migration_covers_required_tables() -> None:
         "security_events",
     }
     assert all(f"CREATE TABLE {table}" in migration for table in required)
+
+
+def test_lobster_edition_reaches_live_runner() -> None:
+    workflow = Path("openclaw/workflows/threat-radar.lobster").read_text(encoding="utf-8")
+    runner = Path("scripts/run-live.sh").read_text(encoding="utf-8")
+    assert 'default: "morning"' in workflow
+    assert 'radar_edition="${LOBSTER_ARG_EDITION:-morning}"' in runner
+    assert '--edition "${radar_edition}"' in runner

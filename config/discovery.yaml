@@ -40,4 +40,5 @@ promotion:
   maximum_candidates_per_run: 6
   maximum_signal_candidates_per_run: 8
   maximum_report_findings: 5
+  minimum_emerging_findings_per_report: 2
   minimum_publication_class: daily
