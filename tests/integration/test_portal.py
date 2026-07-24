@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,11 +9,19 @@ from apps.portal.main import PortalSettings, create_app
 from packages.pipeline.frozen import run_frozen_fixture
 
 
-def _settings(tmp_path: Path, *, token: str | None = None) -> PortalSettings:
+def _settings(
+    tmp_path: Path,
+    *,
+    token: str | None = None,
+    auth_mode: Literal["auto", "required", "disabled"] = "auto",
+    lan_mode: bool = False,
+) -> PortalSettings:
     return PortalSettings(
         analytics_db=tmp_path / "state" / "radar.db",
         reports_root=tmp_path / "reports",
+        auth_mode=auth_mode,
         access_token=token,
+        lan_mode=lan_mode,
     )
 
 
@@ -79,5 +88,43 @@ def test_portal_token_authentication(tmp_path: Path) -> None:
 
 
 def test_lan_mode_requires_a_strong_token() -> None:
-    with pytest.raises(ValidationError, match="LAN mode requires"):
+    with pytest.raises(ValidationError, match="authentication mode requires"):
         PortalSettings(lan_mode=True, access_token="short")  # noqa: S106
+
+
+def test_lan_authentication_can_be_explicitly_disabled(tmp_path: Path) -> None:
+    settings = _settings(
+        tmp_path,
+        token="a-token-that-must-not-be-used",  # noqa: S106
+        auth_mode="disabled",
+        lan_mode=True,
+    )
+    client = TestClient(
+        create_app(settings),
+        client=("192.168.100.25", 50000),
+        follow_redirects=False,
+    )
+
+    dashboard = client.get("/")
+    login = client.get("/login")
+    export = client.get("/exports/reports.json")
+    untrusted_client = TestClient(
+        create_app(settings),
+        client=("203.0.113.25", 50000),
+        follow_redirects=False,
+    )
+
+    assert settings.authentication_enabled is False
+    assert settings.effective_access_token() is None
+    assert dashboard.status_code == 200
+    assert "Sign out" not in dashboard.text
+    assert "Trusted network only" in client.get("/setup").text
+    assert login.status_code == 303
+    assert login.headers["location"] == "/"
+    assert export.status_code == 200
+    assert untrusted_client.get("/").status_code == 403
+
+
+def test_required_authentication_needs_a_token() -> None:
+    with pytest.raises(ValidationError, match="authentication mode requires"):
+        PortalSettings(auth_mode="required")

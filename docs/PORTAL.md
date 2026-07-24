@@ -31,6 +31,16 @@ scripts/uninstall-portal-service.sh
 
 Add `--purge-token` only when the Keychain token should also be deleted.
 
+Token authentication is the private-LAN default. On a trusted internal network, it can be
+explicitly disabled:
+
+```bash
+scripts/install-portal-service.sh --auth disabled
+```
+
+The portal remains read-only and private-CIDR filtered. The Keychain token is preserved so
+authentication can be restored with `scripts/install-portal-service.sh --auth required`.
+
 For an interactive foreground process instead:
 
 ```bash
@@ -42,7 +52,8 @@ The script prints the private network URL. LAN mode:
 
 - binds the server to `0.0.0.0`
 - accepts clients only from configured private CIDRs
-- requires a 20+ character access token
+- requires a 20+ character access token by default
+- permits explicit trusted-network mode with `--auth disabled` or `--no-auth`
 - converts the token to an HMAC-signed, 12-hour, HttpOnly, SameSite=Strict session cookie
 - does not trust proxy forwarding headers
 - exposes no write, collection, scheduling, or delivery routes
@@ -57,6 +68,9 @@ scripts/run-portal.sh --lan \
 
 TLS enables secure cookies. Without TLS, use only a trusted LAN or an encrypted overlay network.
 Do not forward the portal port from a router or expose it to the public internet.
+Disabled authentication is appropriate only when every allowed client and network segment is
+trusted. Re-enable authentication before port forwarding, using a guest network, or widening the
+CIDR allowlist.
 
 ## Capabilities
 

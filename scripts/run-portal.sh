@@ -7,6 +7,7 @@ radar_port="${RADAR_PORTAL_PORT:-8088}"
 radar_lan="false"
 radar_certfile=""
 radar_keyfile=""
+radar_auth_mode="${RADAR_PORTAL_AUTH_MODE:-auto}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,12 +28,27 @@ while [[ $# -gt 0 ]]; do
       radar_keyfile="${2:?--keyfile requires a value}"
       shift 2
       ;;
+    --auth)
+      radar_auth_mode="${2:?--auth requires required or disabled}"
+      shift 2
+      ;;
+    --no-auth)
+      radar_auth_mode="disabled"
+      shift
+      ;;
     *)
       echo "Unknown option: $1" >&2
       exit 2
       ;;
   esac
 done
+
+if [[ "${radar_auth_mode}" != "auto" \
+  && "${radar_auth_mode}" != "required" \
+  && "${radar_auth_mode}" != "disabled" ]]; then
+  echo "Portal authentication must be auto, required, or disabled" >&2
+  exit 2
+fi
 
 if [[ ! "${radar_port}" =~ ^[0-9]+$ ]] || (( radar_port < 1024 || radar_port > 65535 )); then
   echo "Portal port must be an integer from 1024 to 65535" >&2
@@ -49,6 +65,17 @@ fi
 
 if [[ "${radar_lan}" == "true" ]]; then
   export RADAR_PORTAL_LAN_MODE="true"
+fi
+export RADAR_PORTAL_AUTH_MODE="${radar_auth_mode}"
+
+radar_token_required="false"
+if [[ "${radar_auth_mode}" == "required" \
+  || ( "${radar_auth_mode}" == "auto" && "${radar_lan}" == "true" ) ]]; then
+  radar_token_required="true"
+fi
+if [[ "${radar_auth_mode}" == "disabled" ]]; then
+  unset RADAR_PORTAL_ACCESS_TOKEN
+elif [[ "${radar_token_required}" == "true" ]]; then
   radar_portal_token="${RADAR_PORTAL_ACCESS_TOKEN:-}"
   if [[ -z "${radar_portal_token}" ]]; then
     radar_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
@@ -57,7 +84,7 @@ if [[ "${radar_lan}" == "true" ]]; then
     fi
   fi
   if [[ ${#radar_portal_token} -lt 20 ]]; then
-    echo "LAN mode requires RADAR_PORTAL_ACCESS_TOKEN with at least 20 characters" >&2
+    echo "Portal authentication requires RADAR_PORTAL_ACCESS_TOKEN with at least 20 characters" >&2
     exit 2
   fi
   export RADAR_PORTAL_ACCESS_TOKEN="${radar_portal_token}"

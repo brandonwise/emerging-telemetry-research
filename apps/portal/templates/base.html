@@ -20,7 +20,7 @@
       <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>Trends</a>
       <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Setup</a>
     </nav>
-    {% if settings.access_token %}
+    {% if settings.authentication_enabled %}
     <form method="post" action="/logout"><button class="quiet-button" type="submit">Sign out</button></form>
     {% endif %}
   </header>

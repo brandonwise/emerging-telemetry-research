@@ -195,6 +195,10 @@ The installer creates the portal access token in macOS Keychain if absent, insta
 `ai.openclaw.threat-radar-portal`, verifies `/health`, and records a bounded analytics event. It
 never prints the token. Service logs are `~/.openclaw/logs/threat-radar-portal*.log`.
 
+Authentication is required by default. For a trusted, private network, reinstall the service with
+`scripts/install-portal-service.sh --auth disabled`. The private-CIDR boundary remains active and
+the token stays in Keychain. Restore authentication with `--auth required`.
+
 Rollback is recoverable and preserves data:
 
 ```bash

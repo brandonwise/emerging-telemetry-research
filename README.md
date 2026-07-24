@@ -91,9 +91,11 @@ scripts/install-portal-service.sh
 scripts/portal-status.sh
 ```
 
-LAN mode binds `0.0.0.0` but accepts only configured private networks and refuses to start without
-a 20+ character access token. Use `--certfile` and `--keyfile` for TLS; otherwise use only a trusted
-LAN or an encrypted overlay such as Tailscale. The portal is read-only and includes responsive
+LAN mode binds `0.0.0.0` but accepts only configured private networks and requires a 20+ character
+access token by default. Trusted-network deployments can explicitly use
+`scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
+`--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
+as Tailscale. The portal is read-only and includes responsive
 overview, report search/detail, trends, source health, print styling, and CSV/JSON/HTML exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
 Keychain without writing it to the plist or logs.

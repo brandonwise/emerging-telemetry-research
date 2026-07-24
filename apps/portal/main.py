@@ -10,7 +10,7 @@ import json
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import parse_qs
 
 from fastapi import FastAPI, HTTPException, Request
@@ -48,6 +48,7 @@ class PortalSettings(BaseSettings):
     analytics_db: Path = Path("state/radar.db")
     reports_root: Path = Path("reports/generated")
     lan_mode: bool = False
+    auth_mode: Literal["auto", "required", "disabled"] = "auto"
     access_token: str | None = None
     secure_cookie: bool = False
     allowed_networks: str = (
@@ -58,9 +59,34 @@ class PortalSettings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_lan_auth(self) -> PortalSettings:
-        if self.lan_mode and (self.access_token is None or len(self.access_token) < 20):
-            raise ValueError("LAN mode requires RADAR_PORTAL_ACCESS_TOKEN with 20+ characters")
+        authentication_required = self.auth_mode == "required" or (
+            self.auth_mode == "auto" and self.lan_mode
+        )
+        if authentication_required and (
+            self.access_token is None or len(self.access_token) < 20
+        ):
+            raise ValueError(
+                "This authentication mode requires RADAR_PORTAL_ACCESS_TOKEN "
+                "with 20+ characters"
+            )
+        if (
+            self.auth_mode != "disabled"
+            and self.access_token is not None
+            and len(self.access_token) < 20
+        ):
+            raise ValueError("RADAR_PORTAL_ACCESS_TOKEN must have 20+ characters")
         return self
+
+    @property
+    def authentication_enabled(self) -> bool:
+        if self.auth_mode == "disabled":
+            return False
+        if self.auth_mode == "required":
+            return True
+        return self.access_token is not None
+
+    def effective_access_token(self) -> str | None:
+        return self.access_token if self.authentication_enabled else None
 
     def networks(self) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
         return tuple(
@@ -72,6 +98,7 @@ class PortalSettings(BaseSettings):
 
 def create_app(settings: PortalSettings | None = None) -> FastAPI:
     portal_settings = settings or PortalSettings()
+    access_token = portal_settings.effective_access_token()
     store = AnalyticsStore(portal_settings.analytics_db)
     store.sync_reports(portal_settings.reports_root)
     templates = _templates()
@@ -102,8 +129,8 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         )
         if (
             not public_path
-            and portal_settings.access_token is not None
-            and not _valid_session(request, portal_settings.access_token)
+            and access_token is not None
+            and not _valid_session(request, access_token)
         ):
             if request.url.path.startswith("/exports/"):
                 return JSONResponse({"detail": "authentication required"}, status_code=401)
@@ -129,7 +156,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
 
     @application.get("/login", response_class=HTMLResponse)
     async def login_page(request: Request) -> Response:
-        if portal_settings.access_token is None:
+        if access_token is None:
             return RedirectResponse("/", status_code=303)
         return _render(
             templates,
@@ -141,11 +168,11 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
 
     @application.post("/login", response_class=HTMLResponse)
     async def login(request: Request) -> Response:
-        if portal_settings.access_token is None:
+        if access_token is None:
             return RedirectResponse("/", status_code=303)
         body = (await request.body()).decode("utf-8", errors="replace")
         supplied = parse_qs(body, strict_parsing=False).get("token", [""])[0]
-        if not hmac.compare_digest(supplied, portal_settings.access_token):
+        if not hmac.compare_digest(supplied, access_token):
             return _render(
                 templates,
                 "login.html",
@@ -157,7 +184,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         response = RedirectResponse("/", status_code=303)
         response.set_cookie(
             SESSION_COOKIE,
-            _session_value(portal_settings.access_token),
+            _session_value(access_token),
             max_age=SESSION_SECONDS,
             httponly=True,
             secure=portal_settings.secure_cookie,

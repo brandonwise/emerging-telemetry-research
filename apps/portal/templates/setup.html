@@ -24,7 +24,7 @@
   </article>
   <article class="setup-card">
     <span class="step-number">04</span><h2>Open the portal</h2>
-    <p>Loopback is the safe default. LAN mode requires an access token and private network source.</p>
+    <p>Loopback is the safe default. LAN mode uses private network filtering and requires a token unless you explicitly disable authentication.</p>
     <code>scripts/run-portal.sh --lan</code>
   </article>
 </section>
@@ -32,7 +32,7 @@
   <div class="panel-heading"><div><p class="eyebrow">Current portal</p><h2>Runtime posture</h2></div></div>
   <dl class="detail-grid">
     <div><dt>Mode</dt><dd>{{ "Private LAN" if settings.lan_mode else "Loopback only" }}</dd></div>
-    <div><dt>Authentication</dt><dd>{{ "Token required" if settings.access_token else "Local client only" }}</dd></div>
+    <div><dt>Authentication</dt><dd>{{ "Token required" if settings.authentication_enabled else ("Trusted network only" if settings.lan_mode else "Local client only") }}</dd></div>
     <div><dt>Analytics store</dt><dd><code>{{ settings.analytics_db }}</code></dd></div>
     <div><dt>Report root</dt><dd><code>{{ settings.reports_root }}</code></dd></div>
   </dl>

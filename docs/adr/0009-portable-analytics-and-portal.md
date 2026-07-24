@@ -18,7 +18,9 @@ OpenTelemetry also does not provide a durable user-facing report archive.
    local content-addressed objects, and file-only delivery plans.
 4. Treat OpenClaw, Claude Code, Codex, and generic scheduling as thin adapters around the same CLI.
 5. Add an optional server-rendered, read-only portal. It binds loopback by default. Private-LAN
-   mode requires private-source filtering and strong token authentication.
+   mode always requires private-source filtering and uses strong token authentication by default.
+   Trusted-network operators may explicitly disable authentication without weakening the network
+   boundary; the service never disables authentication implicitly.
 6. Keep external delivery separate from portable collection and disabled by default.
 
 ## Consequences
@@ -27,6 +29,8 @@ OpenTelemetry also does not provide a durable user-facing report archive.
 - PostgreSQL/S3 remain the stronger production profile and are not removed.
 - Analytics are derived and can be rebuilt from immutable reports.
 - The portal cannot mutate workflows, thresholds, reports, delivery, or feedback.
+- Disabled authentication is acceptable only on a trusted private segment and must be reversed
+  before public exposure, port forwarding, or broadening the allowed networks.
 - Plain HTTP LAN sessions are appropriate only on a trusted or encrypted network; TLS is supported
   and recommended.
 - Platform changes do not fork threat logic or report contracts.

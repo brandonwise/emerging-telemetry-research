@@ -8,6 +8,14 @@ radar_uid="$(id -u)"
 radar_loaded="false"
 radar_healthy="false"
 radar_ip=""
+radar_auth_mode="${RADAR_PORTAL_AUTH_MODE:-}"
+radar_plist="${HOME}/Library/LaunchAgents/${radar_label}.plist"
+
+if [[ -z "${radar_auth_mode}" && -f "${radar_plist}" ]]; then
+  radar_auth_mode="$(/usr/bin/plutil -extract \
+    EnvironmentVariables.RADAR_PORTAL_AUTH_MODE raw -o - "${radar_plist}" 2>/dev/null || true)"
+fi
+radar_auth_mode="${radar_auth_mode:-required}"
 
 if /bin/launchctl print "gui/${radar_uid}/${radar_label}" >/dev/null 2>&1; then
   radar_loaded="true"
@@ -35,12 +43,13 @@ if [[ -f "${radar_repo_root}/state/radar.db" ]]; then
     "SELECT COUNT(*) FROM analytics_events;" 2>/dev/null || echo 0)"
 fi
 
-printf '{"label":"%s","loaded":%s,"healthy":%s,"url":"http://%s:%s","reports":%s,"events":%s}\n' \
+printf '{"label":"%s","loaded":%s,"healthy":%s,"url":"http://%s:%s","auth":"%s","reports":%s,"events":%s}\n' \
   "${radar_label}" \
   "${radar_loaded}" \
   "${radar_healthy}" \
   "${radar_ip}" \
   "${radar_port}" \
+  "${radar_auth_mode}" \
   "${radar_reports}" \
   "${radar_events}"
 
