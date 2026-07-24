@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Setup · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <p class="eyebrow">Deployment guide</p>
+  <h1>Run it your way</h1>
+  <p class="lede">The engine is platform-neutral. OpenClaw, Claude Code, Codex, and plain shell all call the same typed CLI.</p>
+</section>
+<section class="setup-grid">
+  <article class="setup-card">
+    <span class="step-number">01</span><h2>Choose an adapter</h2>
+    <p>Generate platform-specific instructions without copying secrets into an agent context.</p>
+    <code>uv run threat-radar setup generate --platform codex</code>
+  </article>
+  <article class="setup-card">
+    <span class="step-number">02</span><h2>Configure discovery</h2>
+    <p>Provide Brave and xAI keys through environment variables or your platform secret store.</p>
+    <code>BRAVE_API_KEY · XAI_API_KEY</code>
+  </article>
+  <article class="setup-card">
+    <span class="step-number">03</span><h2>Run locally</h2>
+    <p>SQLite and local immutable objects are the default portable storage profile.</p>
+    <code>uv run threat-radar portable run --json</code>
+  </article>
+  <article class="setup-card">
+    <span class="step-number">04</span><h2>Open the portal</h2>
+    <p>Loopback is the safe default. LAN mode requires an access token and private network source.</p>
+    <code>scripts/run-portal.sh --lan</code>
+  </article>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Current portal</p><h2>Runtime posture</h2></div></div>
+  <dl class="detail-grid">
+    <div><dt>Mode</dt><dd>{{ "Private LAN" if settings.lan_mode else "Loopback only" }}</dd></div>
+    <div><dt>Authentication</dt><dd>{{ "Token required" if settings.access_token else "Local client only" }}</dd></div>
+    <div><dt>Analytics store</dt><dd><code>{{ settings.analytics_db }}</code></dd></div>
+    <div><dt>Report root</dt><dd><code>{{ settings.reports_root }}</code></dd></div>
+  </dl>
+</section>
+{% endblock %}

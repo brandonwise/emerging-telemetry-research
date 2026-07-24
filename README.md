@@ -1,6 +1,7 @@
-# OpenClaw Emerging Threat Radar
+# Emerging Threat Radar
 
-A security-first, evidence-backed cyber-threat early-warning system for OpenClaw.
+A security-first, evidence-backed cyber-threat early-warning system with optional OpenClaw,
+Claude Code, Codex, and generic automation adapters.
 
 The approved local production path uses Brave Search API and xAI server-side X Search for bounded
 discovery, then corroborates candidates with CISA KEV, CVE List V5, NVD, FIRST EPSS, OSV, and
@@ -11,6 +12,10 @@ and delivers through a fixed-destination, idempotent OpenClaw tool.
 
 The daily OpenClaw job runs at 7:30 AM America/New_York. Browser automation is not part of source
 collection; it is used only for report-rendering QA.
+
+The engine itself is vendor-neutral. It can run with portable SQLite/local object storage or the
+production PostgreSQL/S3 profile. Agent platforms remain thin orchestration surfaces; they do not
+own evidence, workflow state, analytics, or report history.
 
 ## Run it
 
@@ -33,6 +38,18 @@ uv run threat-radar fixture run \
   --json
 ```
 
+Run the zero-infrastructure portable profile:
+
+```bash
+export BRAVE_API_KEY="from-your-secret-store"
+export XAI_API_KEY="from-your-secret-store"
+uv run threat-radar portable run --json
+```
+
+This writes immutable evidence objects to `state/objects`, verified reports to
+`reports/generated`, trend/report telemetry to `state/radar.db`, and a file-only delivery plan. It
+never sends externally.
+
 Run the approved live pipeline locally:
 
 ```bash
@@ -43,6 +60,61 @@ The script loads Brave, xAI, PostgreSQL, and MinIO credentials from macOS Keycha
 FileVault, starts the loopback-only data services when needed, applies immutable migrations and
 bucket retention, and emits one delivery-ready JSON object. It does not send Discord messages
 directly; delivery remains isolated behind `radar_delivery_send`.
+
+## Analytics and reports
+
+Every live run is indexed into a portable SQLite analytics store. It captures report snapshots,
+finding severity and class, source health, usage/cost, analyst feedback, improvement-cycle
+outcomes, and bounded content-free telemetry events.
+Re-index existing immutable reports at any time:
+
+```bash
+uv run threat-radar analytics sync --json
+uv run threat-radar analytics overview --days 90 --json
+uv run threat-radar analytics events --days 90 --json
+```
+
+The index is derived and rebuildable; immutable evidence and report JSON remain the source of truth.
+
+## Read-only portal
+
+Start on loopback:
+
+```bash
+scripts/run-portal.sh
+```
+
+Expose it to private systems on the same network:
+
+```bash
+export RADAR_PORTAL_ACCESS_TOKEN="$(openssl rand -hex 24)"
+scripts/run-portal.sh --lan
+```
+
+LAN mode binds `0.0.0.0` but accepts only configured private networks and refuses to start without
+a 20+ character access token. Use `--certfile` and `--keyfile` for TLS; otherwise use only a trusted
+LAN or an encrypted overlay such as Tailscale. The portal is read-only and includes responsive
+overview, report search/detail, trends, source health, print styling, and CSV/JSON/HTML exports.
+
+## Platform onboarding
+
+Choose one first-class adapter and generate it into a project checkout:
+
+```bash
+uv run threat-radar setup generate --platform codex --json
+```
+
+Replace `codex` with `openclaw`, `claude-code`, or `generic` for another adapter.
+
+The Claude Code adapter creates `CLAUDE.md` plus a project skill; the Codex adapter creates
+`AGENTS.md` plus a repository skill; OpenClaw receives a Lobster workflow; generic deployments get
+a shell/cron path. All call `threat-radar portable run`, keep secrets outside prompt context, and
+leave external delivery as a separate approval boundary.
+
+These adapter shapes follow the official
+[Claude Code project configuration and skills model](https://code.claude.com/docs/en/features-overview)
+and the official Codex repository-guidance, skills, and non-interactive execution model documented
+in the [Codex developer documentation](https://developers.openai.com/codex).
 
 The internal API is available with:
 
@@ -88,7 +160,8 @@ approved source plan
   → deterministic HTML + fixed-destination Discord plan
 ```
 
-OpenClaw cron and reviewed Lobster workflows own orchestration. PostgreSQL owns durable state.
+OpenClaw cron and reviewed Lobster workflows can own orchestration, but Claude Code, Codex, shell,
+cron, launchd, systemd, and CI can invoke the same CLI. PostgreSQL or SQLite owns durable state.
 Conversation history owns neither.
 
 ## Grounded self-improvement
@@ -159,3 +232,6 @@ receive separate approval.
 - `openapi/openapi.yaml` — versioned internal service contract
 - `docs/adr/` — architecture decisions and security deviations
 - `docs/adr/0008-grounded-self-improvement-graph.md` — loop, graph, approval, and rollback design
+- `docs/PORTABILITY.md` — portable profiles and platform onboarding
+- `docs/PORTAL.md` — local/private-LAN portal operations and security
+- `docs/adr/0009-portable-analytics-and-portal.md` — storage and portal decision record

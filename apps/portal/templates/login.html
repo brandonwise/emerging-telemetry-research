@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · {{ settings.title }}</title>
+  <link rel="stylesheet" href="/static/portal.css">
+</head>
+<body class="login-shell">
+  <main class="login-card">
+    <span class="brand-mark large" aria-hidden="true"></span>
+    <p class="eyebrow">Private operations portal</p>
+    <h1>{{ settings.title }}</h1>
+    <p class="lede">Enter the access token configured on the host. It never leaves your network.</p>
+    {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="/login" class="stack">
+      <label for="token">Access token</label>
+      <input id="token" name="token" type="password" autocomplete="current-password" required autofocus>
+      <button class="primary-button" type="submit">Open radar</button>
+    </form>
+  </main>
+</body>
+</html>

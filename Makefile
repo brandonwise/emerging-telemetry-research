@@ -1,4 +1,4 @@
-.PHONY: validate test lint typecheck acceptance restore-test api stack-up stack-down
+.PHONY: validate test lint typecheck acceptance restore-test api analytics portal stack-up stack-down
 
 validate:
 	python scripts/validate_repo.py
@@ -20,6 +20,12 @@ restore-test:
 
 api:
 	uvicorn apps.api.main:app --host 127.0.0.1 --port 8080
+
+analytics:
+	threat-radar analytics sync --json
+
+portal:
+	scripts/run-portal.sh
 
 stack-up:
 	docker compose -f infra/docker-compose.yml up -d

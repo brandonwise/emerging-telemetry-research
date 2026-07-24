@@ -4,7 +4,7 @@
 
 | Component | Purpose | Trust level |
 |---|---|---|
-| OpenClaw Gateway | Agent routing, scheduling, channel integration, tool policy | Privileged control plane |
+| Platform Adapter | OpenClaw, Claude Code, Codex, or generic scheduling | Privileged control plane |
 | Scheduler | Durable triggers and run identity | Privileged control plane |
 | Workflow Engine | Typed deterministic stage transitions | Privileged control plane |
 | Connector Workers | Source-specific collection | Internet-facing, untrusted |
@@ -20,6 +20,8 @@
 | Report Renderer | Deterministic HTML/embed/email output | Publishing zone |
 | Delivery Adapter | Discord/email/file delivery | Narrow privileged credential |
 | Telemetry Pipeline | Metrics, traces, logs, usage/cost | Trusted operations |
+| Analytics Index | Rebuildable report, trend, source-health, and cost index | Trusted read model |
+| Operations Portal | Authenticated read-only LAN/local reporting and exports | Publishing read zone |
 
 ## Logical diagram
 
@@ -82,6 +84,15 @@
 - Object-store lifecycle policies
 - Queue partitions by source and priority
 - Multiple publisher instances with idempotent delivery
+
+### Portable single-host
+
+- Python 3.12 and `uv`
+- SQLite for immutable records and analytics
+- Local content-addressed immutable objects
+- Local verified JSON/HTML reports
+- Optional authenticated read-only portal
+- Any scheduler capable of invoking a shell command
 
 ## Data model
 
@@ -166,8 +177,10 @@ A queue item includes:
 
 ## State ownership
 
-- The database owns run and workflow state.
+- PostgreSQL or SQLite owns run and workflow state.
 - The object store owns raw evidence bytes.
 - OpenClaw session history is disposable execution context.
 - Agent memory must not be used as the source of truth.
 - Reports are immutable versions; corrections create a new version and link to the prior one.
+- The analytics index is a derived read model and can be rebuilt from immutable reports.
+- OpenClaw, Claude Code, Codex, and conversation history are execution surfaces, not state owners.

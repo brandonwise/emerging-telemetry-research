@@ -2,6 +2,7 @@ from pathlib import Path
 
 from packages.audit.ledger import AuditLedger
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.delivery.local import build_local_delivery_plan
 from packages.pipeline.frozen import run_frozen_fixture
 
 FIXTURES = Path("tests/fixtures/vertical_slice")
@@ -27,6 +28,12 @@ def test_degraded_flash_run_completes_full_review_and_delivery_plan(tmp_path: Pa
     )
     assert plan["report_id"] == result.report["report_id"]
     assert Path(plan["html_path"]).is_file()
+    local_plan = build_local_delivery_plan(
+        result.report,
+        html_path=result.rendered.path,
+    )
+    assert local_plan["destination"] == "file:local"
+    assert local_plan["report_id"] == result.report["report_id"]
     records = tuple(
         __import__("json").loads(line)
         for line in result.audit_path.read_text(encoding="utf-8").splitlines()

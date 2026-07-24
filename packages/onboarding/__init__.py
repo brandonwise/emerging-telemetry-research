@@ -1,0 +1,1 @@
+"""Cross-platform onboarding adapters."""

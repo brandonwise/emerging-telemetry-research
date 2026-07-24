@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import typer
 
+from packages.analytics.store import AnalyticsStore
 from packages.common.canonical import canonical_json_bytes
 from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
@@ -23,12 +24,22 @@ from packages.improvement.controller import (
     rollback_proposal,
     run_improvement_cycle,
 )
+from packages.onboarding.generator import (
+    DEFAULT_TEMPLATES_ROOT,
+    SUPPORTED_PLATFORMS,
+    generate_setup,
+)
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.pipeline.live import LiveRunSettings, run_live_radar
+from packages.storage.object_store import LocalImmutableObjectStore
 from packages.storage.runtime import (
     ProductionStoreSettings,
     initialize_production_stores,
 )
+from packages.storage.sqlite import SQLiteRepository
+
+DEFAULT_ANALYTICS_DB = Path(os.environ.get("RADAR_ANALYTICS_DB", "state/radar.db"))
+DEFAULT_OBJECT_ROOT = Path(os.environ.get("RADAR_OBJECT_ROOT", "state/objects"))
 
 app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
@@ -38,6 +49,9 @@ eval_app = typer.Typer(no_args_is_help=True)
 live_app = typer.Typer(no_args_is_help=True)
 feedback_app = typer.Typer(no_args_is_help=True)
 improve_app = typer.Typer(no_args_is_help=True)
+portable_app = typer.Typer(no_args_is_help=True)
+analytics_app = typer.Typer(no_args_is_help=True)
+setup_app = typer.Typer(no_args_is_help=True)
 app.add_typer(run_app, name="run")
 app.add_typer(fixture_app, name="fixture")
 app.add_typer(report_app, name="report")
@@ -45,6 +59,9 @@ app.add_typer(eval_app, name="eval")
 app.add_typer(live_app, name="live")
 app.add_typer(feedback_app, name="feedback")
 app.add_typer(improve_app, name="improve")
+app.add_typer(portable_app, name="portable")
+app.add_typer(analytics_app, name="analytics")
+app.add_typer(setup_app, name="setup")
 
 
 def emit(payload: dict[str, Any], pretty: bool = False) -> None:
@@ -115,6 +132,7 @@ def live_run(
     output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
     channel_id: Annotated[str, typer.Option("--channel-id")] = "1476897068885872814",
     edition: Annotated[str, typer.Option("--edition")] = "morning",
+    analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     if not channel_id.isdigit():
@@ -147,6 +165,7 @@ def live_run(
             repository=stores.repository,
         )
     )
+    indexed = AnalyticsStore(analytics_db).index_path(result.report_json_path)
     emit(
         {
             "run_id": result.run_id,
@@ -158,7 +177,164 @@ def live_run(
             "summary": result.summary,
             "candidate_cves": list(result.candidate_cves),
             "degraded_sources": list(result.degraded_sources),
+            "analytics_db": str(analytics_db.resolve()),
+            "analytics_indexed": indexed.inserted,
             "external_delivery": "ready",
+        },
+        pretty=not json_output,
+    )
+
+
+@portable_app.command("run")
+def portable_run(
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
+    objects: Annotated[Path, typer.Option("--objects")] = DEFAULT_OBJECT_ROOT,
+    edition: Annotated[str, typer.Option("--edition")] = "morning",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Run live discovery with SQLite, local immutable objects, and no external delivery."""
+    if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
+        raise typer.BadParameter("unsupported live edition")
+    result = asyncio.run(
+        run_live_radar(
+            LiveRunSettings(
+                output_root=output,
+                discord_channel_id=None,
+                edition=edition,
+            ),
+            brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
+            x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
+            official_client=OfficialSourceClient(),
+            object_store=LocalImmutableObjectStore(objects),
+            repository=SQLiteRepository(database),
+        )
+    )
+    indexed = AnalyticsStore(database).index_path(result.report_json_path)
+    emit(
+        {
+            "run_id": result.run_id,
+            "report_id": result.report["report_id"],
+            "finding_count": len(result.report["findings"]),
+            "report_json": str(result.report_json_path.resolve()),
+            "html_path": str(result.rendered.path.resolve()),
+            "delivery_plan": str(result.delivery_plan_path.resolve()),
+            "delivery_destination": result.delivery_plan["destination"],
+            "candidate_cves": list(result.candidate_cves),
+            "degraded_sources": list(result.degraded_sources),
+            "analytics_db": str(database.resolve()),
+            "analytics_indexed": indexed.inserted,
+            "external_delivery": "disabled",
+        },
+        pretty=not json_output,
+    )
+
+
+@analytics_app.command("sync")
+def analytics_sync(
+    reports: Annotated[Path, typer.Option("--reports")] = Path("reports/generated"),
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Index or rebuild trend data from immutable report JSON."""
+    result = AnalyticsStore(database).sync_reports(reports)
+    emit(
+        {
+            **result,
+            "database": str(database.resolve()),
+            "reports_root": str(reports.resolve()),
+        },
+        pretty=not json_output,
+    )
+
+
+@analytics_app.command("overview")
+def analytics_overview(
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
+    days: Annotated[int, typer.Option("--days", min=1, max=3650)] = 30,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Print aggregate report, finding, source-health, usage, and cost metrics."""
+    emit(AnalyticsStore(database).overview(days=days), pretty=not json_output)
+
+
+@analytics_app.command("event")
+def analytics_event(
+    metric: str,
+    value: float,
+    unit: str,
+    dimensions_json: Annotated[str, typer.Option("--dimensions-json")] = "{}",
+    run_id: Annotated[str | None, typer.Option("--run-id")] = None,
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record one bounded, content-free operational telemetry event."""
+    dimensions = json.loads(dimensions_json)
+    if not isinstance(dimensions, dict) or not all(
+        isinstance(key, str) and isinstance(item, str)
+        for key, item in dimensions.items()
+    ):
+        raise typer.BadParameter("dimensions must be a JSON object of string values")
+    event_id = AnalyticsStore(database).record_event(
+        metric=metric,
+        value=value,
+        unit=unit,
+        dimensions=dimensions,
+        run_id=run_id,
+    )
+    emit(
+        {"event_id": event_id, "status": "recorded"},
+        pretty=not json_output,
+    )
+
+
+@analytics_app.command("events")
+def analytics_events(
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
+    days: Annotated[int, typer.Option("--days", min=1, max=3650)] = 30,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Print grouped operational telemetry for reporting and trend analysis."""
+    emit(
+        {
+            "days": days,
+            "metrics": AnalyticsStore(database).event_summary(days=days),
+        },
+        pretty=not json_output,
+    )
+
+
+@setup_app.command("generate")
+def setup_generate(
+    platform: Annotated[str, typer.Option("--platform")],
+    output: Annotated[Path, typer.Option("--output")] = Path("."),
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Generate a safe OpenClaw, Claude Code, Codex, or generic project adapter."""
+    if platform not in SUPPORTED_PLATFORMS:
+        raise typer.BadParameter(
+            "platform must be one of: " + ", ".join(SUPPORTED_PLATFORMS)
+        )
+    try:
+        result = generate_setup(
+            platform=platform,
+            output_root=output,
+            templates_root=DEFAULT_TEMPLATES_ROOT,
+            force=force,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "platform": result.platform,
+            "output_root": str(result.output_root),
+            "files": [str(path) for path in result.files],
+            "next": [
+                "copy radar.env.example to radar.env",
+                "configure BRAVE_API_KEY and XAI_API_KEY in a secret store",
+                "run ./run-radar.sh",
+            ],
         },
         pretty=not json_output,
     )
@@ -246,6 +422,7 @@ def feedback_record(
     taxonomy: str,
     submitted_by: Annotated[str, typer.Option("--submitted-by")],
     output: Annotated[Path, typer.Option("--output")] = Path("reports/feedback"),
+    analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     notes: Annotated[str | None, typer.Option("--notes")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
@@ -260,6 +437,17 @@ def feedback_record(
         submitted_by=submitted_by,
         output_root=output,
         notes=notes,
+    )
+    AnalyticsStore(analytics_db).record_event(
+        metric="feedback.recorded",
+        value=1,
+        unit="label",
+        occurred_at=str(feedback["created_at"]),
+        dimensions={
+            "report_id": str(feedback["report_id"]),
+            "finding_id": str(feedback["finding_id"]),
+            "taxonomy": str(feedback["taxonomy"]),
+        },
     )
     emit(
         {
@@ -300,6 +488,7 @@ def improve_analyze(
             readable=True,
         ),
     ] = Path("config/improvement.yaml"),
+    analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     result = run_improvement_cycle(
@@ -309,6 +498,18 @@ def improve_analyze(
         fixture_root=fixtures,
         scoring_config=scoring_config,
         improvement_config=improvement_config,
+    )
+    AnalyticsStore(analytics_db).record_event(
+        metric="improvement.cycle",
+        value=1,
+        unit="cycle",
+        occurred_at=str(result["generated_at"]),
+        run_id=str(result["cycle_id"]),
+        dimensions={
+            "status": str(result["status"]),
+            "proposal_created": str(result["proposal_id"] is not None).lower(),
+            "acceptance_passed": str(result["anchors"]["acceptance_passed"]).lower(),
+        },
     )
     emit(result, pretty=not json_output)
 

@@ -50,6 +50,7 @@ packages = ["apps", "packages"]
 
 [tool.hatch.build.targets.wheel.force-include]
 schemas = "schemas"
+"integrations/templates" = "integrations/templates"
 
 [tool.ruff]
 target-version = "py312"

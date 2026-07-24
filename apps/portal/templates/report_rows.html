@@ -1,0 +1,15 @@
+{% if reports %}
+<div class="report-list">
+  {% for report in reports %}
+  <a class="report-row" href="/reports/{{ report.report_id }}">
+    <time datetime="{{ report.generated_at }}">{{ report.generated_at|compact_date }}</time>
+    <span class="edition">{{ report.edition|replace("_", " ") }}</span>
+    <span class="report-summary"><strong>{{ report.finding_count }} finding{% if report.finding_count != 1 %}s{% endif %}</strong><small>{{ report.report_id }}</small></span>
+    <span class="score-pill">{{ "%.1f"|format(report.max_score) }}</span>
+    <span class="row-arrow" aria-hidden="true">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><strong>No matching reports.</strong><span>Run or index a report, then refresh.</span></div>
+{% endif %}

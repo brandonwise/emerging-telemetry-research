@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}{{ settings.title }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/portal.css">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="{{ settings.title }} home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>{{ settings.title }}</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="/" {% if active == "overview" %}aria-current="page"{% endif %}>Overview</a>
+      <a href="/reports" {% if active == "reports" %}aria-current="page"{% endif %}>Reports</a>
+      <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>Trends</a>
+      <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Setup</a>
+    </nav>
+    {% if settings.access_token %}
+    <form method="post" action="/logout"><button class="quiet-button" type="submit">Sign out</button></form>
+    {% endif %}
+  </header>
+  <main id="content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <span>Evidence-backed. Read-only by design.</span>
+    <span>{{ "LAN access" if settings.lan_mode else "Local access" }}</span>
+  </footer>
+</body>
+</html>

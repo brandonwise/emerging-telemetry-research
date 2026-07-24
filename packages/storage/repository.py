@@ -24,6 +24,8 @@ class RepositoryUnavailable(RuntimeError):
 class RadarRepository(Protocol):
     async def available(self) -> bool: ...
 
+    async def close(self) -> None: ...
+
     async def put_idempotent(
         self,
         collection: str,
@@ -59,6 +61,9 @@ class MemoryRepository:
 
     async def available(self) -> bool:
         return True
+
+    async def close(self) -> None:
+        return None
 
     async def put_idempotent(
         self,
@@ -290,6 +295,9 @@ class UnavailableRepository:
 
     async def available(self) -> bool:
         return False
+
+    async def close(self) -> None:
+        return None
 
     async def put_idempotent(
         self,

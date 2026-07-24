@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ report.edition|replace("_", " ")|title }} · {{ settings.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="/reports">← All reports</a>
+<section class="page-heading split">
+  <div>
+    <p class="eyebrow">{{ report.edition|replace("_", " ") }} report</p>
+    <h1>{{ report.generated_at|compact_date }}</h1>
+    <p class="lede">{{ report.executive_summary }}</p>
+  </div>
+  <div class="button-group">
+    <a class="secondary-button" href="/exports/reports/{{ report.report_id }}.json">JSON</a>
+    <a class="secondary-button" href="/exports/reports/{{ report.report_id }}.html">HTML</a>
+  </div>
+</section>
+{% if report.degraded_sources %}
+<div class="notice warning"><strong>Coverage gap</strong> {{ report.degraded_sources|join(", ") }}</div>
+{% endif %}
+<section class="finding-stack">
+  {% for finding in report.findings %}
+  <article class="finding-card">
+    <div class="finding-head">
+      <span class="classification {{ finding.publication_class }}">{{ finding.publication_class }}</span>
+      <span class="large-score">{{ "%.1f"|format(finding.priority_score) }}</span>
+    </div>
+    <h2>{{ finding.title }}</h2>
+    <p>{{ finding.why_now }}</p>
+    <dl class="detail-grid">
+      <div><dt>Confidence</dt><dd>{{ finding.confidence.level|title }} · {{ "%.0f%%"|format(finding.confidence.probability * 100) }}</dd></div>
+      <div><dt>Stage</dt><dd>{{ finding.emergence_stage|replace("_", " ")|title }}</dd></div>
+      <div><dt>Category</dt><dd>{{ finding.category|replace("_", " ")|title }}</dd></div>
+      <div><dt>Next check</dt><dd>{{ finding.next_check_at|compact_date }}</dd></div>
+    </dl>
+    <div class="two-column">
+      <div><h3>Known</h3><ul>{% for item in finding.known %}<li>{{ item }}</li>{% endfor %}</ul></div>
+      <div><h3>Unknown</h3><ul>{% for item in finding.unknown %}<li>{{ item }}</li>{% else %}<li>No material unknowns recorded.</li>{% endfor %}</ul></div>
+    </div>
+    {% if finding.defensive_actions %}
+    <h3>Defensive checks</h3>
+    <ul>{% for action in finding.defensive_actions %}<li><strong>{{ action.priority|title }}:</strong> {{ action.action }}</li>{% endfor %}</ul>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><strong>No findings crossed the publication threshold.</strong></div>
+  {% endfor %}
+</section>
+<p class="record-id">Report {{ report.report_id }} · {{ report.verification.verifier_revision }}</p>
+{% endblock %}

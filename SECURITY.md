@@ -164,6 +164,21 @@ Record:
 
 Audit logs must be append-only or forwarded to a system where the application cannot rewrite history.
 
+## Portal boundary
+
+- The portal is read-only and has no collection, workflow mutation, threshold, feedback, or
+  delivery routes.
+- Loopback is the default bind posture.
+- Private-LAN mode requires a strong access token and accepts only configured private source
+  networks.
+- Sessions use signed, expiring, HttpOnly, SameSite=Strict cookies; secure cookies activate with
+  TLS.
+- The application does not trust forwarded client headers.
+- Browser assets are local and Content Security Policy blocks scripts and third-party resources.
+- CSV exports escape spreadsheet formula prefixes.
+- LAN mode must not be publicly port-forwarded; use TLS or an encrypted overlay for untrusted
+  network segments.
+
 ## Security testing
 
 Required test classes:

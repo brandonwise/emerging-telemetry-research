@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Overview · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div>
+    <p class="eyebrow">Operational picture</p>
+    <h1>Emerging threat radar</h1>
+    <p class="lede">Verified signals, coverage health, and publication history in one view.</p>
+  </div>
+  <form class="period-picker" method="get">
+    <label for="days">Window</label>
+    <select id="days" name="days">
+      {% for option in [7, 30, 90, 365] %}
+      <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} days</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Apply</button>
+  </form>
+</section>
+
+<section class="metric-grid" aria-label="{{ days }} day summary">
+  <article class="metric-card priority">
+    <span>Highest score</span><strong>{{ "%.1f"|format(overview.max_score) }}</strong>
+    <small>across verified findings</small>
+  </article>
+  <article class="metric-card">
+    <span>Findings</span><strong>{{ overview.findings }}</strong>
+    <small>from {{ overview.reports }} reports</small>
+  </article>
+  <article class="metric-card">
+    <span>Source gaps</span><strong>{{ overview.degraded }}</strong>
+    <small>degraded source snapshots</small>
+  </article>
+  <article class="metric-card">
+    <span>Estimated cost</span><strong>{{ overview.estimated_cost|money }}</strong>
+    <small>{{ "{:,}".format(overview.requests) }} requests · {{ overview.events }} events</small>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">Signal movement</p><h2>Findings by day</h2></div>
+    <a href="/trends?days={{ days }}">Open analysis</a>
+  </div>
+  {% if trend %}
+  <div class="bar-chart" role="img" aria-label="Daily verified finding counts">
+    {% set peak = trend|max(attribute="findings") %}
+    {% for point in trend %}
+    <div class="bar-column">
+      <span class="bar-value">{{ point.findings }}</span>
+      <span class="bar h-{{ ((point.findings / (peak.findings or 1)) * 10)|round(0, "ceil")|int }}"></span>
+      <span class="bar-label">{{ point.day[5:] }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><strong>No trend history yet.</strong><span>Index a report to start the timeline.</span></div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">Recent intelligence</p><h2>Latest reports</h2></div>
+    <a href="/reports">View all reports</a>
+  </div>
+  {% include "report_rows.html" %}
+</section>
+{% endblock %}

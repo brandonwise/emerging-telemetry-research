@@ -27,6 +27,7 @@ from packages.connectors.live import (
     cisa_kev_spec,
 )
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.delivery.local import build_local_delivery_plan
 from packages.discovery.clients import (
     BraveSearchClient,
     DiscoverySignal,
@@ -41,7 +42,7 @@ from packages.security_gateway.gateway import (
     TextArtifactMalwareScanner,
 )
 from packages.storage.object_store import ImmutableObjectStore
-from packages.storage.repository import PostgresRepository
+from packages.storage.repository import RadarRepository
 
 PUBLICATION_RANK = {"archive": 0, "daily": 1, "watch": 2, "flash": 3}
 
@@ -49,7 +50,7 @@ PUBLICATION_RANK = {"archive": 0, "daily": 1, "watch": 2, "flash": 3}
 @dataclass(frozen=True, slots=True)
 class LiveRunSettings:
     output_root: Path
-    discord_channel_id: str
+    discord_channel_id: str | None = None
     edition: str = "morning"
     timezone: str = "America/New_York"
     discovery_config: Path = Path("config/discovery.yaml")
@@ -76,7 +77,7 @@ async def run_live_radar(
     x_search_client: XaiXSearchClient,
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
-    repository: PostgresRepository,
+    repository: RadarRepository,
     now: datetime | None = None,
 ) -> LiveRunResult:
     generated_at = (now or datetime.now(UTC)).astimezone(UTC)
@@ -225,10 +226,14 @@ async def run_live_radar(
     report_json_path = run_root / f"{report['report_id']}.json"
     _write_immutable(report_json_path, canonical_json_bytes(report) + b"\n")
     rendered = render_report(report, run_root / f"{report['report_id']}.html")
-    delivery_plan = build_discord_delivery_plan(
-        report,
-        html_path=rendered.path,
-        channel_id=settings.discord_channel_id,
+    delivery_plan = (
+        build_discord_delivery_plan(
+            report,
+            html_path=rendered.path,
+            channel_id=settings.discord_channel_id,
+        )
+        if settings.discord_channel_id is not None
+        else build_local_delivery_plan(report, html_path=rendered.path)
     )
     delivery_plan_path = run_root / f"{report['report_id']}.delivery.json"
     _write_immutable(delivery_plan_path, canonical_json_bytes(delivery_plan) + b"\n")
@@ -261,7 +266,11 @@ def _existing_morning_result(
         return None
     local_date = generated_at.astimezone(ZoneInfo(settings.timezone)).date()
     candidates: list[tuple[datetime, LiveRunResult]] = []
-    destination = f"discord:channel:{settings.discord_channel_id}"
+    destination = (
+        f"discord:channel:{settings.discord_channel_id}"
+        if settings.discord_channel_id is not None
+        else "file:local"
+    )
     for delivery_plan_path in settings.output_root.glob("run_*/rp_*.delivery.json"):
         stem = delivery_plan_path.name.removesuffix(".delivery.json")
         report_json_path = delivery_plan_path.with_name(f"{stem}.json")
@@ -275,10 +284,14 @@ def _existing_morning_result(
                 or report_generated_at.astimezone(ZoneInfo(settings.timezone)).date() != local_date
                 or delivery_plan.get("destination") != destination
                 or delivery_plan
-                != build_discord_delivery_plan(
-                    report,
-                    html_path=html_path,
-                    channel_id=settings.discord_channel_id,
+                != (
+                    build_discord_delivery_plan(
+                        report,
+                        html_path=html_path,
+                        channel_id=settings.discord_channel_id,
+                    )
+                    if settings.discord_channel_id is not None
+                    else build_local_delivery_plan(report, html_path=html_path)
                 )
             ):
                 continue
@@ -514,7 +527,7 @@ def _aggregate_report(
 
 async def _persist_run(
     *,
-    repository: PostgresRepository,
+    repository: RadarRepository,
     run_id: str,
     report: dict[str, Any],
     candidate_results: list[FrozenRunResult],
@@ -556,7 +569,7 @@ async def _persist_run(
 
 
 async def _put(
-    repository: PostgresRepository,
+    repository: RadarRepository,
     collection: str,
     key: str,
     record: dict[str, Any],

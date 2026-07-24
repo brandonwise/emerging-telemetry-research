@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Reports · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div>
+    <p class="eyebrow">Verified archive</p>
+    <h1>Reports</h1>
+    <p class="lede">Search immutable intelligence briefs and export the underlying records.</p>
+  </div>
+  <div class="button-group">
+    <a class="secondary-button" href="/exports/reports.csv">Export CSV</a>
+    <a class="secondary-button" href="/exports/reports.json">Export JSON</a>
+  </div>
+</section>
+<form class="filter-bar" method="get">
+  <label><span>Search</span><input name="q" value="{{ q }}" placeholder="Report ID or finding title"></label>
+  <label><span>Edition</span>
+    <select name="edition">
+      <option value="">All editions</option>
+      {% for option in ["flash", "morning", "afternoon_delta", "weekly"] %}
+      <option value="{{ option }}" {% if edition == option %}selected{% endif %}>{{ option|replace("_", " ")|title }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Filter</button>
+</form>
+<section class="panel flush">
+  {% include "report_rows.html" %}
+</section>
+{% endblock %}

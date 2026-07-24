@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Trends · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div>
+    <p class="eyebrow">Longitudinal analysis</p>
+    <h1>Trends</h1>
+    <p class="lede">Publication volume, severity, and source reliability over time.</p>
+  </div>
+  <form class="period-picker" method="get">
+    <label for="days">Window</label>
+    <select id="days" name="days">
+      {% for option in [30, 90, 180, 365] %}
+      <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} days</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Apply</button>
+  </form>
+</section>
+<section class="metric-grid compact">
+  <article class="metric-card"><span>Reports</span><strong>{{ overview.reports }}</strong></article>
+  <article class="metric-card"><span>Findings</span><strong>{{ overview.findings }}</strong></article>
+  <article class="metric-card"><span>Peak score</span><strong>{{ "%.1f"|format(overview.max_score) }}</strong></article>
+  <article class="metric-card"><span>Source gaps</span><strong>{{ overview.degraded }}</strong></article>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Operational telemetry</p><h2>Workflow events</h2></div></div>
+  {% if events %}
+  <div class="data-table" role="table" aria-label="Workflow telemetry events">
+    <div class="data-row header" role="row"><span>Metric</span><span>Events</span><span>Value</span><span>Latest</span></div>
+    {% for event in events %}
+    <div class="data-row" role="row">
+      <strong>{{ event.metric }}</strong>
+      <span>{{ event.events }}</span>
+      <span>{{ "%.1f"|format(event.total_value) }}</span>
+      <span>{{ event.latest_at|compact_date }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><strong>No operational telemetry in this window.</strong></div>
+  {% endif %}
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Daily movement</p><h2>Finding volume</h2></div></div>
+  {% if trend %}
+  <div class="trend-table">
+    {% for point in trend|reverse %}
+    <div class="trend-row">
+      <time>{{ point.day }}</time>
+      <div class="track"><span class="w-{{ ((point.findings / max_findings) * 10)|round(0, "ceil")|int if max_findings else 0 }}"></span></div>
+      <strong>{{ point.findings }}</strong>
+      <span class="trend-classes">{{ point.flash }} flash · {{ point.watch }} watch · {{ point.daily }} daily</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><strong>No trend data in this window.</strong></div>
+  {% endif %}
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Collection integrity</p><h2>Recent source health</h2></div></div>
+  {% if source_health %}
+  <div class="data-table" role="table" aria-label="Source health">
+    <div class="data-row header" role="row"><span>Source</span><span>Status</span><span>Last success</span><span>Error rate</span></div>
+    {% for source in source_health[:40] %}
+    <div class="data-row" role="row">
+      <strong>{{ source.source_id }}</strong>
+      <span class="status {{ source.status }}">{{ source.status }}</span>
+      <span>{{ source.last_success_at|compact_date if source.last_success_at else "—" }}</span>
+      <span>{{ "%.0f%%"|format(source.error_rate * 100) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><strong>No source health snapshots yet.</strong></div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -19,6 +19,8 @@ COPY --chown=radar:radar pyproject.toml uv.lock README.md ./
 COPY --chown=radar:radar apps ./apps
 COPY --chown=radar:radar packages ./packages
 COPY --chown=radar:radar schemas ./schemas
+COPY --chown=radar:radar config ./config
+COPY --chown=radar:radar integrations ./integrations
 
 RUN uv sync --frozen --no-dev
 
