@@ -4,7 +4,7 @@ Status: approved
 
 Collection authorization: enabled
 
-External delivery authorization: enabled
+External delivery authorization: disabled
 
 Approval reference: discord:channel:1476283808587321451:message:1530156178129289346
 
@@ -17,10 +17,17 @@ Reviewed architecture commit: 984ee9c
 Environment: Brandon Wise local OpenClaw production instance
 
 Residual-risk acceptance: Read-only collection from the approved sources below, bounded paid API
-usage, short-lived discovery results, immutable authoritative evidence, and verified delivery to
-the private Discord `#news` channel are accepted. Browser-based collection, arbitrary web
-execution, authenticated vendor portals, malware detonation, and autonomous defensive changes
-remain out of scope.
+usage, short-lived discovery results, immutable authoritative evidence, and publication to the
+local database/private read-only website are accepted. Routine Discord delivery is disabled.
+Browser-based collection, arbitrary web execution, authenticated vendor portals, malware
+detonation, and autonomous defensive changes remain out of scope.
+
+Delivery amendment: On 2026-07-28, the approver requested DB/private-website publication only and
+revoked routine delivery to the Discord `#news` channel.
+
+Local inference amendment: On 2026-07-28, the approver requested local inference to improve the
+workflow. Approval is limited to the ADR 0011 shadow-mode Nomic embedding observer: loopback-only,
+zero publication authority, no persisted vectors, and fail-open to the deterministic pipeline.
 
 ## Approval scope
 

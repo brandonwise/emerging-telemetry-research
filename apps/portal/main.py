@@ -65,10 +65,7 @@ class PortalSettings(BaseSettings):
     auth_mode: Literal["auto", "required", "disabled"] = "auto"
     access_token: str | None = None
     secure_cookie: bool = False
-    allowed_networks: str = (
-        "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,"
-        "192.168.0.0/16,fc00::/7"
-    )
+    allowed_networks: str = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
     title: str = Field(default="Threat Radar", min_length=1, max_length=80)
 
     @model_validator(mode="after")
@@ -76,12 +73,9 @@ class PortalSettings(BaseSettings):
         authentication_required = self.auth_mode == "required" or (
             self.auth_mode == "auto" and self.lan_mode
         )
-        if authentication_required and (
-            self.access_token is None or len(self.access_token) < 20
-        ):
+        if authentication_required and (self.access_token is None or len(self.access_token) < 20):
             raise ValueError(
-                "This authentication mode requires RADAR_PORTAL_ACCESS_TOKEN "
-                "with 20+ characters"
+                "This authentication mode requires RADAR_PORTAL_ACCESS_TOKEN with 20+ characters"
             )
         if (
             self.auth_mode != "disabled"
@@ -236,9 +230,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
     ) -> HTMLResponse:
         safe_query = q.strip()[:120] if q else None
         safe_edition = (
-            edition
-            if edition in {"flash", "morning", "afternoon_delta", "weekly"}
-            else None
+            edition if edition in {"flash", "morning", "afternoon_delta", "weekly"} else None
         )
         return _render(
             templates,
@@ -322,13 +314,17 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         )
 
     @application.get("/setup", response_class=HTMLResponse)
-    async def setup(request: Request) -> HTMLResponse:
+    async def setup(request: Request, days: int = 30) -> HTMLResponse:
+        bounded_days = max(7, min(days, 365))
         return _render(
             templates,
             "setup.html",
             request=request,
             settings=portal_settings,
             active="setup",
+            costs=store.cost_breakdown(days=bounded_days),
+            local_inference=store.local_inference_status(),
+            days=bounded_days,
         )
 
     @application.get("/exports/reports.csv")
@@ -364,21 +360,12 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         for row in store.export_finding_rows():
             export_row = dict(row)
             export_row["tags"] = "|".join(str(item) for item in row.get("tags", []))
-            export_row["source_types"] = "|".join(
-                str(item) for item in row.get("source_types", [])
-            )
-            writer.writerow(
-                {
-                    key: _safe_csv(export_row.get(key))
-                    for key in CSV_FINDING_FIELDS
-                }
-            )
+            export_row["source_types"] = "|".join(str(item) for item in row.get("source_types", []))
+            writer.writerow({key: _safe_csv(export_row.get(key)) for key in CSV_FINDING_FIELDS})
         return Response(
             output.getvalue(),
             media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": 'attachment; filename="threat-radar-findings.csv"'
-            },
+            headers={"Content-Disposition": 'attachment; filename="threat-radar-findings.csv"'},
         )
 
     @application.get("/exports/findings.json")
@@ -386,9 +373,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             json.dumps(store.export_finding_rows(), indent=2, sort_keys=True),
             media_type="application/json",
-            headers={
-                "Content-Disposition": 'attachment; filename="threat-radar-findings.json"'
-            },
+            headers={"Content-Disposition": 'attachment; filename="threat-radar-findings.json"'},
         )
 
     @application.get("/exports/reports/{report_id}.json")
@@ -399,16 +384,12 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             json.dumps(report, indent=2, sort_keys=True),
             media_type="application/json",
-            headers={
-                "Content-Disposition": f'attachment; filename="{report_id}.json"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{report_id}.json"'},
         )
 
     @application.get("/exports/reports/{report_id}.html")
     async def export_report_html(report_id: str) -> FileResponse:
-        rows = [
-            row for row in store.list_reports(limit=500) if row["report_id"] == report_id
-        ]
+        rows = [row for row in store.list_reports(limit=500) if row["report_id"] == report_id]
         if not rows or not rows[0].get("html_path"):
             raise HTTPException(status_code=404, detail="HTML report not found")
         path = Path(str(rows[0]["html_path"])).resolve()

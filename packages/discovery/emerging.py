@@ -125,6 +125,25 @@ TAG_RULES: dict[str, tuple[str, ...]] = {
         r"\bweaponized\b",
     ),
     "proof_of_concept": (r"\bproof[ -]?of[ -]?concept\b", r"\bpoc\b"),
+    "remote_code_execution": (r"\bremote code execution\b", r"\brce\b"),
+    "authentication_bypass": (
+        r"\bauthentication bypass\b",
+        r"\bauth bypass\b",
+        r"\bpre[ -]?auth(?:entication)?\b",
+        r"\bunauthenticated\b",
+    ),
+    "mass_exploitation": (
+        r"\bmass exploitation\b",
+        r"\bwidespread exploitation\b",
+        r"\binternet[ -]?wide\b",
+        r"\bwormable\b",
+    ),
+    "edge_device": (
+        r"\bedge device\b",
+        r"\bvpn\b",
+        r"\bfirewall\b",
+        r"\bgateway appliance\b",
+    ),
     "third_party": (r"\bthird[ -]?party\b", r"\bvendor\b", r"\bprovider\b"),
 }
 
@@ -646,8 +665,22 @@ def _emerging_score(
         "infrastructure": 17.0,
         "other": 14.0,
     }[category]
+    if {
+        "remote_code_execution",
+        "authentication_bypass",
+        "mass_exploitation",
+    }.intersection(tags):
+        impact = min(25.0, impact + 3.0)
     if "active_exploitation" in tags or "zero_day" in tags:
-        exploitability = 15.0
+        exploitability = (
+            18.0
+            if {
+                "remote_code_execution",
+                "authentication_bypass",
+                "mass_exploitation",
+            }.intersection(tags)
+            else 15.0
+        )
     elif {"malware", "ransomware", "proof_of_concept"}.intersection(tags):
         exploitability = 12.0
     else:

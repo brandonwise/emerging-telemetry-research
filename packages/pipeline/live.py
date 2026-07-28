@@ -29,6 +29,7 @@ from packages.connectors.live import (
 from packages.delivery.discord import build_discord_delivery_plan
 from packages.delivery.local import build_local_delivery_plan
 from packages.discovery.clients import (
+    BRAVE_COST_PER_REQUEST,
     BraveSearchClient,
     DiscoverySignal,
     DiscoveryUsage,
@@ -44,6 +45,7 @@ from packages.discovery.emerging import (
     referenced_discovery_records,
     related_cves,
 )
+from packages.inference.semantic import SemanticShadowEvaluator
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
 from packages.scoring.engine import PublicationThresholds, load_thresholds
 from packages.security_gateway.gateway import (
@@ -54,6 +56,43 @@ from packages.storage.object_store import ImmutableObjectStore
 from packages.storage.repository import RadarRepository
 
 PUBLICATION_RANK = {"archive": 0, "daily": 1, "watch": 2, "flash": 3}
+CRITICAL_SIGNAL_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
+    (
+        re.compile(
+            r"\b(?:actively exploited|exploited in the wild|in-the-wild exploitation)\b",
+            re.IGNORECASE,
+        ),
+        5,
+    ),
+    (
+        re.compile(
+            r"\b(?:unauthenticated|pre-auth(?:entication)?|authentication bypass)\b",
+            re.IGNORECASE,
+        ),
+        4,
+    ),
+    (
+        re.compile(
+            r"\b(?:remote code execution|rce|wormable)\b",
+            re.IGNORECASE,
+        ),
+        4,
+    ),
+    (
+        re.compile(
+            r"\b(?:mass exploitation|widespread exploitation|internet-wide)\b",
+            re.IGNORECASE,
+        ),
+        5,
+    ),
+    (
+        re.compile(
+            r"\b(?:edge device|vpn|firewall|gateway appliance)\b",
+            re.IGNORECASE,
+        ),
+        2,
+    ),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +119,7 @@ class LiveRunResult:
     emerging_signal_count: int = 0
     qualified_emerging_count: int = 0
     source_native_signal_count: int = 0
+    semantic_shadow: dict[str, Any] | None = None
 
 
 async def run_live_radar(
@@ -90,6 +130,7 @@ async def run_live_radar(
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
     repository: RadarRepository,
+    semantic_evaluator: SemanticShadowEvaluator | None = None,
     now: datetime | None = None,
 ) -> LiveRunResult:
     generated_at = (now or datetime.now(UTC)).astimezone(UTC)
@@ -142,6 +183,7 @@ async def run_live_radar(
             provider="brave",
             model="brave-web-search-v1",
             requests=len(queries),
+            estimated_currency=round(len(queries) * BRAVE_COST_PER_REQUEST, 6),
         )
     )
 
@@ -224,7 +266,27 @@ async def run_live_radar(
     }
     related_signals_by_cve: dict[str, list[PreparedSignal]] = {}
     emerging_clusters: list[tuple[PreparedSignal, ...]] = []
-    for cluster in cluster_non_cve_signals(prepared_signals):
+    deterministic_clusters = cluster_non_cve_signals(prepared_signals)
+    semantic_shadow: dict[str, Any] | None = None
+    if semantic_evaluator is not None:
+        try:
+            semantic_result = await semantic_evaluator.evaluate(
+                prepared_signals,
+                deterministic_clusters,
+            )
+        except Exception:
+            semantic_result = semantic_evaluator.degraded_result(prepared_signals)
+        semantic_shadow = semantic_result.as_report()
+        usage.append(
+            _usage_record(
+                stage="semantic_clustering_shadow",
+                provider="ollama",
+                model=semantic_result.model,
+                requests=semantic_result.requests,
+                input_tokens=semantic_result.input_tokens,
+            )
+        )
+    for cluster in deterministic_clusters:
         matches = set(related_cves(cluster, prepared_signals)).intersection(available_cves)
         if len(matches) == 1:
             cve = matches.pop()
@@ -293,6 +355,7 @@ async def run_live_radar(
         source_health=list(source_health.values()),
         degraded=degraded,
         usage=usage,
+        semantic_shadow=semantic_shadow,
     )
     report_json_path = run_root / f"{report['report_id']}.json"
     _write_immutable(report_json_path, canonical_json_bytes(report) + b"\n")
@@ -341,6 +404,7 @@ async def run_live_radar(
         source_native_signal_count=sum(
             not candidate_cves((item.signal,)) for item in prepared_signals
         ),
+        semantic_shadow=semantic_shadow,
     )
 
 
@@ -481,6 +545,11 @@ def _existing_morning_result(
                             for mapping in finding.get("mappings", [])
                         )
                     ),
+                    semantic_shadow=(
+                        report.get("semantic_shadow")
+                        if isinstance(report.get("semantic_shadow"), dict)
+                        else None
+                    ),
                 ),
             )
         )
@@ -587,8 +656,9 @@ def _prioritized_candidates(
 ) -> tuple[str, ...]:
     scores: Counter[str] = Counter()
     for signal in signals:
+        criticality_bonus = _critical_signal_bonus(signal)
         for cve in candidate_cves((signal,)):
-            scores[cve] += 2 if signal.source_id == "x-researchers" else 1
+            scores[cve] += (2 if signal.source_id == "x-researchers" else 1) + criticality_bonus
     if cisa_artifact is not None:
         try:
             payload = json.loads(cisa_artifact.result.content)
@@ -605,11 +675,22 @@ def _prioritized_candidates(
                     continue
                 try:
                     if date.fromisoformat(added) >= minimum_date:
-                        scores[cve_value.upper()] += 5
+                        scores[cve_value.upper()] += 12
                 except ValueError:
                     continue
     ranked = sorted(scores, key=lambda item: (-scores[item], item))
     return tuple(ranked[:maximum])
+
+
+def _critical_signal_bonus(signal: DiscoverySignal) -> int:
+    """Prioritize corroboration; never changes evidence or publication gates."""
+    text = "\n".join(
+        item for item in (signal.title, signal.summary, signal.rationale) if item is not None
+    )
+    return min(
+        12,
+        sum(weight for pattern, weight in CRITICAL_SIGNAL_PATTERNS if pattern.search(text)),
+    )
 
 
 def _discovery_baselines(
@@ -692,6 +773,7 @@ def _aggregate_report(
     source_health: list[dict[str, Any]],
     degraded: set[str],
     usage: list[dict[str, Any]],
+    semantic_shadow: dict[str, Any] | None,
 ) -> dict[str, Any]:
     material = len(findings)
     if material:
@@ -705,7 +787,7 @@ def _aggregate_report(
             "No material emerging threats met the verified publication threshold "
             "during this window."
         )
-    return {
+    report = {
         "schema_version": "1.0",
         "report_id": stable_id("rp", run_id, settings.edition),
         "edition": settings.edition,
@@ -726,6 +808,9 @@ def _aggregate_report(
             "verifier_revision": "deterministic-verifier-v1",
         },
     }
+    if semantic_shadow is not None:
+        report["semantic_shadow"] = semantic_shadow
+    return report
 
 
 async def _persist_run(

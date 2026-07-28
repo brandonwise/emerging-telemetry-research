@@ -2,7 +2,8 @@
 
 This package contains the security-first OpenClaw Emerging Threat Radar implementation. The
 approved local deployment performs live Brave and X discovery, authoritative corroboration, and
-fixed-destination Discord delivery; unapproved source classes remain fail-closed.
+DB/private-website publication with no routine Discord delivery; unapproved source classes remain
+fail-closed.
 
 ## Primary handoff documents
 
@@ -24,7 +25,7 @@ fixed-destination Discord delivery; unapproved source classes remain fail-closed
 - `openclaw/` — example OpenClaw configuration, role definitions, and Lobster workflows.
 - `schemas/` — JSON Schemas for evidence, findings, assessments, and reports.
 - `policies/` — tool, egress, and untrusted-content gateway policies.
-- `config/` — source, model, scoring, schedule, and report configuration.
+- `config/` — source, model, local-embedding, scoring, schedule, and report configuration.
 - `apps/` and `packages/` — internal API, worker CLI, pipeline, connectors, security gateway,
   scoring, verification, delivery planning, telemetry, and storage adapters.
 - `infra/` — local observability and service topology.

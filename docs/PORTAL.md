@@ -74,7 +74,9 @@ CIDR allowlist.
 
 ## Capabilities
 
-- overview KPIs for reports, findings, severity, source gaps, usage, and cost
+- overview KPIs for reports, findings, severity, and source gaps
+- Settings-page provider/model and workflow-stage cost attribution with subscription-plan context
+- latest local Nomic semantic-shadow health, recall candidates, deterministic overlap, and latency
 - finding-level search and filters for category, tag, and discovery source type
 - source-native website and X-post excerpts with original links and timestamps
 - category and tag trend summaries

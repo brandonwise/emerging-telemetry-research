@@ -24,8 +24,8 @@ scripts/run-live.sh
 ```
 
 The runner loads secrets from macOS Keychain, verifies FileVault, starts the loopback-only
-PostgreSQL and MinIO services, and emits delivery metadata as JSON. Send only through the reviewed
-OpenClaw `radar_delivery_send` tool; never bypass it with a generic message or Discord client.
+PostgreSQL and MinIO services, writes the verified report to the durable database and analytics
+index, and emits file-only audit metadata as JSON. Routine runs have no external delivery step.
 
 Before live collection, confirm all of the following:
 
@@ -41,12 +41,32 @@ Before live collection, confirm all of the following:
 ## Daily operator review
 
 - Confirm morning and afternoon runs completed
-- Review Flash alerts and Watch changes
+- Review Flash and Watch changes in the private portal
 - Check source freshness and degraded-source banner
 - Check model/tool usage and daily budget
 - Review policy denials and sanitizer high-risk counts
-- Review delivery receipts
+- Confirm analytics indexing and portal freshness
+- Review local semantic-shadow health and potentially missed pairs in Settings
 - Triage analyst feedback and corrections
+
+## Local semantic shadow
+
+The approved local model is `nomic-embed-text:latest` through the fixed loopback Ollama endpoint.
+It is an observer, not a fallback decision-maker. Check the Settings page or the
+`semantic_shadow` object in the newest report for status, latency, candidate pairs, and overlap
+with deterministic clustering.
+
+If status is `degraded`:
+
+1. Confirm `ollama list` includes `nomic-embed-text:latest`.
+2. Confirm the loopback service responds; do not change the endpoint to a LAN or public host.
+3. Keep the deterministic run. Local-inference failure is not a reason to broaden egress or delay
+   verified publication.
+4. Re-run the next normal cycle after service recovery. Do not edit an immutable prior report.
+
+Do not promote semantic candidates into authoritative clustering based on anecdotes. Promotion
+requires a labeled replay set, a separate threat-model approval, deterministic safety gates, and
+rollback evidence.
 
 ## Source outage
 
@@ -94,13 +114,13 @@ Before live collection, confirm all of the following:
 - Require operator approval for emergency budget extension
 - Include the budget event in telemetry
 
-## Discord delivery failure
+## Portal publication failure
 
-- Retry with the same idempotency key
-- Avoid generating a new report version for transport retries
-- Store the HTTP/provider receipt or error category
-- Fall back to the approved email/file channel only when policy allows
-- Alert an operator after the configured retry window
+- Confirm the verified report exists in PostgreSQL and `reports/generated`.
+- Re-run analytics sync; it is immutable and idempotent.
+- Verify the portal service can read `state/radar.db`.
+- Do not enable Discord or another external transport as a workaround.
+- Alert an operator after the configured retry window.
 
 ## Dead-letter replay
 

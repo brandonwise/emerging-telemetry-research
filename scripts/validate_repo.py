@@ -34,6 +34,7 @@ def check_release_gates(failures: list[str]) -> None:
     sources = load_yaml("config/sources.yaml")
     schedules = load_yaml("config/schedules.yaml")
     report = load_yaml("config/report.yaml")
+    embeddings = load_yaml("config/embeddings.yaml")
     terms = load_yaml("config/source-terms.yaml")
     approval_text = (ROOT / "THREAT_MODEL_APPROVAL.md").read_text(encoding="utf-8")
     approval_pending = "Status: approved" not in approval_text
@@ -70,6 +71,12 @@ def check_release_gates(failures: list[str]) -> None:
         and publication.get("shadow_mode") is not False
     ):
         failures.append("Approved external delivery cannot be labeled shadow mode")
+
+    semantic = embeddings.get("semantic_clustering", {})
+    if semantic.get("enabled") is True and semantic.get("mode") != "shadow":
+        failures.append("Local semantic clustering must remain in shadow mode")
+    if semantic.get("enabled") is True and semantic.get("provider") != "ollama":
+        failures.append("Local semantic clustering must use the loopback Ollama adapter")
 
     source_terms = terms.get("sources", {})
     default_terms_status = terms.get("default_status")
@@ -129,12 +136,9 @@ def check_contracts(failures: list[str]) -> None:
 
 def check_migrations(failures: list[str]) -> None:
     migration_text = "\n".join(
-        path.read_text(encoding="utf-8").lower()
-        for path in repository_files("migrations/*.sql")
+        path.read_text(encoding="utf-8").lower() for path in repository_files("migrations/*.sql")
     )
-    found = set(
-        re.findall(r"create\s+table\s+(?:if\s+not\s+exists\s+)?([a-z_]+)", migration_text)
-    )
+    found = set(re.findall(r"create\s+table\s+(?:if\s+not\s+exists\s+)?([a-z_]+)", migration_text))
     required_table_groups = {
         "runs": {"runs"},
         "steps": {"steps", "workflow_steps"},
@@ -162,17 +166,14 @@ def check_migrations(failures: list[str]) -> None:
     if "skip locked" not in migration_text:
         failures.append("Durable claim work must use PostgreSQL SKIP LOCKED")
     has_immutable_evidence = (
-        "reject_row_mutation" in migration_text
-        and "evidence_items_immutable" in migration_text
+        "reject_row_mutation" in migration_text and "evidence_items_immutable" in migration_text
     )
     if not has_immutable_evidence:
         failures.append("Immutable evidence tables need database-enforced mutation rejection")
 
 
 def check_supply_chain(failures: list[str]) -> None:
-    action_pin = re.compile(
-        r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?@[a-f0-9]{40}$"
-    )
+    action_pin = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?@[a-f0-9]{40}$")
     for workflow in repository_files(".github/workflows/*.yml"):
         for line_number, line in enumerate(workflow.read_text(encoding="utf-8").splitlines(), 1):
             stripped = line.strip()

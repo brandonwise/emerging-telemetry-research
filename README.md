@@ -10,7 +10,7 @@ CVE List V5, NVD, FIRST EPSS, OSV, and GitHub Global Security Advisories. It cap
 PostgreSQL and an
 object-locked, versioned S3-compatible store; sanitizes hostile content; normalizes entities; builds
 source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
-and delivers through a fixed-destination, idempotent OpenClaw tool.
+and publishes the results to its durable database and private read-only website.
 
 The daily OpenClaw job runs at 7:30 AM America/New_York. Browser automation is not part of source
 collection; it is used only for report-rendering QA.
@@ -60,8 +60,8 @@ scripts/run-live.sh
 
 The script loads Brave, xAI, PostgreSQL, and MinIO credentials from macOS Keychain, verifies
 FileVault, starts the loopback-only data services when needed, applies immutable migrations and
-bucket retention, and emits one delivery-ready JSON object. It does not send Discord messages
-directly; delivery remains isolated behind `radar_delivery_send`.
+bucket retention, writes one verified report to PostgreSQL and the analytics index, and emits a
+file-only audit plan. Scheduled runs do not send Discord messages.
 
 Live output reports `source_native_signal_count`, `qualified_emerging_count`, and
 `emerging_signal_count` so operators can distinguish discovery volume from qualified and
@@ -70,11 +70,19 @@ findings. Strong title-level matches are clustered with complete-link agreement,
 coverage that maps to exactly one CVE established in the same run is reconciled into that CVE
 finding instead of appearing twice.
 
+The approved local profile also sends bounded sanitized signal text to the installed
+`nomic-embed-text:latest` model through loopback-only Ollama. It runs as a shadow observer: semantic
+candidate pairs, deterministic overlap, latency, and token volume are recorded in the immutable
+report and analytics index, but embeddings cannot change clusters, scores, verification, or
+publication. Ollama failure does not interrupt the deterministic radar.
+
 ## Analytics and reports
 
 Every live run is indexed into a portable SQLite analytics store. It captures report snapshots,
-finding severity and class, source health, usage/cost, analyst feedback, improvement-cycle
-outcomes, and bounded content-free telemetry events.
+finding severity and class, source health, provider/model/stage usage and API-equivalent cost
+estimates, analyst feedback, improvement-cycle outcomes, and bounded content-free telemetry
+events. Cost estimates are attribution signals, not necessarily cash spend: subscriptions, credits,
+or committed plans can make incremental cost lower or effectively zero.
 Re-index existing immutable reports at any time:
 
 ```bash
@@ -106,7 +114,8 @@ access token by default. Trusted-network deployments can explicitly use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
 as Tailscale. The portal is read-only and includes a filterable findings archive, categories and
 tags, source-native website/X excerpts and links, taxonomy trends, report search/detail, source
-health, print styling, and finding/report CSV/JSON/HTML exports.
+health, provider/model/workflow cost analysis, print styling, and finding/report CSV/JSON/HTML
+exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
 Keychain without writing it to the plist or logs.
 
@@ -155,6 +164,8 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
   constrains archives, exposes a malware-scanner hook, and gates model access by risk.
 - PostgreSQL work claiming uses `SKIP LOCKED`; API commands and delivery plans are idempotent.
 - Raw, sanitized, evidence, report, policy, and security records are append-only where required.
+- Local Nomic embeddings are loopback-only, bounded, vector-validated, and shadow-only; vectors are
+  never persisted and have no publication authority.
 - CI actions and service images are version pinned; CI runs schema, lint, type, test, PostgreSQL,
   replay, security, and frozen acceptance gates.
 - OpenTelemetry exposes bounded, content-free workflow/source/model/delivery/security metrics.
@@ -171,7 +182,7 @@ approved source plan
   → deterministic scoring
   → specialist → skeptic → citation verifier → coordinator
   → verified report JSON
-  → deterministic HTML + fixed-destination Discord plan
+  → PostgreSQL + analytics index → deterministic HTML + private portal
 ```
 
 OpenClaw cron and reviewed Lobster workflows can own orchestration, but Claude Code, Codex, shell,

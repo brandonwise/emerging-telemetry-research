@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Setup · {{ settings.title }}{% endblock %}
+{% block title %}Settings · {{ settings.title }}{% endblock %}
 {% block content %}
 <section class="page-heading">
-  <p class="eyebrow">Deployment guide</p>
-  <h1>Run it your way</h1>
-  <p class="lede">The engine is platform-neutral. OpenClaw, Claude Code, Codex, and plain shell all call the same typed CLI.</p>
+  <p class="eyebrow">System settings</p>
+  <h1>Configuration and usage</h1>
+  <p class="lede">Runtime posture, deployment guidance, and optional cost analysis live here instead of competing with operational signals.</p>
 </section>
 <section class="setup-grid">
   <article class="setup-card">
@@ -36,5 +36,98 @@
     <div><dt>Analytics store</dt><dd><code>{{ settings.analytics_db }}</code></dd></div>
     <div><dt>Report root</dt><dd><code>{{ settings.reports_root }}</code></dd></div>
   </dl>
+</section>
+<section class="panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">Local inference</p><h2>Semantic clustering shadow</h2></div>
+  </div>
+  <div class="notice">
+    <strong>Observer only.</strong>
+    Local embeddings can suggest missed relationships, but they cannot change clusters, scores,
+    verification, or publication. The deterministic pipeline remains authoritative.
+  </div>
+  {% if local_inference %}
+  <dl class="detail-grid">
+    <div><dt>Status</dt><dd>{{ local_inference.status|replace("_", " ")|title }}</dd></div>
+    <div><dt>Model</dt><dd><code>{{ local_inference.provider }}/{{ local_inference.model }}</code></dd></div>
+    <div><dt>Signals evaluated</dt><dd>{{ local_inference.evaluated_signal_count }} of {{ local_inference.discovered_signal_count }}</dd></div>
+    <div><dt>Semantic candidates</dt><dd>{{ local_inference.candidate_pair_count }}</dd></div>
+    <div><dt>Matches current logic</dt><dd>{{ local_inference.overlap_pair_count }}</dd></div>
+    <div><dt>Potentially missed pairs</dt><dd>{{ local_inference.semantic_only_pair_count }}</dd></div>
+    <div><dt>Latency</dt><dd>{{ local_inference.duration_ms }} ms</dd></div>
+    <div><dt>Estimated incremental cost</dt><dd>$0.0000</dd></div>
+  </dl>
+  {% if local_inference.failure_reason %}
+  <p class="muted">Last result: {{ local_inference.failure_reason|replace("_", " ") }}.</p>
+  {% endif %}
+  {% else %}
+  <div class="empty-state compact">
+    <strong>Waiting for the next live run.</strong>
+    <span>The installed Nomic model will appear here after its first shadow evaluation.</span>
+  </div>
+  {% endif %}
+</section>
+<section class="panel cost-panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">Cost analysis</p><h2>Usage estimate</h2></div>
+    <form class="period-picker" method="get" action="/setup">
+      <label for="cost-days">Window</label>
+      <select id="cost-days" name="days">
+        {% for option in [7, 30, 90, 365] %}
+        <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} days</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Apply</button>
+    </form>
+  </div>
+  <div class="notice cost-context">
+    <strong>Usage value, not necessarily cash spend.</strong>
+    Subscription plans, credits, and committed spend can make the actual incremental cost lower —
+    sometimes effectively $0. Brave Search is estimated at $5 per 1,000 requests ($0.005 each).
+  </div>
+  <div class="cost-summary" aria-label="Cost summary">
+    <div><span>Total estimate</span><strong>{{ costs.estimated_cost|money }}</strong></div>
+    <div><span>Average per report</span><strong>{{ costs.average_per_report|money }}</strong></div>
+    <div><span>Average per request</span><strong>{{ costs.average_per_request|money }}</strong></div>
+    <div><span>Measured volume</span><strong>{{ "{:,}".format(costs.tokens) }}</strong><small>tokens</small></div>
+  </div>
+  <div class="cost-breakdowns">
+    <div>
+      <h3>By provider and model</h3>
+      {% if costs.providers %}
+      <div class="cost-list">
+        {% for item in costs.providers %}
+        <div class="cost-row">
+          <div>
+            <strong>{{ item.provider }}</strong>
+            <span>{{ item.model }} · {{ "{:,}".format(item.requests) }} requests · {{ "{:,}".format(item.tokens) }} tokens</span>
+          </div>
+          <div><strong>{{ item.estimated_cost|money }}</strong><span>{{ "%.1f"|format(item.cost_share) }}% of estimate</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state compact"><strong>No usage records yet.</strong><span>The next indexed run will populate this breakdown.</span></div>
+      {% endif %}
+    </div>
+    <div>
+      <h3>By workflow stage</h3>
+      {% if costs.stages %}
+      <div class="cost-list">
+        {% for item in costs.stages %}
+        <div class="cost-row">
+          <div>
+            <strong>{{ item.stage|replace("_", " ")|title }}</strong>
+            <span>{{ "{:,}".format(item.requests) }} requests · {{ "{:,}".format(item.tokens) }} tokens</span>
+          </div>
+          <div><strong>{{ item.estimated_cost|money }}</strong><span>{{ "%.1f"|format(item.cost_share) }}% of estimate</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state compact"><strong>No stage data yet.</strong><span>Usage is recorded with every verified report.</span></div>
+      {% endif %}
+    </div>
+  </div>
 </section>
 {% endblock %}

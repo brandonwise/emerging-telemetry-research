@@ -19,7 +19,7 @@
       <a href="/findings" {% if active == "findings" %}aria-current="page"{% endif %}>Findings</a>
       <a href="/reports" {% if active == "reports" %}aria-current="page"{% endif %}>Reports</a>
       <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>Trends</a>
-      <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Setup</a>
+      <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Settings</a>
     </nav>
     {% if settings.authentication_enabled %}
     <form method="post" action="/logout"><button class="quiet-button" type="submit">Sign out</button></form>

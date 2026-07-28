@@ -15,6 +15,8 @@ from packages.security_gateway.url_policy import canonicalize_url
 
 CVE_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.I)
 BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
+BRAVE_COST_PER_1000_REQUESTS = 5.0
+BRAVE_COST_PER_REQUEST = BRAVE_COST_PER_1000_REQUESTS / 1000
 XAI_RESPONSES_ENDPOINT = "https://api.x.ai/v1/responses"
 XAI_COST_TICK_DIVISOR = 1_000_000_000
 

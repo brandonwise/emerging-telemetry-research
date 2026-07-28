@@ -68,6 +68,5 @@ export RADAR_S3_SERVER_SIDE_ENCRYPTION="none"
 cd "${radar_repo_root}"
 exec uv run threat-radar live run \
   --output "${radar_repo_root}/reports/generated" \
-  --channel-id "1476897068885872814" \
   --edition "${radar_edition}" \
   --json

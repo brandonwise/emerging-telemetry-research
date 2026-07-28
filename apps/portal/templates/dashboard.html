@@ -25,14 +25,14 @@
   </article>
   <article class="metric-card">
     <span>Findings</span><strong>{{ overview.findings }}</strong>
-    <small>from {{ overview.reports }} reports</small>
+    <small>verified intelligence items</small>
   </article>
   <article class="metric-card">
     <span>Source gaps</span><strong>{{ overview.degraded }}</strong>
     <small>degraded source snapshots</small>
   </article>
   <article class="metric-card">
-    <span>Estimated cost</span><strong>{{ overview.estimated_cost|money }}</strong>
+    <span>Reports</span><strong>{{ overview.reports }}</strong>
     <small>{{ "{:,}".format(overview.requests) }} requests · {{ overview.events }} events</small>
   </article>
 </section>

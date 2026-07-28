@@ -29,6 +29,34 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
             "source_handle": "researcher",
         }
     ]
+    report["usage"].extend(
+        [
+            {
+                "stage": "social_discovery",
+                "agent_id": None,
+                "source_id": "x-researchers",
+                "finding_id": None,
+                "provider": "xai",
+                "model": "grok-4.5",
+                "requests": 1,
+                "input_tokens": 1200,
+                "output_tokens": 300,
+                "estimated_currency": 0.25,
+            },
+            {
+                "stage": "web_discovery",
+                "agent_id": None,
+                "source_id": "brave-web",
+                "finding_id": None,
+                "provider": "brave",
+                "model": "brave-web-search-v1",
+                "requests": 5,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "estimated_currency": 0,
+            },
+        ]
+    )
     finding_category = report["findings"][0]["category"]
     result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
     store = AnalyticsStore(tmp_path / "state" / "radar.db")
@@ -36,6 +64,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     indexed = store.index_path(result.report_json_path)
     replay = store.index_path(result.report_json_path)
     overview = store.overview(days=365)
+    costs = store.cost_breakdown(days=365)
     reports = store.list_reports(query="CVE-2026")
     findings = store.list_findings(
         category=finding_category,
@@ -55,6 +84,30 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     assert replay.inserted is False
     assert overview["reports"] == 1
     assert overview["findings"] == 1
+    assert costs["estimated_cost"] == 0.275
+    assert costs["requests"] == 10
+    assert costs["tokens"] == 1500
+    assert costs["average_per_report"] == 0.275
+    assert costs["providers"][0] == {
+        "provider": "xai",
+        "model": "grok-4.5",
+        "requests": 1,
+        "tokens": 1500,
+        "estimated_cost": 0.25,
+        "cost_share": 90.9,
+    }
+    assert costs["providers"][1] == {
+        "provider": "brave",
+        "model": "brave-web-search-v1",
+        "requests": 5,
+        "tokens": 0,
+        "estimated_cost": 0.025,
+        "cost_share": 9.1,
+    }
+    assert {item["stage"] for item in costs["stages"]} >= {
+        "social_discovery",
+        "web_discovery",
+    }
     assert reports[0]["report_id"] == result.report["report_id"]
     assert findings[0]["tags"] == ["ai", "supply_chain"]
     assert findings[0]["source_types"] == ["x_post"]
@@ -129,7 +182,7 @@ def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
     assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1}
 
 
-def test_analytics_migrates_v1_to_taxonomy_schema(tmp_path: Path) -> None:
+def test_analytics_migrates_v1_to_usage_schema(tmp_path: Path) -> None:
     database = tmp_path / "radar.db"
     with sqlite3.connect(database) as connection:
         connection.execute(
@@ -156,5 +209,9 @@ def test_analytics_migrates_v1_to_taxonomy_schema(tmp_path: Path) -> None:
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             ).fetchall()
         }
-    assert version == ("2",)
-    assert {"analytics_finding_tags", "analytics_finding_sources"}.issubset(tables)
+    assert version == ("3",)
+    assert {
+        "analytics_finding_tags",
+        "analytics_finding_sources",
+        "analytics_usage",
+    }.issubset(tables)

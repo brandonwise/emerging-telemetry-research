@@ -25,6 +25,21 @@ def test_taxonomy_classifies_ai_supply_chain_and_malicious_packages() -> None:
     assert {"ai", "open_source", "pre_cve", "supply_chain"}.issubset(taxonomy.tags)
 
 
+def test_taxonomy_preserves_critical_exploitation_primitives() -> None:
+    taxonomy = classify_taxonomy(
+        "Wormable pre-auth RCE in edge VPN is actively exploited",
+        "Researchers report widespread exploitation and authentication bypass.",
+    )
+
+    assert {
+        "active_exploitation",
+        "authentication_bypass",
+        "edge_device",
+        "mass_exploitation",
+        "remote_code_execution",
+    }.issubset(taxonomy.tags)
+
+
 def test_pre_cve_sources_become_cited_emerging_finding(tmp_path: Path) -> None:
     generated_at = datetime(2026, 7, 24, 13, tzinfo=UTC)
     signals = [

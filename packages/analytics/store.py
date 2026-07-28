@@ -9,6 +9,7 @@ from typing import Any
 
 from packages.common.canonical import canonical_json_bytes, sha256_hex, stable_id
 from packages.contracts.validation import validate_payload
+from packages.discovery.clients import BRAVE_COST_PER_REQUEST
 from packages.discovery.emerging import classify_taxonomy
 from packages.verification.claims import require_verified_report
 
@@ -43,9 +44,7 @@ class AnalyticsStore:
         findings = [item for item in report["findings"] if isinstance(item, dict)]
         scores = [float(item["priority_score"]) for item in findings]
         usage = [item for item in report["usage"] if isinstance(item, dict)]
-        source_health = [
-            item for item in report["source_health"] if isinstance(item, dict)
-        ]
+        source_health = [item for item in report["source_health"] if isinstance(item, dict)]
         classes = {
             name: sum(1 for item in findings if item["publication_class"] == name)
             for name in ("flash", "watch", "daily", "archive")
@@ -87,6 +86,11 @@ class AnalyticsStore:
                     report_id=report_id,
                     findings=findings,
                 )
+                _index_usage_dimensions(
+                    connection,
+                    report_id=report_id,
+                    usage=usage,
+                )
                 connection.commit()
                 return IndexResult(report_id, False, len(findings))
             connection.execute(
@@ -104,6 +108,11 @@ class AnalyticsStore:
                 connection,
                 report_id=report_id,
                 findings=findings,
+            )
+            _index_usage_dimensions(
+                connection,
+                report_id=report_id,
+                usage=usage,
             )
             for source in source_health:
                 connection.execute(
@@ -184,8 +193,7 @@ class AnalyticsStore:
         if not metric or len(metric) > 100:
             raise ValueError("metric must contain 1 to 100 characters")
         if len(dimensions) > 20 or any(
-            len(key) > 100 or len(item) > 300
-            for key, item in dimensions.items()
+            len(key) > 100 or len(item) > 300 for key, item in dimensions.items()
         ):
             raise ValueError("telemetry dimensions exceed bounded limits")
         timestamp = occurred_at or datetime.now(UTC).isoformat()
@@ -257,6 +265,94 @@ class AnalyticsStore:
             "events": int(event_count["events"]),
             "latest": dict(latest) if latest is not None else None,
         }
+
+    def cost_breakdown(self, *, days: int = 30) -> dict[str, Any]:
+        """Analyze API-equivalent usage estimates without claiming cash spend."""
+        since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        with self._connect() as connection:
+            totals = connection.execute(
+                """
+                SELECT COUNT(DISTINCT r.report_id) AS reports,
+                       COALESCE(SUM(u.requests), 0) AS requests,
+                       COALESCE(SUM(u.input_tokens + u.output_tokens), 0) AS tokens,
+                       COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
+                FROM analytics_reports r
+                LEFT JOIN analytics_usage u ON u.report_id = r.report_id
+                WHERE r.generated_at >= ?
+                """,
+                (since,),
+            ).fetchone()
+            providers = connection.execute(
+                """
+                SELECT u.provider,
+                       u.model,
+                       COALESCE(SUM(u.requests), 0) AS requests,
+                       COALESCE(SUM(u.input_tokens + u.output_tokens), 0) AS tokens,
+                       COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
+                FROM analytics_usage u
+                JOIN analytics_reports r ON r.report_id = u.report_id
+                WHERE r.generated_at >= ?
+                GROUP BY u.provider, u.model
+                ORDER BY estimated_cost DESC, requests DESC, u.provider, u.model
+                """,
+                (since,),
+            ).fetchall()
+            stages = connection.execute(
+                """
+                SELECT u.stage,
+                       COALESCE(SUM(u.requests), 0) AS requests,
+                       COALESCE(SUM(u.input_tokens + u.output_tokens), 0) AS tokens,
+                       COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
+                FROM analytics_usage u
+                JOIN analytics_reports r ON r.report_id = u.report_id
+                WHERE r.generated_at >= ?
+                GROUP BY u.stage
+                ORDER BY estimated_cost DESC, requests DESC, u.stage
+                """,
+                (since,),
+            ).fetchall()
+        assert totals is not None
+        report_count = int(totals["reports"])
+        estimated_cost = float(totals["estimated_cost"])
+        request_count = int(totals["requests"])
+        provider_rows = _cost_rows(providers, estimated_cost=estimated_cost)
+        stage_rows = _cost_rows(stages, estimated_cost=estimated_cost)
+        return {
+            "days": days,
+            "reports": report_count,
+            "requests": request_count,
+            "tokens": int(totals["tokens"]),
+            "estimated_cost": estimated_cost,
+            "average_per_report": estimated_cost / report_count if report_count else 0.0,
+            "average_per_request": (estimated_cost / request_count if request_count else 0.0),
+            "providers": provider_rows,
+            "stages": stage_rows,
+        }
+
+    def local_inference_status(self) -> dict[str, Any] | None:
+        """Return the newest persisted semantic shadow observation, if any."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT report_id, generated_at, report_json
+                FROM analytics_reports
+                ORDER BY generated_at DESC
+                LIMIT 100
+                """
+            ).fetchall()
+        for row in rows:
+            report = json.loads(str(row["report_json"]))
+            if not isinstance(report, dict):
+                continue
+            shadow = report.get("semantic_shadow")
+            if not isinstance(shadow, dict):
+                continue
+            return {
+                **shadow,
+                "report_id": str(row["report_id"]),
+                "generated_at": str(row["generated_at"]),
+            }
+        return None
 
     def list_reports(
         self,
@@ -391,8 +487,7 @@ class AnalyticsStore:
                 "SELECT DISTINCT tag FROM analytics_finding_tags ORDER BY tag"
             ).fetchall()
             source_types = connection.execute(
-                "SELECT DISTINCT source_type FROM analytics_finding_sources "
-                "ORDER BY source_type"
+                "SELECT DISTINCT source_type FROM analytics_finding_sources ORDER BY source_type"
             ).fetchall()
         return {
             "categories": [str(row["category"]) for row in categories],
@@ -498,7 +593,7 @@ class AnalyticsStore:
                   value TEXT NOT NULL
                 );
                 INSERT OR IGNORE INTO analytics_meta (key, value)
-                  VALUES ('schema_version', '2');
+                  VALUES ('schema_version', '3');
                 CREATE TABLE IF NOT EXISTS analytics_reports (
                   report_id TEXT PRIMARY KEY,
                   generated_at TEXT NOT NULL,
@@ -572,6 +667,22 @@ class AnalyticsStore:
                   error_rate REAL NOT NULL,
                   PRIMARY KEY (report_id, source_id)
                 );
+                CREATE TABLE IF NOT EXISTS analytics_usage (
+                  report_id TEXT NOT NULL REFERENCES analytics_reports(report_id),
+                  usage_index INTEGER NOT NULL,
+                  stage TEXT NOT NULL,
+                  provider TEXT NOT NULL,
+                  model TEXT NOT NULL,
+                  requests INTEGER NOT NULL,
+                  input_tokens INTEGER NOT NULL,
+                  output_tokens INTEGER NOT NULL,
+                  estimated_cost REAL NOT NULL,
+                  PRIMARY KEY (report_id, usage_index)
+                );
+                CREATE INDEX IF NOT EXISTS analytics_usage_provider_idx
+                  ON analytics_usage (provider, model, report_id);
+                CREATE INDEX IF NOT EXISTS analytics_usage_stage_idx
+                  ON analytics_usage (stage, report_id);
                 CREATE TABLE IF NOT EXISTS analytics_events (
                   event_id TEXT PRIMARY KEY,
                   occurred_at TEXT NOT NULL,
@@ -588,14 +699,14 @@ class AnalyticsStore:
             version = connection.execute(
                 "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
             ).fetchone()
-            if version is not None and str(version["value"]) == "1":
+            if version is not None and str(version["value"]) in {"1", "2"}:
                 connection.execute(
-                    "UPDATE analytics_meta SET value = '2' WHERE key = 'schema_version'"
+                    "UPDATE analytics_meta SET value = '3' WHERE key = 'schema_version'"
                 )
                 version = connection.execute(
                     "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
                 ).fetchone()
-            if version is None or str(version["value"]) != "2":
+            if version is None or str(version["value"]) != "3":
                 raise RuntimeError("unsupported analytics schema")
 
     def _connect(self) -> sqlite3.Connection:
@@ -651,8 +762,7 @@ def _index_finding_dimensions(
             identifiers = tuple(
                 str(mapping["identifier"])
                 for mapping in finding.get("mappings", [])
-                if isinstance(mapping, dict)
-                and isinstance(mapping.get("identifier"), str)
+                if isinstance(mapping, dict) and isinstance(mapping.get("identifier"), str)
             )
             taxonomy = classify_taxonomy(
                 str(finding.get("title", "")),
@@ -696,10 +806,68 @@ def _index_finding_dimensions(
             )
 
 
+def _index_usage_dimensions(
+    connection: sqlite3.Connection,
+    *,
+    report_id: str,
+    usage: list[dict[str, Any]],
+) -> None:
+    for index, item in enumerate(usage):
+        connection.execute(
+            """
+            INSERT INTO analytics_usage (
+              report_id, usage_index, stage, provider, model, requests,
+              input_tokens, output_tokens, estimated_cost
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (report_id, usage_index) DO UPDATE SET
+              stage = excluded.stage,
+              provider = excluded.provider,
+              model = excluded.model,
+              requests = excluded.requests,
+              input_tokens = excluded.input_tokens,
+              output_tokens = excluded.output_tokens,
+              estimated_cost = excluded.estimated_cost
+            """,
+            (
+                report_id,
+                index,
+                str(item["stage"]),
+                str(item["provider"]),
+                str(item["model"]),
+                int(item.get("requests", 0)),
+                int(item.get("input_tokens", 0)),
+                int(item.get("output_tokens", 0)),
+                _usage_cost(item),
+            ),
+        )
+
+
+def _usage_cost(item: dict[str, Any]) -> float:
+    reported = float(item.get("estimated_currency", 0))
+    if reported > 0:
+        return reported
+    if str(item.get("provider", "")).lower() == "brave":
+        return round(int(item.get("requests", 0)) * BRAVE_COST_PER_REQUEST, 6)
+    return 0.0
+
+
+def _cost_rows(
+    rows: list[sqlite3.Row],
+    *,
+    estimated_cost: float,
+) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        item_cost = float(item["estimated_cost"])
+        item["estimated_cost"] = item_cost
+        item["cost_share"] = round(item_cost / estimated_cost * 100, 1) if estimated_cost else 0.0
+        result.append(item)
+    return result
+
+
 def _finding_row(row: sqlite3.Row) -> dict[str, Any]:
     value = dict(row)
     value["tags"] = [item for item in str(value["tags"]).split("|") if item]
-    value["source_types"] = [
-        item for item in str(value["source_types"]).split("|") if item
-    ]
+    value["source_types"] = [item for item in str(value["source_types"]).split("|") if item]
     return value

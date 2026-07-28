@@ -122,6 +122,15 @@
 
 **Controls:** minimize data, local relevance matching where feasible, provider policy review, pseudonymous asset identifiers, no inventory in collector prompts.
 
+### TM-15: Local embedding output creates false semantic relationships
+
+**Impact:** unrelated source reports are merged, inflating confidence or hiding a critical signal.
+
+**Controls:** fixed loopback endpoint, bounded sanitized input, numeric-only validated output,
+taxonomy compatibility, no vector persistence, shadow-only telemetry, and no path from embedding
+output to clustering, scoring, verification, or publication. Local-inference failures leave the
+deterministic pipeline unchanged.
+
 ## Trust-boundary acceptance tests
 
 - A collector token cannot authenticate to delivery services.
@@ -132,3 +141,4 @@
 - A URL resolving to a public IP and redirecting to a private IP is rejected.
 - A report renders source text as escaped text with a restrictive content-security policy.
 - A source instruction cannot survive as a schedule, memory item, or policy.
+- Local embedding output cannot alter a cluster, score, claim, or publication decision.

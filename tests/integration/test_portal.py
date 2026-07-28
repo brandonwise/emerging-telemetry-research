@@ -46,6 +46,56 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
             "source_handle": "researcher",
         }
     ]
+    report["usage"].append(
+        {
+            "stage": "social_discovery",
+            "agent_id": None,
+            "source_id": "x-researchers",
+            "finding_id": None,
+            "provider": "xai",
+            "model": "grok-4.5",
+            "requests": 1,
+            "input_tokens": 1200,
+            "output_tokens": 300,
+            "estimated_currency": 0.25,
+        }
+    )
+    report["semantic_shadow"] = {
+        "mode": "shadow",
+        "status": "completed",
+        "provider": "ollama",
+        "model": "nomic-embed-text:latest",
+        "similarity_threshold": 0.78,
+        "discovered_signal_count": 12,
+        "evaluated_signal_count": 12,
+        "truncated_signal_count": 0,
+        "deterministic_pair_count": 3,
+        "candidate_pair_count": 5,
+        "overlap_pair_count": 3,
+        "semantic_only_pair_count": 2,
+        "deterministic_only_pair_count": 0,
+        "requests": 1,
+        "input_tokens": 240,
+        "duration_ms": 130,
+        "vector_dimensions": 768,
+        "failure_reason": None,
+        "candidate_pairs": [],
+        "publication_authority": False,
+    }
+    report["usage"].append(
+        {
+            "stage": "web_discovery",
+            "agent_id": None,
+            "source_id": "brave-web",
+            "finding_id": None,
+            "provider": "brave",
+            "model": "brave-web-search-v1",
+            "requests": 5,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "estimated_currency": 0,
+        }
+    )
     finding_category = report["findings"][0]["category"]
     result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
     client = TestClient(
@@ -54,11 +104,10 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     )
 
     dashboard = client.get("/")
+    settings = client.get("/setup")
     reports = client.get("/reports?q=CVE-2026")
     detail = client.get(f"/reports/{result.report['report_id']}")
-    findings = client.get(
-        f"/findings?category={finding_category}&tag=ai&source=x_post"
-    )
+    findings = client.get(f"/findings?category={finding_category}&tag=ai&source=x_post")
     trends = client.get("/trends")
     csv_export = client.get("/exports/reports.csv")
     json_export = client.get("/exports/reports.json")
@@ -67,6 +116,16 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
 
     assert dashboard.status_code == 200
     assert "Emerging threat radar" in dashboard.text
+    assert "Usage estimate" not in dashboard.text
+    assert settings.status_code == 200
+    assert "Configuration and usage" in settings.text
+    assert "Usage value, not necessarily cash spend." in settings.text
+    assert "Brave Search is estimated at $5 per 1,000 requests" in settings.text
+    assert "Semantic clustering shadow" in settings.text
+    assert "nomic-embed-text:latest" in settings.text
+    assert "Potentially missed pairs" in settings.text
+    assert "grok-4.5" in settings.text
+    assert "$0.2750" in settings.text
     assert 'style="' not in dashboard.text
     assert reports.status_code == 200
     assert result.report["report_id"] in reports.text
@@ -81,9 +140,7 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "Cross-cutting themes" in trends.text
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
-    assert json_export.headers["content-disposition"].endswith(
-        '"threat-radar-reports.json"'
-    )
+    assert json_export.headers["content-disposition"].endswith('"threat-radar-reports.json"')
     assert finding_csv_export.status_code == 200
     assert "supply_chain" in finding_csv_export.text
     assert finding_json_export.status_code == 200

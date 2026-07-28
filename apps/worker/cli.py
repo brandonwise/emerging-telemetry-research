@@ -24,6 +24,7 @@ from packages.improvement.controller import (
     rollback_proposal,
     run_improvement_cycle,
 )
+from packages.inference.semantic import build_semantic_shadow_evaluator
 from packages.onboarding.generator import (
     DEFAULT_TEMPLATES_ROOT,
     SUPPORTED_PLATFORMS,
@@ -40,6 +41,9 @@ from packages.storage.sqlite import SQLiteRepository
 
 DEFAULT_ANALYTICS_DB = Path(os.environ.get("RADAR_ANALYTICS_DB", "state/radar.db"))
 DEFAULT_OBJECT_ROOT = Path(os.environ.get("RADAR_OBJECT_ROOT", "state/objects"))
+DEFAULT_EMBEDDINGS_CONFIG = Path(
+    os.environ.get("RADAR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
+)
 
 app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
@@ -130,13 +134,10 @@ def fixture_run(
 @live_app.command("run")
 def live_run(
     output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
-    channel_id: Annotated[str, typer.Option("--channel-id")] = "1476897068885872814",
     edition: Annotated[str, typer.Option("--edition")] = "morning",
     analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    if not channel_id.isdigit():
-        raise typer.BadParameter("Discord channel ID must be numeric")
     if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
         raise typer.BadParameter("unsupported live edition")
     stores = initialize_production_stores(
@@ -155,7 +156,7 @@ def live_run(
         run_live_radar(
             LiveRunSettings(
                 output_root=output,
-                discord_channel_id=channel_id,
+                discord_channel_id=None,
                 edition=edition,
             ),
             brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
@@ -163,6 +164,7 @@ def live_run(
             official_client=OfficialSourceClient(),
             object_store=stores.object_store,
             repository=stores.repository,
+            semantic_evaluator=build_semantic_shadow_evaluator(DEFAULT_EMBEDDINGS_CONFIG),
         )
     )
     indexed = AnalyticsStore(analytics_db).index_path(result.report_json_path)
@@ -173,16 +175,16 @@ def live_run(
             "report_json": str(result.report_json_path.resolve()),
             "html_path": str(result.rendered.path.resolve()),
             "delivery_plan": str(result.delivery_plan_path.resolve()),
-            "idempotency_key": result.delivery_plan["idempotency_key"],
-            "summary": result.summary,
+            "delivery_destination": result.delivery_plan["destination"],
             "candidate_cves": list(result.candidate_cves),
             "emerging_signal_count": result.emerging_signal_count,
             "qualified_emerging_count": result.qualified_emerging_count,
             "source_native_signal_count": result.source_native_signal_count,
+            "semantic_shadow": result.semantic_shadow,
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(analytics_db.resolve()),
             "analytics_indexed": indexed.inserted,
-            "external_delivery": "ready",
+            "external_delivery": "disabled",
         },
         pretty=not json_output,
     )
@@ -211,6 +213,7 @@ def portable_run(
             official_client=OfficialSourceClient(),
             object_store=LocalImmutableObjectStore(objects),
             repository=SQLiteRepository(database),
+            semantic_evaluator=build_semantic_shadow_evaluator(DEFAULT_EMBEDDINGS_CONFIG),
         )
     )
     indexed = AnalyticsStore(database).index_path(result.report_json_path)
@@ -227,6 +230,7 @@ def portable_run(
             "emerging_signal_count": result.emerging_signal_count,
             "qualified_emerging_count": result.qualified_emerging_count,
             "source_native_signal_count": result.source_native_signal_count,
+            "semantic_shadow": result.semantic_shadow,
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(database.resolve()),
             "analytics_indexed": indexed.inserted,

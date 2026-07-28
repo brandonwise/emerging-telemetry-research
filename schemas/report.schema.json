@@ -25,6 +25,7 @@
     "degraded_sources": {"type": "array", "items": {"type": "string"}},
     "source_health": {"type": "array", "items": {"$ref": "#/$defs/source_health"}},
     "usage": {"type": "array", "items": {"$ref": "#/$defs/usage"}},
+    "semantic_shadow": {"$ref": "#/$defs/semantic_shadow"},
     "verification": {
       "type": "object",
       "additionalProperties": false,
@@ -64,6 +65,91 @@
         "input_tokens": {"type": "integer", "minimum": 0},
         "output_tokens": {"type": "integer", "minimum": 0},
         "estimated_currency": {"type": "number", "minimum": 0}
+      }
+    },
+    "semantic_shadow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "status",
+        "provider",
+        "model",
+        "similarity_threshold",
+        "discovered_signal_count",
+        "evaluated_signal_count",
+        "truncated_signal_count",
+        "deterministic_pair_count",
+        "candidate_pair_count",
+        "overlap_pair_count",
+        "semantic_only_pair_count",
+        "deterministic_only_pair_count",
+        "requests",
+        "input_tokens",
+        "duration_ms",
+        "vector_dimensions",
+        "failure_reason",
+        "candidate_pairs",
+        "publication_authority"
+      ],
+      "properties": {
+        "mode": {"const": "shadow"},
+        "status": {"enum": ["completed", "skipped", "degraded"]},
+        "provider": {"const": "ollama"},
+        "model": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
+        },
+        "similarity_threshold": {"type": "number", "minimum": 0.5, "maximum": 0.99},
+        "discovered_signal_count": {"type": "integer", "minimum": 0},
+        "evaluated_signal_count": {"type": "integer", "minimum": 0, "maximum": 64},
+        "truncated_signal_count": {"type": "integer", "minimum": 0},
+        "deterministic_pair_count": {"type": "integer", "minimum": 0},
+        "candidate_pair_count": {"type": "integer", "minimum": 0},
+        "overlap_pair_count": {"type": "integer", "minimum": 0},
+        "semantic_only_pair_count": {"type": "integer", "minimum": 0},
+        "deterministic_only_pair_count": {"type": "integer", "minimum": 0},
+        "requests": {"type": "integer", "minimum": 0, "maximum": 1},
+        "input_tokens": {"type": "integer", "minimum": 0},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "vector_dimensions": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "failure_reason": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "insufficient_signals",
+            "local_inference_unavailable",
+            "response_too_large",
+            "invalid_response",
+            "shadow_evaluation_failed"
+          ]
+        },
+        "candidate_pairs": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {"$ref": "#/$defs/semantic_candidate_pair"}
+        },
+        "publication_authority": {"const": false}
+      }
+    },
+    "semantic_candidate_pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left_evidence_id",
+        "right_evidence_id",
+        "similarity",
+        "deterministic_match"
+      ],
+      "properties": {
+        "left_evidence_id": {"type": "string", "pattern": "^ev_[A-Za-z0-9_-]+$"},
+        "right_evidence_id": {"type": "string", "pattern": "^ev_[A-Za-z0-9_-]+$"},
+        "similarity": {"type": "number", "minimum": -1, "maximum": 1},
+        "deterministic_match": {"type": "boolean"}
       }
     }
   }
