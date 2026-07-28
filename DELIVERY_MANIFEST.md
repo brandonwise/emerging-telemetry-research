@@ -18,6 +18,8 @@ fail-closed.
 ## Visual documentation
 
 - `docs/index.html` — self-contained visual architecture and implementation guide.
+- `docs/architecture-visual.html` — as-built end-to-end architecture, runtime, trust, data, local
+  inference, and deployment diagrams.
 - `docs/sample-daily-brief.html` — rich sample threat intelligence report.
 
 ## Build assets

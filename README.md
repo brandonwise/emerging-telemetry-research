@@ -172,6 +172,10 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 
 ## Architecture
 
+[Open the complete visual architecture](docs/architecture-visual.html) for the as-built system map,
+scheduled run sequence, trust boundaries, local-inference rail, state ownership, and deployment
+topology.
+
 ```text
 approved source plan
   → centralized safe fetch
@@ -259,4 +263,5 @@ receive separate approval.
 - `docs/adr/0008-grounded-self-improvement-graph.md` — loop, graph, approval, and rollback design
 - `docs/PORTABILITY.md` — portable profiles and platform onboarding
 - `docs/PORTAL.md` — local/private-LAN portal operations and security
+- `docs/architecture-visual.html` — standalone end-to-end visual architecture
 - `docs/adr/0009-portable-analytics-and-portal.md` — storage and portal decision record

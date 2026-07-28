@@ -1,5 +1,9 @@
 # Architecture Specification
 
+Visual companion: [`docs/architecture-visual.html`](docs/architecture-visual.html) documents the
+as-built system map, complete scheduled run, trust boundaries, Nomic shadow rail, state ownership,
+and single-host production topology.
+
 ## Components
 
 | Component | Purpose | Trust level |
