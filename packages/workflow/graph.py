@@ -24,6 +24,56 @@ class GraphExecution:
     manifest: dict[str, Any]
 
 
+@dataclass(frozen=True, slots=True)
+class GraphPlan:
+    layers: tuple[tuple[str, ...], ...]
+    edges: tuple[tuple[str, str], ...]
+
+    def to_contract(self) -> dict[str, Any]:
+        return {
+            "layers": [list(layer) for layer in self.layers],
+            "edges": [
+                {"from": source, "to": target}
+                for source, target in self.edges
+            ],
+        }
+
+
+def plan_graph(dependencies: dict[str, tuple[str, ...]]) -> GraphPlan:
+    """Validate and layer an explicit DAG without executing any node."""
+    for node_id, node_dependencies in dependencies.items():
+        if (
+            not node_id
+            or node_id in node_dependencies
+            or any(dependency not in dependencies for dependency in node_dependencies)
+        ):
+            raise ValueError(f"graph node {node_id!r} has an invalid dependency")
+
+    completed: set[str] = set()
+    pending = set(dependencies)
+    layers: list[tuple[str, ...]] = []
+    while pending:
+        ready = tuple(
+            sorted(
+                node_id
+                for node_id in pending
+                if set(dependencies[node_id]).issubset(completed)
+            )
+        )
+        if not ready:
+            raise ValueError("workflow graph contains a cycle")
+        layers.append(ready)
+        completed.update(ready)
+        pending.difference_update(ready)
+
+    edges = tuple(
+        (dependency, node_id)
+        for node_id in dependencies
+        for dependency in dependencies[node_id]
+    )
+    return GraphPlan(layers=tuple(layers), edges=edges)
+
+
 def execute_graph(
     nodes: tuple[GraphNode, ...],
     *,
@@ -35,42 +85,27 @@ def execute_graph(
     by_id = {node.node_id: node for node in nodes}
     if len(by_id) != len(nodes):
         raise ValueError("graph node IDs must be unique")
-    for node in nodes:
-        if not node.node_id or any(dependency not in by_id for dependency in node.depends_on):
-            raise ValueError(f"graph node {node.node_id!r} has an invalid dependency")
-        if node.node_id in node.depends_on:
-            raise ValueError(f"graph node {node.node_id!r} depends on itself")
+    plan = plan_graph({node.node_id: node.depends_on for node in nodes})
 
     outputs: dict[str, GraphOutput] = {}
-    pending = set(by_id)
-    layers: list[list[str]] = []
-    while pending:
-        ready = sorted(
-            node_id
-            for node_id in pending
-            if set(by_id[node_id].depends_on).issubset(outputs)
-        )
-        if not ready:
-            raise ValueError("workflow graph contains a cycle")
+    for layer in plan.layers:
         snapshot = dict(outputs)
         with ThreadPoolExecutor(
-            max_workers=min(maximum_parallel_nodes, len(ready))
+            max_workers=min(maximum_parallel_nodes, len(layer))
         ) as executor:
             futures = {
                 node_id: executor.submit(by_id[node_id].handler, snapshot)
-                for node_id in ready
+                for node_id in layer
             }
-            for node_id in ready:
+            for node_id in layer:
                 value = futures[node_id].result()
                 if not isinstance(value, dict):
                     raise TypeError(f"graph node {node_id!r} returned a non-object")
                 outputs[node_id] = value
-        pending.difference_update(ready)
-        layers.append(ready)
 
     manifest = {
         "schema_version": "1.0",
-        "layers": layers,
+        "layers": [list(layer) for layer in plan.layers],
         "nodes": [
             {
                 "node_id": node.node_id,
@@ -81,9 +116,8 @@ def execute_graph(
             for node in nodes
         ],
         "edges": [
-            {"from": dependency, "to": node.node_id}
-            for node in nodes
-            for dependency in node.depends_on
+            {"from": source, "to": target}
+            for source, target in plan.edges
         ],
     }
     return GraphExecution(outputs=outputs, manifest=manifest)

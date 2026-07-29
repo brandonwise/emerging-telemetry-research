@@ -2,7 +2,19 @@
 
 Visual companion: [`docs/architecture-visual.html`](docs/architecture-visual.html) documents the
 as-built system map, complete scheduled run, trust boundaries, Nomic shadow rail, state ownership,
-and single-host production topology.
+single-host production topology, agent communication, model routing, loops, graph execution, and
+the recommended activation sequence.
+
+## Runtime truth
+
+- The live daily path is OpenClaw cron → reviewed Lobster → deterministic Python pipeline.
+- Nomic embeddings run in shadow mode and have no publication authority.
+- The model router, role-specific agent definitions, typed assessment contracts, and DAG executor
+  are implemented and tested. Every live finding records the resulting graph and model routes as
+  a content-free shadow plan; the live daily pipeline still does not dispatch those agents.
+- The specialist → impact/skeptic → verifier → chief graph is the configured target review topology.
+- The weekly champion/challenger improvement DAG is implemented with approval and rollback, but its
+  schedule remains disabled until sufficient analyst labels exist.
 
 ## Components
 
@@ -55,17 +67,22 @@ and single-host production topology.
              ┌──────────▼──────────┐  ┌─────▼─────────────────┐
              │ Correlate + Score   │  │ Usage + Source Health │
              └──────────┬──────────┘  └───────────────────────┘
-                        │ promoted clusters only
-             ┌──────────▼──────────────────────────────────────┐
-             │ Specialist → Skeptic → Verifier → Coordinator  │
-             │ typed evidence packets; no raw web content      │
-             └──────────┬──────────────────────────────────────┘
-                        │ validated report JSON
+                        │ deterministic verified findings
              ┌──────────▼──────────┐
              │ Deterministic Render │
              └──────┬───────┬──────┘
                     │       │
-                 Discord   HTML/email/download
+              DB / portal  Discord disabled
+```
+
+Configured bounded-agent review graph, not yet live:
+
+```text
+typed evidence packet
+  → specialist + impact + skeptic
+  → citation verifier
+  → chief coordinator
+  → deterministic verification and publication gate
 ```
 
 ## Deployment topology

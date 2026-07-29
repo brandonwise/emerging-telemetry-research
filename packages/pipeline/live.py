@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 import yaml
 
 from apps.report_renderer.render import TEMPLATE_REVISION, RenderedReport, render_report
+from packages.agents.planning import build_shadow_agent_plans
 from packages.common.canonical import (
     canonical_json_bytes,
     format_timestamp,
@@ -46,6 +47,7 @@ from packages.discovery.emerging import (
     related_cves,
 )
 from packages.inference.semantic import SemanticShadowEvaluator
+from packages.model_router.router import ModelRouter
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
 from packages.scoring.engine import PublicationThresholds, load_thresholds
 from packages.security_gateway.gateway import (
@@ -103,6 +105,7 @@ class LiveRunSettings:
     timezone: str = "America/New_York"
     discovery_config: Path = Path("config/discovery.yaml")
     scoring_config: Path = Path("config/scoring.yaml")
+    models_config: Path = Path("config/models.yaml")
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,6 +337,12 @@ async def run_live_radar(
         maximum_findings=maximum_findings,
         minimum_emerging_findings=minimum_emerging_findings,
     )
+    agent_shadow_plans = build_shadow_agent_plans(
+        findings,
+        run_id=run_id,
+        generated_at=generated_at,
+        router=ModelRouter.from_path(settings.models_config),
+    )
     discovery_evidence, discovery_artifacts = referenced_discovery_records(
         findings,
         prepared_signals,
@@ -343,6 +352,14 @@ async def run_live_radar(
             stage="deterministic_pipeline",
             provider="local",
             model="deterministic-code",
+            requests=0,
+        )
+    )
+    usage.append(
+        _usage_record(
+            stage="agent_routing_shadow",
+            provider="local",
+            model="deterministic-model-router",
             requests=0,
         )
     )
@@ -356,6 +373,7 @@ async def run_live_radar(
         degraded=degraded,
         usage=usage,
         semantic_shadow=semantic_shadow,
+        agent_shadow_plans=agent_shadow_plans,
     )
     report_json_path = run_root / f"{report['report_id']}.json"
     _write_immutable(report_json_path, canonical_json_bytes(report) + b"\n")
@@ -774,6 +792,7 @@ def _aggregate_report(
     degraded: set[str],
     usage: list[dict[str, Any]],
     semantic_shadow: dict[str, Any] | None,
+    agent_shadow_plans: list[dict[str, Any]],
 ) -> dict[str, Any]:
     material = len(findings)
     if material:
@@ -802,6 +821,7 @@ def _aggregate_report(
         "degraded_sources": sorted(degraded),
         "source_health": sorted(source_health, key=lambda item: str(item["source_id"])),
         "usage": usage,
+        "agent_shadow_plans": agent_shadow_plans,
         "verification": {
             "all_claims_cited": True,
             "all_claims_verified": True,

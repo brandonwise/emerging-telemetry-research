@@ -322,3 +322,17 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
     assert ollama_usage["input_tokens"] == 20
     assert len(repository.evidence) == 2
     assert len(repository.artifacts) == 2
+    assert result.report["agent_shadow_plans"][0]["dispatch_executed"] is False
+    assert result.report["agent_shadow_plans"][0]["publication_authority"] is False
+    assert result.report["agent_shadow_plans"][0]["graph"]["layers"] == [
+        ["impact", "skeptic", "specialist"],
+        ["citation_verifier"],
+        ["coordinator"],
+    ]
+    routing_usage = next(
+        item
+        for item in result.report["usage"]
+        if item["stage"] == "agent_routing_shadow"
+    )
+    assert routing_usage["requests"] == 0
+    assert routing_usage["estimated_currency"] == 0

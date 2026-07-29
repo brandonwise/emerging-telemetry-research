@@ -7,32 +7,36 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f1ea;
+      --bg: #f3f0e9;
       --surface: #fffefa;
-      --ink: #17211f;
-      --muted: #62706c;
-      --line: #bfc9c4;
-      --line-strong: #7c8b86;
+      --surface-alt: #faf8f2;
+      --ink: #18211f;
+      --muted: #5d6966;
+      --line: #c4ccc8;
+      --line-strong: #74817d;
       --control: #ebe4fb;
-      --control-strong: #6941c6;
-      --external: #fde9cf;
-      --external-strong: #b85c13;
-      --security: #fbe2de;
-      --security-strong: #b83a2b;
-      --process: #deebf8;
-      --process-strong: #24679b;
-      --storage: #dcefe8;
-      --storage-strong: #16715d;
-      --experience: #e6efd8;
-      --experience-strong: #547b2f;
-      --shadow: #eee4f7;
-      --shadow-strong: #7543a5;
-      --disabled: #edf0ee;
-      --disabled-strong: #6e7773;
-      --danger: #a82c22;
-      --white: #ffffff;
+      --control-strong: #6741bd;
+      --external: #fce8ce;
+      --external-strong: #a95412;
+      --security: #f9e1dd;
+      --security-strong: #a9382b;
+      --process: #deebf7;
+      --process-strong: #25658f;
+      --storage: #dceee7;
+      --storage-strong: #176b59;
+      --experience: #e5eed7;
+      --experience-strong: #53752f;
+      --shadow: #ece3f5;
+      --shadow-strong: #74439f;
+      --disabled: #ecefed;
+      --disabled-strong: #68716e;
+      --proposed: #fff4cc;
+      --proposed-strong: #8a6412;
+      --danger: #9f2f26;
+      --white: #fff;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       background: var(--bg);
@@ -46,7 +50,7 @@
       top: 8px;
       z-index: 10;
       background: var(--ink);
-      color: white;
+      color: var(--white);
       padding: 10px 14px;
     }
     .skip-link:focus { left: 8px; }
@@ -57,9 +61,9 @@
     .hero {
       width: min(1440px, calc(100% - 40px));
       margin: 0 auto;
-      padding: 58px 0 42px;
+      padding: 54px 0 38px;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 330px;
+      grid-template-columns: minmax(0, 1fr) 350px;
       gap: 48px;
       align-items: end;
     }
@@ -75,11 +79,11 @@
     h1 {
       max-width: 900px;
       margin: 0;
-      font: 700 clamp(40px, 6vw, 78px)/.98 Georgia, "Times New Roman", serif;
+      font: 700 clamp(40px, 6vw, 76px)/.98 Georgia, "Times New Roman", serif;
       letter-spacing: -.045em;
     }
     .hero-copy {
-      max-width: 880px;
+      max-width: 900px;
       margin: 22px 0 0;
       color: var(--muted);
       font-size: 18px;
@@ -138,7 +142,7 @@
     main {
       width: min(1440px, calc(100% - 40px));
       margin: 0 auto;
-      padding: 48px 0 72px;
+      padding: 44px 0 72px;
     }
     .legend {
       display: flex;
@@ -162,22 +166,19 @@
       height: 15px;
       border: 1px solid var(--line-strong);
     }
-    .swatch.control { background: var(--control); }
-    .swatch.external { background: var(--external); }
-    .swatch.security { background: var(--security); }
-    .swatch.process { background: var(--process); }
-    .swatch.storage { background: var(--storage); }
-    .swatch.experience { background: var(--experience); }
-    .swatch.shadow { background: var(--shadow); }
-    .swatch.disabled { background: var(--disabled); }
+    .swatch.live { background: var(--storage); border-color: var(--storage-strong); }
+    .swatch.shadow { background: var(--shadow); border-color: var(--shadow-strong); }
+    .swatch.configured { background: var(--process); border-color: var(--process-strong); }
+    .swatch.disabled { background: var(--disabled); border-color: var(--disabled-strong); }
+    .swatch.proposed { background: var(--proposed); border-color: var(--proposed-strong); }
     section {
-      margin: 0 0 42px;
+      margin: 0 0 44px;
       scroll-margin-top: 20px;
     }
     .section-heading {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(250px, 430px);
-      gap: 40px;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 460px);
+      gap: 42px;
       align-items: end;
       margin-bottom: 18px;
     }
@@ -200,7 +201,7 @@
       gap: 8px;
       padding: 12px 16px;
       border-bottom: 1px solid var(--line);
-      background: #faf8f2;
+      background: var(--surface-alt);
     }
     .pill {
       border: 1px solid var(--line);
@@ -212,15 +213,11 @@
       letter-spacing: .06em;
       text-transform: uppercase;
     }
-    .pill.live {
-      color: var(--storage-strong);
-      border-color: var(--storage-strong);
-      background: var(--storage);
-    }
-    .pill.disabled {
-      color: var(--disabled-strong);
-      background: var(--disabled);
-    }
+    .pill.live { color: var(--storage-strong); border-color: var(--storage-strong); background: var(--storage); }
+    .pill.shadow { color: var(--shadow-strong); border-color: var(--shadow-strong); background: var(--shadow); }
+    .pill.configured { color: var(--process-strong); border-color: var(--process-strong); background: var(--process); }
+    .pill.disabled { color: var(--disabled-strong); border-color: var(--disabled-strong); background: var(--disabled); }
+    .pill.proposed { color: var(--proposed-strong); border-color: var(--proposed-strong); background: var(--proposed); }
     .svg-wrap {
       overflow-x: auto;
       padding: 10px;
@@ -228,23 +225,18 @@
     svg {
       display: block;
       width: 100%;
-      min-width: 980px;
+      min-width: 1040px;
       height: auto;
       color: var(--ink);
     }
-    svg text { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .svg-title { fill: var(--ink); font-size: 20px; font-weight: 800; }
-    .svg-label { fill: var(--ink); font-size: 14px; font-weight: 750; }
-    .svg-small { fill: var(--muted); font-size: 12px; font-weight: 550; }
-    .svg-micro { fill: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
-    .zone {
-      fill: none;
-      stroke: var(--line);
-      stroke-width: 1.4;
-      stroke-dasharray: 8 6;
+    svg text {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .zone-fill { fill: #faf8f2; stroke: var(--line); stroke-width: 1; }
-    .node { stroke: var(--line-strong); stroke-width: 1.3; }
+    .svg-label { fill: var(--ink); font-size: 14px; font-weight: 780; }
+    .svg-small { fill: var(--muted); font-size: 12px; font-weight: 560; }
+    .svg-micro { fill: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+    .svg-note { fill: var(--muted); font-size: 11px; font-weight: 650; }
+    .node { stroke-width: 1.35; }
     .node-control { fill: var(--control); stroke: var(--control-strong); }
     .node-external { fill: var(--external); stroke: var(--external-strong); }
     .node-security { fill: var(--security); stroke: var(--security-strong); }
@@ -253,15 +245,22 @@
     .node-experience { fill: var(--experience); stroke: var(--experience-strong); }
     .node-shadow { fill: var(--shadow); stroke: var(--shadow-strong); }
     .node-disabled { fill: var(--disabled); stroke: var(--disabled-strong); stroke-dasharray: 6 5; }
+    .node-proposed { fill: var(--proposed); stroke: var(--proposed-strong); }
+    .boundary {
+      fill: var(--surface-alt);
+      stroke: var(--line);
+      stroke-width: 1.3;
+      stroke-dasharray: 8 6;
+    }
+    .panel {
+      fill: var(--surface-alt);
+      stroke: var(--line);
+      stroke-width: 1.2;
+    }
     .edge {
       fill: none;
       stroke: var(--line-strong);
       stroke-width: 2;
-    }
-    .edge-soft {
-      fill: none;
-      stroke: var(--line);
-      stroke-width: 1.6;
     }
     .edge-shadow {
       fill: none;
@@ -269,23 +268,36 @@
       stroke-width: 2;
       stroke-dasharray: 7 5;
     }
+    .edge-proposed {
+      fill: none;
+      stroke: var(--proposed-strong);
+      stroke-width: 2;
+      stroke-dasharray: 7 5;
+    }
     .edge-danger {
       fill: none;
       stroke: var(--danger);
       stroke-width: 2;
-      stroke-dasharray: 7 5;
     }
-    .lane-line {
-      stroke: var(--line);
-      stroke-width: 1.2;
-      stroke-dasharray: 5 6;
+    .status-live { fill: var(--storage-strong); }
+    .status-shadow { fill: var(--shadow-strong); }
+    .status-configured { fill: var(--process-strong); }
+    .status-disabled { fill: var(--disabled-strong); }
+    .status-proposed { fill: var(--proposed-strong); }
+    .status-text {
+      fill: var(--white);
+      font-size: 9px;
+      font-weight: 850;
+      letter-spacing: .07em;
+      text-anchor: middle;
     }
     .step-circle { fill: var(--ink); }
-    .step-text { fill: var(--white); font-size: 11px; font-weight: 850; text-anchor: middle; }
-    .badge-live { fill: var(--storage-strong); }
-    .badge-shadow { fill: var(--shadow-strong); }
-    .badge-disabled { fill: var(--disabled-strong); }
-    .badge-text { fill: white; font-size: 9px; font-weight: 850; letter-spacing: .06em; text-anchor: middle; }
+    .step-number {
+      fill: var(--white);
+      font-size: 11px;
+      font-weight: 850;
+      text-anchor: middle;
+    }
     .stop { fill: var(--surface); stroke: var(--danger); stroke-width: 2; }
     .stop-line { stroke: var(--danger); stroke-width: 2; }
     .callouts {
@@ -297,7 +309,7 @@
     .callout {
       border: 1px solid var(--line);
       padding: 14px;
-      background: #faf8f2;
+      background: var(--surface-alt);
     }
     .callout strong { display: block; margin-bottom: 5px; font-size: 13px; }
     .callout span { color: var(--muted); font-size: 12px; }
@@ -336,339 +348,329 @@
   <header>
     <div class="hero">
       <div>
-        <p class="eyebrow">As-built system architecture · July 2026</p>
+        <p class="eyebrow">As-built system architecture · corrected July 2026</p>
         <h1>Emerging Threat Radar, end to end</h1>
         <p class="hero-copy">
-          A security-first view of how a scheduled OpenClaw run turns hostile internet signals
-          into verified, immutable intelligence in PostgreSQL and a private read-only website—
-          with local Nomic inference observing the pipeline but never controlling it.
+          A security-first map of the live pipeline, its trust boundaries, state, local inference,
+          agent topology, model-routing policy, and grounded improvement graph. Each advanced
+          capability is labeled by actual runtime status so configured intent is never mistaken
+          for production execution.
         </p>
       </div>
       <aside class="status-card" aria-label="Architecture status">
         <strong>Current production posture</strong>
-        <span>Mac mini · OpenClaw + Lobster · Python 3.12</span>
-        <span>PostgreSQL + MinIO · SQLite analytics · Ollama/Nomic</span>
-        <div class="status-row"><span class="dot"></span><span>DB + private website publication only</span></div>
+        <span>Daily deterministic run on the Mac mini</span>
+        <span>PostgreSQL + MinIO + private read-only portal</span>
+        <span>Nomic embeddings observe in shadow mode</span>
+        <div class="status-row"><span class="dot"></span><span>Routine Discord delivery remains disabled</span></div>
       </aside>
     </div>
     <nav aria-label="Diagram index">
       <ol>
-        <li><a href="#landscape">01 · System map</a></li>
-        <li><a href="#run">02 · One complete run</a></li>
-        <li><a href="#trust">03 · Trust boundaries</a></li>
-        <li><a href="#inference">04 · Local inference</a></li>
-        <li><a href="#state">05 · State ownership</a></li>
+        <li><a href="#landscape">01 · System</a></li>
+        <li><a href="#run">02 · Runtime</a></li>
+        <li><a href="#trust">03 · Trust</a></li>
+        <li><a href="#inference">04 · Inference</a></li>
+        <li><a href="#state">05 · State</a></li>
         <li><a href="#deployment">06 · Deployment</a></li>
+        <li><a href="#agents">07 · Agents</a></li>
+        <li><a href="#routing">08 · Routing</a></li>
+        <li><a href="#loops">09 · Loops + graph</a></li>
+        <li><a href="#roadmap">10 · Activation</a></li>
       </ol>
     </nav>
   </header>
 
   <main id="content">
-    <div class="legend" aria-label="Color legend">
-      <span><i class="swatch control"></i>Control plane</span>
-      <span><i class="swatch external"></i>External / hostile</span>
-      <span><i class="swatch security"></i>Security boundary</span>
-      <span><i class="swatch process"></i>Deterministic processing</span>
-      <span><i class="swatch storage"></i>Durable storage</span>
-      <span><i class="swatch experience"></i>Read-only experience</span>
-      <span><i class="swatch shadow"></i>Shadow observer</span>
-      <span><i class="swatch disabled"></i>Disabled path</span>
+    <div class="legend" aria-label="Runtime status legend">
+      <span><i class="swatch live"></i>Live production</span>
+      <span><i class="swatch shadow"></i>Shadow or test only</span>
+      <span><i class="swatch configured"></i>Implemented/configured, not wired live</span>
+      <span><i class="swatch disabled"></i>Explicitly disabled</span>
+      <span><i class="swatch proposed"></i>Recommended next step</span>
     </div>
 
     <section id="landscape">
       <div class="section-heading">
-        <div><p class="section-kicker">01 · Landscape</p><h2>The whole system on one page</h2></div>
-        <p>The control plane starts a bounded run. External signals cross two explicit security
-          boundaries before deterministic scoring. Only verified report JSON reaches durable
-          storage and the private experience.</p>
+        <div><p class="section-kicker">01 · Landscape</p><h2>The whole system</h2></div>
+        <p>External signals cross acquisition and evidence boundaries before deterministic
+          correlation. Verified report objects alone reach durable storage and the private portal.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill live">Current production</span>
-          <span class="pill">Primary flow</span>
+          <span class="pill live">Live production</span>
           <span class="pill">One-way publication</span>
-          <span class="pill disabled">Discord disabled</span>
+          <span class="pill shadow">Nomic shadow</span>
+          <span class="pill disabled">Discord off</span>
         </div>
         <div class="svg-wrap">
-          <svg viewBox="0 0 1400 650" role="img" aria-labelledby="landscape-title landscape-desc">
+          <svg viewBox="0 0 1400 690" role="img" aria-labelledby="landscape-title landscape-desc">
             <title id="landscape-title">Threat Radar system landscape</title>
-            <desc id="landscape-desc">From scheduled OpenClaw orchestration through external discovery,
-              security controls, deterministic analysis, local shadow embeddings, immutable storage,
-              and the read-only portal.</desc>
+            <desc id="landscape-desc">A left-to-right system map from hostile sources through local
+              security and processing boundaries into durable storage and the private portal.</desc>
             <defs>
-              <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
+              <marker id="landscape-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
-              <marker id="a1s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7543a5"></path>
+              <marker id="landscape-shadow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74439f"></path>
               </marker>
             </defs>
 
-            <rect class="zone-fill" x="20" y="54" width="232" height="554" rx="14"></rect>
-            <rect class="zone-fill" x="270" y="54" width="880" height="554" rx="14"></rect>
-            <rect class="zone-fill" x="1168" y="54" width="212" height="554" rx="14"></rect>
+            <rect class="boundary" x="20" y="50" width="220" height="600" rx="14"></rect>
+            <rect class="boundary" x="260" y="50" width="900" height="600" rx="14"></rect>
+            <rect class="boundary" x="1180" y="50" width="200" height="600" rx="14"></rect>
+            <text class="svg-micro" x="42" y="78">HOSTILE / EXTERNAL</text>
+            <text class="svg-micro" x="282" y="78">LOCAL TRUSTED HOST</text>
+            <text class="svg-micro" x="1202" y="78">PRIVATE READ ZONE</text>
 
-            <path class="edge" d="M 425 150 H 550" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 705 150 H 830" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 985 174 V 245 H 412 V 272" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 220 278 H 300" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 220 428 H 260 V 380 H 300" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 510 340 H 570" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 780 340 H 840" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 1050 340 H 1110" marker-end="url(#a1)"></path>
-            <path class="edge" d="M 1218 340 H 1235" marker-end="url(#a1)"></path>
-            <path class="edge-shadow" d="M 675 405 V 488 H 840" marker-end="url(#a1s)"></path>
-            <path class="edge-shadow" d="M 1050 526 H 1100 V 404" marker-end="url(#a1s)"></path>
+            <path class="edge" data-from="landscape-discovery" data-to="landscape-acquisition" d="M220 245 H300" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-authority" data-to="landscape-acquisition" d="M220 425 H260 V365 H300" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-cron" data-to="landscape-workflow" d="M490 155 H560" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-workflow" data-to="landscape-acquisition" d="M650 200 V245 H510 V285" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-acquisition" data-to="landscape-evidence" d="M510 365 H570" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-evidence" data-to="landscape-engine" d="M780 365 H840" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-engine" data-to="landscape-report" d="M1040 365 H1070" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge" data-from="landscape-report" data-to="landscape-portal" d="M1150 365 H1210" marker-end="url(#landscape-arrow)"></path>
+            <path class="edge-shadow" data-from="landscape-evidence" data-to="landscape-nomic" d="M675 445 V500 H840" marker-end="url(#landscape-shadow-arrow)"></path>
+            <path class="edge-shadow" data-from="landscape-nomic" data-to="landscape-metrics" d="M1040 550 H1080" marker-end="url(#landscape-shadow-arrow)"></path>
 
-            <text class="svg-micro" x="42" y="82">HOSTILE / EXTERNAL</text>
-            <text class="svg-micro" x="292" y="82">LOCAL TRUSTED HOST</text>
-            <text class="svg-micro" x="1190" y="82">PRIVATE EXPERIENCE</text>
-
-            <g>
-              <rect class="node node-control" x="300" y="106" width="125" height="88" rx="10"></rect>
-              <text class="svg-label" x="323" y="137">OpenClaw</text>
-              <text class="svg-small" x="323" y="159">07:30 ET cron</text>
-              <text class="svg-small" x="323" y="178">isolated · no delivery</text>
+            <g id="landscape-discovery" class="node-group">
+              <rect class="node node-external" x="45" y="190" width="175" height="110" rx="10"></rect>
+              <text class="svg-label" x="69" y="222">Discovery</text>
+              <text class="svg-small" x="69" y="248">Brave Search</text>
+              <text class="svg-small" x="69" y="269">curated X search</text>
+              <text class="svg-small" x="69" y="290">early web signals</text>
             </g>
-            <g>
-              <rect class="node node-control" x="550" y="106" width="155" height="88" rx="10"></rect>
-              <text class="svg-label" x="574" y="137">Lobster</text>
-              <text class="svg-small" x="574" y="159">reviewed workflow</text>
-              <text class="svg-small" x="574" y="178">typed run arguments</text>
+            <g id="landscape-authority" class="node-group">
+              <rect class="node node-external" x="45" y="370" width="175" height="110" rx="10"></rect>
+              <text class="svg-label" x="69" y="402">Authority</text>
+              <text class="svg-small" x="69" y="428">CISA · CVE · NVD</text>
+              <text class="svg-small" x="69" y="449">EPSS · OSV · GitHub</text>
+              <text class="svg-small" x="69" y="470">corroboration</text>
             </g>
-            <g>
-              <rect class="node node-control" x="830" y="106" width="155" height="88" rx="10"></rect>
-              <text class="svg-label" x="854" y="137">Live runner</text>
-              <text class="svg-small" x="854" y="159">Keychain · FileVault</text>
-              <text class="svg-small" x="854" y="178">Python CLI</text>
+            <g id="landscape-cron" class="node-group">
+              <rect class="node node-control" x="300" y="110" width="190" height="90" rx="10"></rect>
+              <text class="svg-label" x="324" y="143">OpenClaw cron</text>
+              <text class="svg-small" x="324" y="168">07:30 ET · isolated</text>
+              <text class="svg-small" x="324" y="189">delivery: none</text>
             </g>
-
-            <g>
-              <rect class="node node-external" x="46" y="225" width="174" height="106" rx="10"></rect>
-              <text class="svg-label" x="68" y="256">Discovery APIs</text>
-              <text class="svg-small" x="68" y="280">Brave Search</text>
-              <text class="svg-small" x="68" y="300">xAI X Search</text>
-              <text class="svg-small" x="68" y="318">curated handles</text>
+            <g id="landscape-workflow" class="node-group">
+              <rect class="node node-control" x="560" y="110" width="180" height="90" rx="10"></rect>
+              <text class="svg-label" x="584" y="143">Lobster + CLI</text>
+              <text class="svg-small" x="584" y="168">reviewed workflow</text>
+              <text class="svg-small" x="584" y="189">typed run arguments</text>
             </g>
-            <g>
-              <rect class="node node-external" x="46" y="375" width="174" height="106" rx="10"></rect>
-              <text class="svg-label" x="68" y="404">Authoritative</text>
-              <text class="svg-small" x="68" y="428">CISA · CVE · NVD</text>
-              <text class="svg-small" x="68" y="448">EPSS · OSV · GitHub</text>
-              <text class="svg-small" x="68" y="466">CVE corroboration</text>
+            <g id="landscape-acquisition" class="node-group">
+              <rect class="node node-security" x="300" y="285" width="210" height="160" rx="10"></rect>
+              <text class="svg-label" x="324" y="319">Safe acquisition</text>
+              <text class="svg-small" x="324" y="346">allowlists + SSRF</text>
+              <text class="svg-small" x="324" y="368">redirect revalidation</text>
+              <text class="svg-small" x="324" y="390">MIME · bytes · timeout</text>
+              <text class="svg-small" x="324" y="412">rate + cost bounds</text>
             </g>
-
-            <g>
-              <rect class="node node-security" x="300" y="272" width="210" height="136" rx="10"></rect>
-              <text class="svg-label" x="324" y="304">Safe acquisition</text>
-              <text class="svg-small" x="324" y="329">host allowlists · SSRF</text>
-              <text class="svg-small" x="324" y="350">DNS/redirect revalidation</text>
-              <text class="svg-small" x="324" y="371">MIME · bytes · timeout</text>
-              <text class="svg-small" x="324" y="392">rate + cost bounds</text>
+            <g id="landscape-evidence" class="node-group">
+              <rect class="node node-storage" x="570" y="285" width="210" height="160" rx="10"></rect>
+              <text class="svg-label" x="594" y="319">Evidence boundary</text>
+              <text class="svg-small" x="594" y="346">MinIO object lock</text>
+              <text class="svg-small" x="594" y="368">content gateway</text>
+              <text class="svg-small" x="594" y="390">hashes + excerpts</text>
+              <text class="svg-small" x="594" y="412">typed observations</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="570" y="272" width="210" height="136" rx="10"></rect>
-              <text class="svg-label" x="594" y="304">Evidence boundary</text>
-              <text class="svg-small" x="594" y="329">MinIO object lock</text>
-              <text class="svg-small" x="594" y="350">content gateway</text>
-              <text class="svg-small" x="594" y="371">hashes + bounded excerpts</text>
-              <text class="svg-small" x="594" y="392">typed observations</text>
+            <g id="landscape-engine" class="node-group">
+              <rect class="node node-process" x="840" y="285" width="200" height="160" rx="10"></rect>
+              <text class="svg-label" x="864" y="319">Intelligence engine</text>
+              <text class="svg-small" x="864" y="346">criticality ordering</text>
+              <text class="svg-small" x="864" y="368">complete-link clusters</text>
+              <text class="svg-small" x="864" y="390">lineage + score</text>
+              <text class="svg-small" x="864" y="412">claim verification</text>
             </g>
-            <g>
-              <rect class="node node-process" x="840" y="272" width="210" height="136" rx="10"></rect>
-              <text class="svg-label" x="864" y="304">Intelligence engine</text>
-              <text class="svg-small" x="864" y="329">criticality ordering</text>
-              <text class="svg-small" x="864" y="350">complete-link clusters</text>
-              <text class="svg-small" x="864" y="371">lineage + score</text>
-              <text class="svg-small" x="864" y="392">claims verification</text>
+            <g id="landscape-report" class="node-group">
+              <rect class="node node-storage" x="1070" y="305" width="80" height="120" rx="10"></rect>
+              <text class="svg-label" x="1088" y="340">Verified</text>
+              <text class="svg-label" x="1088" y="360">report</text>
+              <text class="svg-small" x="1088" y="388">JSON</text>
+              <text class="svg-small" x="1088" y="408">HTML</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="1110" y="272" width="108" height="136" rx="10"></rect>
-              <text class="svg-label" x="1128" y="304">Verified</text>
-              <text class="svg-label" x="1128" y="324">report</text>
-              <text class="svg-small" x="1128" y="351">JSON</text>
-              <text class="svg-small" x="1128" y="372">HTML</text>
-              <text class="svg-small" x="1128" y="393">file plan</text>
+            <g id="landscape-portal" class="node-group">
+              <rect class="node node-experience" x="1210" y="295" width="140" height="140" rx="10"></rect>
+              <text class="svg-label" x="1234" y="329">DB + portal</text>
+              <text class="svg-small" x="1234" y="356">PostgreSQL</text>
+              <text class="svg-small" x="1234" y="378">SQLite index</text>
+              <text class="svg-small" x="1234" y="400">read-only site</text>
+              <text class="svg-small" x="1234" y="422">private LAN</text>
             </g>
-            <g>
-              <rect class="node node-experience" x="1235" y="272" width="125" height="136" rx="10"></rect>
-              <text class="svg-label" x="1256" y="304">DB + site</text>
-              <text class="svg-small" x="1256" y="329">PostgreSQL</text>
-              <text class="svg-small" x="1256" y="350">SQLite index</text>
-              <text class="svg-small" x="1256" y="371">private portal</text>
-              <text class="svg-small" x="1256" y="392">read only</text>
+            <g id="landscape-nomic" class="node-group">
+              <rect class="node node-shadow" x="840" y="500" width="200" height="100" rx="10"></rect>
+              <text class="svg-label" x="864" y="533">Nomic shadow</text>
+              <text class="svg-small" x="864" y="558">loopback Ollama</text>
+              <text class="svg-small" x="864" y="580">candidate pairs only</text>
+              <rect class="status-shadow" x="936" y="475" width="84" height="18" rx="9"></rect>
+              <text class="status-text" x="978" y="488">NO AUTHORITY</text>
             </g>
-
-            <g>
-              <rect class="node node-shadow" x="840" y="476" width="210" height="100" rx="10"></rect>
-              <text class="svg-label" x="864" y="508">Nomic shadow</text>
-              <text class="svg-small" x="864" y="531">loopback Ollama</text>
-              <text class="svg-small" x="864" y="552">candidate metrics only</text>
-              <rect class="badge-shadow" x="950" y="450" width="81" height="18" rx="9"></rect>
-              <text class="badge-text" x="990.5" y="463">NO AUTHORITY</text>
+            <g id="landscape-metrics" class="node-group">
+              <rect class="node node-shadow" x="1080" y="510" width="70" height="80" rx="10"></rect>
+              <text class="svg-small" x="1095" y="544">shadow</text>
+              <text class="svg-small" x="1095" y="564">metrics</text>
             </g>
-
-            <g>
-              <rect class="node node-disabled" x="1215" y="470" width="145" height="82" rx="10"></rect>
-              <text class="svg-label" x="1237" y="502">Discord news</text>
-              <text class="svg-small" x="1237" y="526">routine delivery off</text>
-              <rect class="badge-disabled" x="1270" y="538" width="72" height="18" rx="9"></rect>
-              <text class="badge-text" x="1306" y="551">DISABLED</text>
+            <g id="landscape-discord" class="node-group">
+              <rect class="node node-disabled" x="1210" y="515" width="140" height="82" rx="10"></rect>
+              <text class="svg-label" x="1234" y="548">Discord news</text>
+              <text class="svg-small" x="1234" y="572">routine path off</text>
+              <rect class="status-disabled" x="1265" y="585" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="1298" y="598">DISABLED</text>
             </g>
           </svg>
         </div>
         <div class="callouts">
-          <div class="callout"><strong>Authority stays deterministic</strong><span>Criticality,
-            clustering, scoring, verification, and publication gates are code and schema driven.</span></div>
-          <div class="callout"><strong>Durable state is outside OpenClaw</strong><span>PostgreSQL,
-            MinIO, immutable reports, and rebuildable SQLite own history—not chat sessions.</span></div>
-          <div class="callout"><strong>Publication is intentionally narrow</strong><span>The result
-            lands in the DB and private site. Routine Discord/news delivery is disabled.</span></div>
+          <div class="callout"><strong>Deterministic authority</strong><span>Scoring,
+            verification, and publication remain code- and schema-driven.</span></div>
+          <div class="callout"><strong>Durable state</strong><span>PostgreSQL, MinIO, immutable
+            reports, and rebuildable SQLite own history—not sessions.</span></div>
+          <div class="callout"><strong>Narrow publication</strong><span>The live destination is
+            DB plus private portal. Routine chat delivery stays off.</span></div>
         </div>
       </div>
     </section>
 
     <section id="run">
       <div class="section-heading">
-        <div><p class="section-kicker">02 · Runtime</p><h2>One complete scheduled run</h2></div>
-        <p>A numbered swimlane shows ownership at each transition. The most important detail:
-          untrusted bytes never jump directly into the decision or publishing lanes.</p>
+        <div><p class="section-kicker">02 · Runtime</p><h2>One complete run</h2></div>
+        <p>The runtime is shown as a numbered snake path. Every connector ends on the next step,
+          and the three rows keep security, processing, and publication transitions readable.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
           <span class="pill live">Daily · 07:30 ET</span>
           <span class="pill">Idempotent writes</span>
-          <span class="pill">Partial-source degradation supported</span>
+          <span class="pill">Partial-source degradation</span>
         </div>
         <div class="svg-wrap">
-          <svg viewBox="0 0 1400 930" role="img" aria-labelledby="run-title run-desc">
-            <title id="run-title">Scheduled run sequence across six swimlanes</title>
-            <desc id="run-desc">Twelve steps from OpenClaw schedule through source queries, security
-              processing, deterministic decisions, local inference observation, persistence,
-              analytics indexing, and portal reading.</desc>
+          <svg viewBox="0 0 1400 900" role="img" aria-labelledby="run-title run-desc">
+            <title id="run-title">Twelve-step scheduled run</title>
+            <desc id="run-desc">A twelve-step flow arranged in three rows from scheduling through
+              discovery, evidence processing, deterministic decisions, persistence, and portal use.</desc>
             <defs>
-              <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
+              <marker id="run-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
-              <marker id="a2s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7543a5"></path>
+              <marker id="run-shadow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74439f"></path>
               </marker>
             </defs>
 
-            <rect class="zone-fill" x="20" y="20" width="1360" height="880" rx="14"></rect>
-            <line class="lane-line" x1="140" y1="145" x2="140" y2="865"></line>
-            <line class="lane-line" x1="360" y1="145" x2="360" y2="865"></line>
-            <line class="lane-line" x1="580" y1="145" x2="580" y2="865"></line>
-            <line class="lane-line" x1="800" y1="145" x2="800" y2="865"></line>
-            <line class="lane-line" x1="1020" y1="145" x2="1020" y2="865"></line>
-            <line class="lane-line" x1="1240" y1="145" x2="1240" y2="865"></line>
+            <rect class="panel" x="20" y="34" width="1360" height="832" rx="14"></rect>
+            <text class="svg-micro" x="45" y="68">CONTROL + DISCOVERY</text>
+            <text class="svg-micro" x="45" y="328">SECURITY + DECISION</text>
+            <text class="svg-micro" x="45" y="588">VERIFICATION + PUBLICATION</text>
 
-            <path class="edge" d="M 140 190 H 800" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 140 248 H 1020" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 140 306 H 360" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 360 364 H 580" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 360 422 H 580" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 580 480 H 1020" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 580 538 H 800" marker-end="url(#a2)"></path>
-            <path class="edge-shadow" d="M 800 596 H 1020" marker-end="url(#a2s)"></path>
-            <path class="edge" d="M 800 654 H 1020" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 800 712 H 1020" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 1020 770 H 1240" marker-end="url(#a2)"></path>
-            <path class="edge" d="M 1240 828 H 1020" marker-end="url(#a2)"></path>
+            <path class="edge" data-from="run-01" data-to="run-02" d="M335 185 H385" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-02" data-to="run-03" d="M675 185 H725" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-03" data-to="run-04" d="M1015 185 H1065" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-04" data-to="run-05" d="M1210 240 V370" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-05" data-to="run-06" d="M1065 445 H1015" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-06" data-to="run-07" d="M725 445 H675" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-07" data-to="run-08" d="M385 445 H335" marker-end="url(#run-arrow)"></path>
+            <path class="edge-shadow" data-from="run-08" data-to="run-09" d="M190 500 V630" marker-end="url(#run-shadow-arrow)"></path>
+            <path class="edge" data-from="run-09" data-to="run-10" d="M335 705 H385" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-10" data-to="run-11" d="M675 705 H725" marker-end="url(#run-arrow)"></path>
+            <path class="edge" data-from="run-11" data-to="run-12" d="M1015 705 H1065" marker-end="url(#run-arrow)"></path>
 
-            <g>
-              <rect class="node node-control" x="45" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="67" y="84">Control plane</text>
-              <text class="svg-small" x="67" y="105">OpenClaw · Lobster · CLI</text>
+            <g id="run-01" class="node-group">
+              <rect class="node node-control" x="45" y="120" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="72" cy="146" r="16"></circle><text class="step-number" x="72" y="150">01</text>
+              <text class="svg-label" x="100" y="151">Create isolated run</text>
+              <text class="svg-small" x="69" y="181">OpenClaw cron · fixed edition</text>
+              <text class="svg-small" x="69" y="204">Lobster is the only workflow tool</text>
+              <text class="svg-small" x="69" y="227">external delivery disabled</text>
             </g>
-            <g>
-              <rect class="node node-external" x="265" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="287" y="84">External APIs</text>
-              <text class="svg-small" x="287" y="105">discovery + authority</text>
+            <g id="run-02" class="node-group">
+              <rect class="node node-control" x="385" y="120" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="412" cy="146" r="16"></circle><text class="step-number" x="412" y="150">02</text>
+              <text class="svg-label" x="440" y="151">Preflight local services</text>
+              <text class="svg-small" x="409" y="181">FileVault · Keychain · Colima</text>
+              <text class="svg-small" x="409" y="204">PostgreSQL · MinIO</text>
+              <text class="svg-small" x="409" y="227">fail closed on missing controls</text>
             </g>
-            <g>
-              <rect class="node node-security" x="485" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="507" y="84">Security boundary</text>
-              <text class="svg-small" x="507" y="105">fetch · quarantine · sanitize</text>
+            <g id="run-03" class="node-group">
+              <rect class="node node-external" x="725" y="120" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="752" cy="146" r="16"></circle><text class="step-number" x="752" y="150">03</text>
+              <text class="svg-label" x="780" y="151">Discover early signals</text>
+              <text class="svg-small" x="749" y="181">five bounded Brave queries</text>
+              <text class="svg-small" x="749" y="204">curated X handles</text>
+              <text class="svg-small" x="749" y="227">capture usage and source health</text>
             </g>
-            <g>
-              <rect class="node node-process" x="705" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="727" y="84">Decision engine</text>
-              <text class="svg-small" x="727" y="105">correlate · score · verify</text>
+            <g id="run-04" class="node-group">
+              <rect class="node node-process" x="1065" y="120" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="1092" cy="146" r="16"></circle><text class="step-number" x="1092" y="150">04</text>
+              <text class="svg-label" x="1120" y="151">Prioritize candidates</text>
+              <text class="svg-small" x="1089" y="181">criticality language bonus</text>
+              <text class="svg-small" x="1089" y="204">CISA KEV freshness</text>
+              <text class="svg-small" x="1089" y="227">bounded candidate count</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="925" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="947" y="84">Durable state</text>
-              <text class="svg-small" x="947" y="105">MinIO · PostgreSQL · files</text>
+            <g id="run-05" class="node-group">
+              <rect class="node node-external" x="1065" y="380" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="1092" cy="406" r="16"></circle><text class="step-number" x="1092" y="410">05</text>
+              <text class="svg-label" x="1120" y="411">Fetch authority</text>
+              <text class="svg-small" x="1089" y="441">CISA · CVE · NVD · EPSS</text>
+              <text class="svg-small" x="1089" y="464">OSV · GitHub advisory</text>
+              <text class="svg-small" x="1089" y="487">parallel per candidate</text>
             </g>
-            <g>
-              <rect class="node node-experience" x="1145" y="55" width="190" height="68" rx="9"></rect>
-              <text class="svg-label" x="1167" y="84">Experience</text>
-              <text class="svg-small" x="1167" y="105">SQLite · HTML · portal</text>
+            <g id="run-06" class="node-group">
+              <rect class="node node-security" x="725" y="380" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="752" cy="406" r="16"></circle><text class="step-number" x="752" y="410">06</text>
+              <text class="svg-label" x="780" y="411">Quarantine + sanitize</text>
+              <text class="svg-small" x="749" y="441">immutable bytes and hashes</text>
+              <text class="svg-small" x="749" y="464">malware and injection scan</text>
+              <text class="svg-small" x="749" y="487">bounded typed evidence</text>
             </g>
-
-            <g>
-              <circle class="step-circle" cx="140" cy="190" r="16"></circle><text class="step-text" x="140" y="194">01</text>
-              <rect class="node node-control" x="168" y="166" width="475" height="46" rx="8"></rect>
-              <text class="svg-label" x="186" y="187">Cron creates isolated morning run</text>
-              <text class="svg-small" x="450" y="187">tools: Lobster only · delivery: none</text>
+            <g id="run-07" class="node-group">
+              <rect class="node node-process" x="385" y="380" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="412" cy="406" r="16"></circle><text class="step-number" x="412" y="410">07</text>
+              <text class="svg-label" x="440" y="411">Correlate + score</text>
+              <text class="svg-small" x="409" y="441">canonical entities and lineage</text>
+              <text class="svg-small" x="409" y="464">complete-link clustering</text>
+              <text class="svg-small" x="409" y="487">deterministic thresholds</text>
             </g>
-            <g>
-              <circle class="step-circle" cx="140" cy="248" r="16"></circle><text class="step-text" x="140" y="252">02</text>
-              <rect class="node node-control" x="168" y="224" width="690" height="46" rx="8"></rect>
-              <text class="svg-label" x="186" y="245">Runner checks FileVault, Keychain, Colima, Postgres, and MinIO</text>
+            <g id="run-08" class="node-group">
+              <rect class="node node-shadow" x="45" y="380" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="72" cy="406" r="16"></circle><text class="step-number" x="72" y="410">08</text>
+              <text class="svg-label" x="100" y="411">Observe semantic pairs</text>
+              <text class="svg-small" x="69" y="441">Nomic embeddings via loopback</text>
+              <text class="svg-small" x="69" y="464">compare with deterministic pairs</text>
+              <text class="svg-small" x="69" y="487">never changes publication</text>
             </g>
-            <g>
-              <circle class="step-circle" cx="140" cy="306" r="16"></circle><text class="step-text" x="140" y="310">03</text>
-              <rect class="node node-external" x="168" y="282" width="164" height="46" rx="8"></rect>
-              <text class="svg-label" x="186" y="303">Query discovery</text>
-              <text class="svg-small" x="186" y="320">5 Brave + curated X</text>
+            <g id="run-09" class="node-group">
+              <rect class="node node-process" x="45" y="640" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="72" cy="666" r="16"></circle><text class="step-number" x="72" y="670">09</text>
+              <text class="svg-label" x="100" y="671">Build + verify findings</text>
+              <text class="svg-small" x="69" y="701">claim-to-evidence checks</text>
+              <text class="svg-small" x="69" y="724">publication-class selection</text>
+              <text class="svg-small" x="69" y="747">degraded sources recorded</text>
             </g>
-            <g>
-              <circle class="step-circle" cx="360" cy="364" r="16"></circle><text class="step-text" x="360" y="368">04</text>
-              <rect class="node node-security" x="388" y="340" width="334" height="46" rx="8"></rect>
-              <text class="svg-label" x="406" y="361">Canonicalize, bound, deduplicate, and preserve provenance</text>
+            <g id="run-10" class="node-group">
+              <rect class="node node-storage" x="385" y="640" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="412" cy="666" r="16"></circle><text class="step-number" x="412" y="670">10</text>
+              <text class="svg-label" x="440" y="671">Persist immutable state</text>
+              <text class="svg-small" x="409" y="701">report JSON + HTML</text>
+              <text class="svg-small" x="409" y="724">PostgreSQL records</text>
+              <text class="svg-small" x="409" y="747">idempotent delivery plan</text>
             </g>
-            <g>
-              <circle class="step-circle" cx="360" cy="422" r="16"></circle><text class="step-text" x="360" y="426">05</text>
-              <rect class="node node-external" x="388" y="398" width="398" height="46" rx="8"></rect>
-              <text class="svg-label" x="406" y="419">Prioritize CVEs, then fetch CISA/CVE/NVD/EPSS/OSV/GitHub</text>
+            <g id="run-11" class="node-group">
+              <rect class="node node-experience" x="725" y="640" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="752" cy="666" r="16"></circle><text class="step-number" x="752" y="670">11</text>
+              <text class="svg-label" x="780" y="671">Build read model</text>
+              <text class="svg-small" x="749" y="701">SQLite analytics index</text>
+              <text class="svg-small" x="749" y="724">server-rendered portal</text>
+              <text class="svg-small" x="749" y="747">private-LAN authentication</text>
             </g>
-            <g>
-              <circle class="step-circle" cx="580" cy="480" r="16"></circle><text class="step-text" x="580" y="484">06</text>
-              <rect class="node node-storage" x="608" y="456" width="350" height="46" rx="8"></rect>
-              <text class="svg-label" x="626" y="477">Write raw objects, hashes, evidence, and source health</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="580" cy="538" r="16"></circle><text class="step-text" x="580" y="542">07</text>
-              <rect class="node node-process" x="608" y="514" width="355" height="46" rx="8"></rect>
-              <text class="svg-label" x="626" y="535">Taxonomy, lineage, complete-link clustering, and score</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="800" cy="596" r="16"></circle><text class="step-text" x="800" y="600">08</text>
-              <rect class="node node-shadow" x="828" y="572" width="347" height="46" rx="8"></rect>
-              <text class="svg-label" x="846" y="593">Nomic compares semantic pairs in shadow mode</text>
-              <text class="svg-small" x="846" y="610">metrics only · pipeline continues on failure</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="800" cy="654" r="16"></circle><text class="step-text" x="800" y="658">09</text>
-              <rect class="node node-process" x="828" y="630" width="375" height="46" rx="8"></rect>
-              <text class="svg-label" x="846" y="651">Build findings and verify every claim/evidence reference</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="800" cy="712" r="16"></circle><text class="step-text" x="800" y="716">10</text>
-              <rect class="node node-storage" x="828" y="688" width="355" height="46" rx="8"></rect>
-              <text class="svg-label" x="846" y="709">Persist immutable report JSON + PostgreSQL records</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="1020" cy="770" r="16"></circle><text class="step-text" x="1020" y="774">11</text>
-              <rect class="node node-experience" x="1048" y="746" width="272" height="46" rx="8"></rect>
-              <text class="svg-label" x="1066" y="767">Render HTML and index SQLite</text>
-            </g>
-            <g>
-              <circle class="step-circle" cx="1240" cy="828" r="16"></circle><text class="step-text" x="1240" y="832">12</text>
-              <rect class="node node-experience" x="800" y="804" width="412" height="46" rx="8"></rect>
-              <text class="svg-label" x="818" y="825">Private clients read Overview, Findings, Reports, Trends, Settings</text>
+            <g id="run-12" class="node-group">
+              <rect class="node node-experience" x="1065" y="640" width="290" height="120" rx="10"></rect>
+              <circle class="step-circle" cx="1092" cy="666" r="16"></circle><text class="step-number" x="1092" y="670">12</text>
+              <text class="svg-label" x="1120" y="671">Read + give feedback</text>
+              <text class="svg-small" x="1089" y="701">findings · reports · trends</text>
+              <text class="svg-small" x="1089" y="724">settings · cost estimates</text>
+              <text class="svg-small" x="1089" y="747">append-only analyst labels</text>
             </g>
           </svg>
         </div>
@@ -677,135 +679,109 @@
 
     <section id="trust">
       <div class="section-heading">
-        <div><p class="section-kicker">03 · Security</p><h2>Trust boundaries and forbidden flows</h2></div>
-        <p>The design assumes every monitored source may contain instructions aimed at the agent.
-          Safety comes from fixed capabilities, typed transitions, immutable evidence, and explicit
-          “no path” controls—not from hoping a model ignores the payload.</p>
+        <div><p class="section-kicker">03 · Security</p><h2>Trust boundaries</h2></div>
+        <p>The permitted path is a clean left-to-right chain. Prohibited flows are separate,
+          explicit controls rather than decorative red lines crossing unrelated nodes.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill">STRIDE-reviewed</span>
+          <span class="pill live">Enforced controls</span>
           <span class="pill">External content = data</span>
           <span class="pill">Unknown fields rejected</span>
           <span class="pill">No source-derived actions</span>
         </div>
         <div class="svg-wrap">
-          <svg viewBox="0 0 1400 780" role="img" aria-labelledby="trust-title trust-desc">
-            <title id="trust-title">Trust zones and forbidden data flows</title>
-            <desc id="trust-desc">Six trust zones show permitted one-way data flow and blocked paths
-              from hostile sources, local inference, the portal, and disabled Discord delivery.</desc>
+          <svg viewBox="0 0 1400 700" role="img" aria-labelledby="trust-title trust-desc">
+            <title id="trust-title">Permitted and forbidden trust flows</title>
+            <desc id="trust-desc">Five security zones form the only permitted data path. Three
+              separate control cards describe prohibited source, model, and portal actions.</desc>
             <defs>
-              <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
-              </marker>
-              <marker id="a3s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7543a5"></path>
+              <marker id="trust-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
             </defs>
 
-            <rect class="zone" x="20" y="65" width="210" height="565" rx="14"></rect>
-            <rect class="zone" x="252" y="65" width="220" height="565" rx="14"></rect>
-            <rect class="zone" x="494" y="65" width="240" height="565" rx="14"></rect>
-            <rect class="zone" x="756" y="65" width="260" height="565" rx="14"></rect>
-            <rect class="zone" x="1038" y="65" width="190" height="565" rx="14"></rect>
-            <rect class="zone" x="1250" y="65" width="130" height="565" rx="14"></rect>
+            <text class="svg-micro" x="36" y="42">ONLY PERMITTED DATA PATH</text>
+            <path class="edge" data-from="trust-source" data-to="trust-fetch" d="M250 185 H300" marker-end="url(#trust-arrow)"></path>
+            <path class="edge" data-from="trust-fetch" data-to="trust-evidence" d="M510 185 H560" marker-end="url(#trust-arrow)"></path>
+            <path class="edge" data-from="trust-evidence" data-to="trust-decision" d="M770 185 H820" marker-end="url(#trust-arrow)"></path>
+            <path class="edge" data-from="trust-decision" data-to="trust-read" d="M1030 185 H1080" marker-end="url(#trust-arrow)"></path>
 
-            <path class="edge" d="M 195 220 H 282" marker-end="url(#a3)"></path>
-            <path class="edge" d="M 442 220 H 524" marker-end="url(#a3)"></path>
-            <path class="edge" d="M 704 220 H 786" marker-end="url(#a3)"></path>
-            <path class="edge" d="M 986 220 H 1068" marker-end="url(#a3)"></path>
-            <path class="edge" d="M 1198 220 H 1270" marker-end="url(#a3)"></path>
-            <path class="edge-shadow" d="M 614 395 H 786" marker-end="url(#a3s)"></path>
-            <path class="edge-shadow" d="M 916 455 H 1080 V 295" marker-end="url(#a3s)"></path>
-
-            <path class="edge-danger" d="M 125 510 C 350 700, 780 700, 886 560"></path>
-            <circle class="stop" cx="500" cy="665" r="15"></circle>
-            <line class="stop-line" x1="490" y1="655" x2="510" y2="675"></line>
-            <line class="stop-line" x1="510" y1="655" x2="490" y2="675"></line>
-
-            <path class="edge-danger" d="M 886 500 V 570"></path>
-            <circle class="stop" cx="886" cy="548" r="15"></circle>
-            <line class="stop-line" x1="876" y1="538" x2="896" y2="558"></line>
-            <line class="stop-line" x1="896" y1="538" x2="876" y2="558"></line>
-
-            <path class="edge-danger" d="M 1315 410 C 1180 650, 920 670, 850 560"></path>
-            <circle class="stop" cx="1090" cy="648" r="15"></circle>
-            <line class="stop-line" x1="1080" y1="638" x2="1100" y2="658"></line>
-            <line class="stop-line" x1="1100" y1="638" x2="1080" y2="658"></line>
-
-            <text class="svg-micro" x="42" y="94">ZONE A · HOSTILE</text>
-            <text class="svg-micro" x="274" y="94">ZONE B · EGRESS</text>
-            <text class="svg-micro" x="516" y="94">ZONE C · QUARANTINE</text>
-            <text class="svg-micro" x="778" y="94">ZONE D · DECISION</text>
-            <text class="svg-micro" x="1060" y="94">ZONE E · DATA</text>
-            <text class="svg-micro" x="1272" y="94">ZONE F · READ</text>
-
-            <g>
-              <rect class="node node-external" x="55" y="150" width="140" height="140" rx="10"></rect>
-              <text class="svg-label" x="78" y="183">Internet APIs</text>
-              <text class="svg-small" x="78" y="210">pages · JSON</text>
-              <text class="svg-small" x="78" y="231">social posts</text>
-              <text class="svg-small" x="78" y="252">advisories</text>
-              <text class="svg-small" x="78" y="273">all untrusted</text>
+            <g id="trust-source" class="node-group">
+              <rect class="node node-external" x="40" y="95" width="210" height="180" rx="10"></rect>
+              <text class="svg-label" x="64" y="130">Hostile source zone</text>
+              <text class="svg-small" x="64" y="160">web · social · feeds</text>
+              <text class="svg-small" x="64" y="183">documents · archives</text>
+              <text class="svg-small" x="64" y="218">Never trusted as policy,</text>
+              <text class="svg-small" x="64" y="239">tools, prompts, or commands</text>
             </g>
-            <g>
-              <rect class="node node-security" x="282" y="150" width="160" height="140" rx="10"></rect>
-              <text class="svg-label" x="305" y="183">Safe fetch</text>
-              <text class="svg-small" x="305" y="210">HTTPS allowlist</text>
-              <text class="svg-small" x="305" y="231">public IP only</text>
-              <text class="svg-small" x="305" y="252">redirect checks</text>
-              <text class="svg-small" x="305" y="273">size / MIME / rate</text>
+            <g id="trust-fetch" class="node-group">
+              <rect class="node node-security" x="300" y="95" width="210" height="180" rx="10"></rect>
+              <text class="svg-label" x="324" y="130">Acquisition boundary</text>
+              <text class="svg-small" x="324" y="160">destination allowlists</text>
+              <text class="svg-small" x="324" y="183">DNS + redirect checks</text>
+              <text class="svg-small" x="324" y="206">MIME + byte limits</text>
+              <text class="svg-small" x="324" y="239">Raw bytes quarantined</text>
             </g>
-            <g>
-              <rect class="node node-security" x="524" y="150" width="180" height="140" rx="10"></rect>
-              <text class="svg-label" x="547" y="183">Content gateway</text>
-              <text class="svg-small" x="547" y="210">hash + immutable raw</text>
-              <text class="svg-small" x="547" y="231">strip active/hidden</text>
-              <text class="svg-small" x="547" y="252">injection risk</text>
-              <text class="svg-small" x="547" y="273">bounded evidence</text>
+            <g id="trust-evidence" class="node-group">
+              <rect class="node node-storage" x="560" y="95" width="210" height="180" rx="10"></rect>
+              <text class="svg-label" x="584" y="130">Evidence boundary</text>
+              <text class="svg-small" x="584" y="160">immutable object hash</text>
+              <text class="svg-small" x="584" y="183">sanitized excerpt</text>
+              <text class="svg-small" x="584" y="206">typed observation</text>
+              <text class="svg-small" x="584" y="239">Raw fields forbidden</text>
             </g>
-            <g>
-              <rect class="node node-process" x="786" y="150" width="200" height="140" rx="10"></rect>
-              <text class="svg-label" x="809" y="183">Deterministic authority</text>
-              <text class="svg-small" x="809" y="210">typed observations</text>
-              <text class="svg-small" x="809" y="231">lineage + clustering</text>
-              <text class="svg-small" x="809" y="252">score + thresholds</text>
-              <text class="svg-small" x="809" y="273">claim verification</text>
+            <g id="trust-decision" class="node-group">
+              <rect class="node node-process" x="820" y="95" width="210" height="180" rx="10"></rect>
+              <text class="svg-label" x="844" y="130">Decision boundary</text>
+              <text class="svg-small" x="844" y="160">deterministic score</text>
+              <text class="svg-small" x="844" y="183">schema validation</text>
+              <text class="svg-small" x="844" y="206">claim verification</text>
+              <text class="svg-small" x="844" y="239">Model output untrusted</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="1068" y="150" width="130" height="140" rx="10"></rect>
-              <text class="svg-label" x="1091" y="183">Immutable</text>
-              <text class="svg-small" x="1091" y="210">PostgreSQL</text>
-              <text class="svg-small" x="1091" y="231">MinIO</text>
-              <text class="svg-small" x="1091" y="252">report JSON</text>
-              <text class="svg-small" x="1091" y="273">audit hashes</text>
-            </g>
-            <g>
-              <rect class="node node-experience" x="1270" y="150" width="90" height="140" rx="10"></rect>
-              <text class="svg-label" x="1285" y="183">Portal</text>
-              <text class="svg-small" x="1285" y="210">GET</text>
-              <text class="svg-small" x="1285" y="231">exports</text>
-              <text class="svg-small" x="1285" y="252">private</text>
-              <text class="svg-small" x="1285" y="273">read only</text>
+            <g id="trust-read" class="node-group">
+              <rect class="node node-experience" x="1080" y="95" width="280" height="180" rx="10"></rect>
+              <text class="svg-label" x="1104" y="130">Publication + read zone</text>
+              <text class="svg-small" x="1104" y="160">verified report objects only</text>
+              <text class="svg-small" x="1104" y="183">escaped deterministic HTML</text>
+              <text class="svg-small" x="1104" y="206">authenticated private portal</text>
+              <text class="svg-small" x="1104" y="239">No control-plane access</text>
             </g>
 
-            <g>
-              <rect class="node node-shadow" x="786" y="382" width="200" height="118" rx="10"></rect>
-              <text class="svg-label" x="809" y="414">Loopback Ollama</text>
-              <text class="svg-small" x="809" y="440">numeric vectors only</text>
-              <text class="svg-small" x="809" y="461">no tools · no secrets</text>
-              <text class="svg-small" x="809" y="482">no persisted vectors</text>
+            <text class="svg-micro" x="36" y="338">PROHIBITED FLOWS</text>
+            <g id="trust-block-source" class="node-group">
+              <rect class="node node-security" x="40" y="375" width="410" height="230" rx="10"></rect>
+              <circle class="stop" cx="82" cy="423" r="17"></circle>
+              <line class="stop-line" x1="71" y1="412" x2="93" y2="434"></line>
+              <line class="stop-line" x1="93" y1="412" x2="71" y2="434"></line>
+              <text class="svg-label" x="116" y="428">Source → capability escalation</text>
+              <text class="svg-small" x="68" y="468">No source-provided URL bypasses the registry.</text>
+              <text class="svg-small" x="68" y="493">No payload can request tools, credentials, or memory.</text>
+              <text class="svg-small" x="68" y="518">No content can modify schedules or workflow arguments.</text>
+              <text class="svg-small" x="68" y="553">Enforced by fixed connectors, schemas, and tool policy.</text>
             </g>
-            <g>
-              <rect class="node node-disabled" x="1260" y="365" width="110" height="90" rx="10"></rect>
-              <text class="svg-label" x="1277" y="398">Discord</text>
-              <text class="svg-small" x="1277" y="420">news path</text>
-              <text class="svg-small" x="1277" y="440">disabled</text>
+            <g id="trust-block-model" class="node-group">
+              <rect class="node node-security" x="495" y="375" width="410" height="230" rx="10"></rect>
+              <circle class="stop" cx="537" cy="423" r="17"></circle>
+              <line class="stop-line" x1="526" y1="412" x2="548" y2="434"></line>
+              <line class="stop-line" x1="548" y1="412" x2="526" y2="434"></line>
+              <text class="svg-label" x="571" y="428">Model → direct publication</text>
+              <text class="svg-small" x="523" y="468">No model owns score, verification, or durable state.</text>
+              <text class="svg-small" x="523" y="493">Unknown evidence IDs and extra fields are rejected.</text>
+              <text class="svg-small" x="523" y="518">Nomic vectors have zero publication authority.</text>
+              <text class="svg-small" x="523" y="553">Coordinator failure holds Flash publication.</text>
             </g>
-
-            <text class="svg-small" x="52" y="696">BLOCKED: source text cannot become tools, policy, memory, schedules, or privileged instructions</text>
-            <text class="svg-small" x="748" y="597">BLOCKED: embeddings cannot alter clusters, score, verification, or publication</text>
-            <text class="svg-small" x="1360" y="696" text-anchor="end">BLOCKED: portal cannot mutate, collect, schedule, or deliver</text>
+            <g id="trust-block-portal" class="node-group">
+              <rect class="node node-security" x="950" y="375" width="410" height="230" rx="10"></rect>
+              <circle class="stop" cx="992" cy="423" r="17"></circle>
+              <line class="stop-line" x1="981" y1="412" x2="1003" y2="434"></line>
+              <line class="stop-line" x1="1003" y1="412" x2="981" y2="434"></line>
+              <text class="svg-label" x="1026" y="428">Portal → pipeline control</text>
+              <text class="svg-small" x="978" y="468">Read-only pages cannot invoke collectors or agents.</text>
+              <text class="svg-small" x="978" y="493">Feedback is append-only typed data, not a command.</text>
+              <text class="svg-small" x="978" y="518">No database or object-store credentials reach clients.</text>
+              <text class="svg-small" x="978" y="553">Every mutation stays behind reviewed CLI workflows.</text>
+            </g>
           </svg>
         </div>
       </div>
@@ -813,124 +789,97 @@
 
     <section id="inference">
       <div class="section-heading">
-        <div><p class="section-kicker">04 · Local AI</p><h2>Two rails: authority and observation</h2></div>
-        <p>The deterministic rail publishes. The local-inference rail measures semantic recall and
-          writes telemetry back into the report. The rails touch at input and metrics—never at a
-          decision edge.</p>
+        <div><p class="section-kicker">04 · Local inference</p><h2>Authority and observation split</h2></div>
+        <p>The deterministic rail produces clusters and publication decisions. The local Nomic
+          rail measures semantic agreement and disagreement, then stops at telemetry.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill live">nomic-embed-text:latest</span>
-          <span class="pill">127.0.0.1:11434</span>
-          <span class="pill">Threshold 0.78</span>
-          <span class="pill">Estimated API cost $0</span>
+          <span class="pill live">Deterministic authority</span>
+          <span class="pill shadow">Nomic shadow</span>
+          <span class="pill">Loopback only</span>
+          <span class="pill">Pipeline survives failure</span>
         </div>
         <div class="svg-wrap">
-          <svg viewBox="0 0 1400 720" role="img" aria-labelledby="inference-title inference-desc">
-            <title id="inference-title">Authoritative deterministic rail and shadow embedding rail</title>
-            <desc id="inference-desc">Sanitized signals enter both rails. The upper deterministic
-              rail creates findings. The lower Nomic rail emits only quality and usage telemetry.</desc>
+          <svg viewBox="0 0 1400 610" role="img" aria-labelledby="inference-title inference-desc">
+            <title id="inference-title">Deterministic and local inference rails</title>
+            <desc id="inference-desc">A live deterministic rail reaches report verification while
+              a dashed Nomic shadow rail reaches metrics and is explicitly blocked from publication.</desc>
             <defs>
-              <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
+              <marker id="inference-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
-              <marker id="a4s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7543a5"></path>
+              <marker id="inference-shadow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74439f"></path>
               </marker>
             </defs>
 
-            <rect class="zone-fill" x="20" y="70" width="1360" height="250" rx="14"></rect>
-            <rect class="zone-fill" x="20" y="380" width="1360" height="250" rx="14"></rect>
+            <rect class="panel" x="25" y="50" width="1350" height="225" rx="14"></rect>
+            <rect class="panel" x="25" y="325" width="1350" height="225" rx="14"></rect>
+            <text class="svg-micro" x="50" y="82">LIVE AUTHORITY RAIL</text>
+            <text class="svg-micro" x="50" y="357">SHADOW OBSERVATION RAIL</text>
 
-            <path class="edge" d="M 250 194 H 340" marker-end="url(#a4)"></path>
-            <path class="edge" d="M 555 194 H 645" marker-end="url(#a4)"></path>
-            <path class="edge" d="M 860 194 H 950" marker-end="url(#a4)"></path>
-            <path class="edge" d="M 1165 194 H 1240" marker-end="url(#a4)"></path>
+            <path class="edge" data-from="inference-evidence" data-to="inference-deterministic" d="M290 170 H360" marker-end="url(#inference-arrow)"></path>
+            <path class="edge" data-from="inference-deterministic" data-to="inference-score" d="M610 170 H680" marker-end="url(#inference-arrow)"></path>
+            <path class="edge" data-from="inference-score" data-to="inference-publish" d="M930 170 H1000" marker-end="url(#inference-arrow)"></path>
+            <path class="edge-shadow" data-from="inference-bounded" data-to="inference-ollama" d="M290 445 H360" marker-end="url(#inference-shadow-arrow)"></path>
+            <path class="edge-shadow" data-from="inference-ollama" data-to="inference-compare" d="M610 445 H680" marker-end="url(#inference-shadow-arrow)"></path>
+            <path class="edge-shadow" data-from="inference-compare" data-to="inference-telemetry" d="M930 445 H1000" marker-end="url(#inference-shadow-arrow)"></path>
 
-            <path class="edge-shadow" d="M 250 504 H 340" marker-end="url(#a4s)"></path>
-            <path class="edge-shadow" d="M 555 504 H 645" marker-end="url(#a4s)"></path>
-            <path class="edge-shadow" d="M 860 504 H 950" marker-end="url(#a4s)"></path>
-            <path class="edge-shadow" d="M 1165 504 H 1240" marker-end="url(#a4s)"></path>
-            <path class="edge-shadow" d="M 1292 466 V 280 H 1292" marker-end="url(#a4s)"></path>
-
-            <path class="edge-danger" d="M 752 420 V 285"></path>
-            <circle class="stop" cx="752" cy="348" r="17"></circle>
-            <line class="stop-line" x1="741" y1="337" x2="763" y2="359"></line>
-            <line class="stop-line" x1="763" y1="337" x2="741" y2="359"></line>
-
-            <text class="svg-micro" x="46" y="100">AUTHORITATIVE RAIL · DETERMINISTIC</text>
-            <rect class="badge-live" x="1220" y="85" width="125" height="20" rx="10"></rect>
-            <text class="badge-text" x="1282" y="99">CAN PUBLISH</text>
-            <text class="svg-micro" x="46" y="410">OBSERVER RAIL · LOCAL SHADOW</text>
-            <rect class="badge-shadow" x="1198" y="395" width="147" height="20" rx="10"></rect>
-            <text class="badge-text" x="1271" y="409">ZERO AUTHORITY</text>
-
-            <g>
-              <rect class="node node-process" x="55" y="145" width="195" height="98" rx="10"></rect>
-              <text class="svg-label" x="78" y="178">Prepared signals</text>
-              <text class="svg-small" x="78" y="202">deduped · taxonomy</text>
-              <text class="svg-small" x="78" y="222">evidence IDs</text>
+            <g id="inference-evidence" class="node-group">
+              <rect class="node node-storage" x="60" y="115" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="84" y="149">Typed evidence</text>
+              <text class="svg-small" x="84" y="177">sanitized observations</text>
+              <text class="svg-small" x="84" y="199">lineage + hashes</text>
             </g>
-            <g>
-              <rect class="node node-process" x="340" y="145" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="363" y="178">Complete-link clusters</text>
-              <text class="svg-small" x="363" y="202">strong title agreement</text>
-              <text class="svg-small" x="363" y="222">no transitive mega-clusters</text>
+            <g id="inference-deterministic" class="node-group">
+              <rect class="node node-process" x="360" y="115" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="384" y="149">Deterministic clusters</text>
+              <text class="svg-small" x="384" y="177">entity and token rules</text>
+              <text class="svg-small" x="384" y="199">complete-link constraint</text>
             </g>
-            <g>
-              <rect class="node node-process" x="645" y="145" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="668" y="178">Lineage + score</text>
-              <text class="svg-small" x="668" y="202">source independence</text>
-              <text class="svg-small" x="668" y="222">criticality prioritization</text>
+            <g id="inference-score" class="node-group">
+              <rect class="node node-process" x="680" y="115" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="704" y="149">Score + verify</text>
+              <text class="svg-small" x="704" y="177">fixed features + thresholds</text>
+              <text class="svg-small" x="704" y="199">claim/evidence checks</text>
             </g>
-            <g>
-              <rect class="node node-process" x="950" y="145" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="973" y="178">Claim verification</text>
-              <text class="svg-small" x="973" y="202">schema + evidence refs</text>
-              <text class="svg-small" x="973" y="222">publication threshold</text>
+            <g id="inference-publish" class="node-group">
+              <rect class="node node-experience" x="1000" y="115" width="320" height="110" rx="10"></rect>
+              <text class="svg-label" x="1024" y="149">Verified report publication</text>
+              <text class="svg-small" x="1024" y="177">PostgreSQL + private portal</text>
+              <text class="svg-small" x="1024" y="199">only this rail can publish</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="1240" y="145" width="110" height="98" rx="10"></rect>
-              <text class="svg-label" x="1258" y="178">Report</text>
-              <text class="svg-small" x="1258" y="202">findings</text>
-              <text class="svg-small" x="1258" y="222">verified JSON</text>
+            <g id="inference-bounded" class="node-group">
+              <rect class="node node-shadow" x="60" y="390" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="84" y="424">Bounded text</text>
+              <text class="svg-small" x="84" y="452">maximum 64 signals</text>
+              <text class="svg-small" x="84" y="474">no tools or raw bytes</text>
             </g>
-
-            <g>
-              <rect class="node node-shadow" x="55" y="455" width="195" height="98" rx="10"></rect>
-              <text class="svg-label" x="78" y="488">Eligible signals</text>
-              <text class="svg-small" x="78" y="512">source-native · no CVE</text>
-              <text class="svg-small" x="78" y="532">≤64 · ≤1,200 chars</text>
+            <g id="inference-ollama" class="node-group">
+              <rect class="node node-shadow" x="360" y="390" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="384" y="424">Ollama + Nomic</text>
+              <text class="svg-small" x="384" y="452">127.0.0.1 only</text>
+              <text class="svg-small" x="384" y="474">validated numeric vectors</text>
             </g>
-            <g>
-              <rect class="node node-shadow" x="340" y="455" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="363" y="488">Loopback Ollama</text>
-              <text class="svg-small" x="363" y="512">Nomic clustering prefix</text>
-              <text class="svg-small" x="363" y="532">10s · 4MB · no proxy</text>
+            <g id="inference-compare" class="node-group">
+              <rect class="node node-shadow" x="680" y="390" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="704" y="424">Compare candidates</text>
+              <text class="svg-small" x="704" y="452">overlap + semantic-only</text>
+              <text class="svg-small" x="704" y="474">deterministic-only pairs</text>
             </g>
-            <g>
-              <rect class="node node-shadow" x="645" y="455" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="668" y="488">Vector validation</text>
-              <text class="svg-small" x="668" y="512">model · count · finite</text>
-              <text class="svg-small" x="668" y="532">consistent dimensions</text>
+            <g id="inference-telemetry" class="node-group">
+              <rect class="node node-shadow" x="1000" y="390" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="1024" y="424">Report telemetry</text>
+              <text class="svg-small" x="1024" y="452">quality + latency + cost</text>
+              <text class="svg-small" x="1024" y="474">publication authority: false</text>
             </g>
-            <g>
-              <rect class="node node-shadow" x="950" y="455" width="215" height="98" rx="10"></rect>
-              <text class="svg-label" x="973" y="488">Pair comparison</text>
-              <text class="svg-small" x="973" y="512">taxonomy compatible</text>
-              <text class="svg-small" x="973" y="532">cosine ≥ 0.78</text>
+            <g id="inference-stop" class="node-group">
+              <circle class="stop" cx="1280" cy="445" r="20"></circle>
+              <line class="stop-line" x1="1267" y1="432" x2="1293" y2="458"></line>
+              <line class="stop-line" x1="1293" y1="432" x2="1267" y2="458"></line>
+              <text class="svg-note" x="1242" y="492">No publication path</text>
             </g>
-            <g>
-              <rect class="node node-shadow" x="1240" y="455" width="110" height="98" rx="10"></rect>
-              <text class="svg-label" x="1258" y="488">Metrics</text>
-              <text class="svg-small" x="1258" y="512">overlap</text>
-              <text class="svg-small" x="1258" y="532">candidates</text>
-            </g>
-
-            <text class="svg-small" x="782" y="340">NO DECISION EDGE</text>
-            <text class="svg-small" x="1360" y="335" text-anchor="end">Metrics append to the report; scoring never reads them</text>
-            <text class="svg-small" x="46" y="592">Persisted: model, threshold, counts, evidence-ID pairs, latency, input tokens, failure reason, publication_authority=false</text>
-            <text class="svg-small" x="46" y="614">Not persisted: vectors, hidden model state, source-derived instructions, secrets, or tool requests</text>
           </svg>
         </div>
       </div>
@@ -938,110 +887,114 @@
 
     <section id="state">
       <div class="section-heading">
-        <div><p class="section-kicker">05 · Data</p><h2>Who owns what</h2></div>
-        <p>Four durable layers have deliberately different jobs. The portal and orchestration
-          surfaces are consumers; neither is allowed to become the system of record.</p>
+        <div><p class="section-kicker">05 · Durable state</p><h2>Who owns what</h2></div>
+        <p>Each row has one producer, one authoritative store, and one bounded consumer.
+          Conversational sessions never appear in the ownership column.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill">Immutable source of truth</span>
+          <span class="pill live">Externalized state</span>
+          <span class="pill">Immutable evidence</span>
           <span class="pill">Rebuildable read model</span>
-          <span class="pill">Disposable sessions</span>
         </div>
         <div class="svg-wrap">
           <svg viewBox="0 0 1400 650" role="img" aria-labelledby="state-title state-desc">
-            <title id="state-title">State ownership and rebuild paths</title>
-            <desc id="state-desc">MinIO, PostgreSQL, report files, and SQLite have separate ownership.
-              OpenClaw sessions are disposable and the portal is read-only.</desc>
+            <title id="state-title">State ownership by producer, store, and consumer</title>
+            <desc id="state-desc">Four rows connect bounded producers to authoritative durable
+              stores and then to their consumers.</desc>
             <defs>
-              <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
+              <marker id="state-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
             </defs>
 
-            <rect class="zone-fill" x="20" y="55" width="1360" height="545" rx="14"></rect>
+            <text class="svg-micro" x="68" y="48">PRODUCER</text>
+            <text class="svg-micro" x="538" y="48">AUTHORITATIVE OWNER</text>
+            <text class="svg-micro" x="1038" y="48">BOUNDED CONSUMER</text>
+            <path class="edge" data-from="state-fetch" data-to="state-minio" d="M360 130 H500" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-minio" data-to="state-security" d="M900 130 H1040" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-pipeline" data-to="state-postgres" d="M360 260 H500" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-postgres" data-to="state-workers" d="M900 260 H1040" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-renderer" data-to="state-reports" d="M360 390 H500" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-reports" data-to="state-portal" d="M900 390 H1040" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-indexer" data-to="state-sqlite" d="M360 520 H500" marker-end="url(#state-arrow)"></path>
+            <path class="edge" data-from="state-sqlite" data-to="state-analytics" d="M900 520 H1040" marker-end="url(#state-arrow)"></path>
 
-            <path class="edge" d="M 280 205 H 375" marker-end="url(#a5)"></path>
-            <path class="edge" d="M 600 205 H 695" marker-end="url(#a5)"></path>
-            <path class="edge" d="M 920 205 H 1015" marker-end="url(#a5)"></path>
-            <path class="edge" d="M 1240 205 H 1300" marker-end="url(#a5)"></path>
-            <path class="edge-soft" d="M 807 275 V 390 H 1128 V 320" marker-end="url(#a5)"></path>
-            <path class="edge-soft" d="M 1128 320 V 470 H 807" marker-end="url(#a5)"></path>
-            <path class="edge-soft" d="M 487 320 V 470 H 695" marker-end="url(#a5)"></path>
-
-            <g>
-              <rect class="node node-storage" x="55" y="130" width="225" height="150" rx="10"></rect>
-              <text class="svg-label" x="80" y="165">MinIO object store</text>
-              <text class="svg-small" x="80" y="194">raw source bytes + metadata</text>
-              <text class="svg-small" x="80" y="216">content addressed</text>
-              <text class="svg-small" x="80" y="238">versioning + object lock</text>
-              <text class="svg-small" x="80" y="260">host disk encrypted</text>
+            <g id="state-fetch" class="node-group">
+              <rect class="node node-security" x="60" y="80" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="84" y="114">Safe-fetch workers</text>
+              <text class="svg-small" x="84" y="142">capture bytes and source metadata</text>
+              <text class="svg-small" x="84" y="164">never own history</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="375" y="130" width="225" height="150" rx="10"></rect>
-              <text class="svg-label" x="400" y="165">PostgreSQL</text>
-              <text class="svg-small" x="400" y="194">runs · artifacts · evidence</text>
-              <text class="svg-small" x="400" y="216">observations · assessments</text>
-              <text class="svg-small" x="400" y="238">reports · deliveries</text>
-              <text class="svg-small" x="400" y="260">idempotent immutable API</text>
+            <g id="state-minio" class="node-group">
+              <rect class="node node-storage" x="500" y="80" width="400" height="100" rx="10"></rect>
+              <text class="svg-label" x="524" y="114">MinIO object store</text>
+              <text class="svg-small" x="524" y="142">raw bytes · hashes · retention · object lock</text>
+              <text class="svg-small" x="524" y="164">encrypted host disk</text>
             </g>
-            <g>
-              <rect class="node node-storage" x="695" y="130" width="225" height="150" rx="10"></rect>
-              <text class="svg-label" x="720" y="165">Report files</text>
-              <text class="svg-small" x="720" y="194">canonical verified JSON</text>
-              <text class="svg-small" x="720" y="216">self-contained HTML</text>
-              <text class="svg-small" x="720" y="238">local delivery audit plan</text>
-              <text class="svg-small" x="720" y="260">immutable per run</text>
-            </g>
-            <g>
-              <rect class="node node-storage" x="1015" y="130" width="225" height="150" rx="10"></rect>
-              <text class="svg-label" x="1040" y="165">SQLite analytics</text>
-              <text class="svg-small" x="1040" y="194">trends · taxonomy · sources</text>
-              <text class="svg-small" x="1040" y="216">provider/stage usage</text>
-              <text class="svg-small" x="1040" y="238">cost + shadow telemetry</text>
-              <text class="svg-small" x="1040" y="260">derived and rebuildable</text>
-            </g>
-            <g>
-              <rect class="node node-experience" x="1270" y="130" width="90" height="150" rx="10"></rect>
-              <text class="svg-label" x="1285" y="165">Portal</text>
-              <text class="svg-small" x="1285" y="194">read</text>
-              <text class="svg-small" x="1285" y="216">filter</text>
-              <text class="svg-small" x="1285" y="238">export</text>
-              <text class="svg-small" x="1285" y="260">no writes</text>
+            <g id="state-security" class="node-group">
+              <rect class="node node-process" x="1040" y="80" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="1064" y="114">Content security</text>
+              <text class="svg-small" x="1064" y="142">reads by immutable reference</text>
+              <text class="svg-small" x="1064" y="164">emits sanitized contracts</text>
             </g>
 
-            <g>
-              <rect class="node node-control" x="55" y="410" width="225" height="120" rx="10"></rect>
-              <text class="svg-label" x="80" y="444">OpenClaw session</text>
-              <text class="svg-small" x="80" y="471">run orchestration context</text>
-              <text class="svg-small" x="80" y="493">no evidence authority</text>
-              <text class="svg-small" x="80" y="515">disposable after execution</text>
+            <g id="state-pipeline" class="node-group">
+              <rect class="node node-process" x="60" y="210" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="84" y="244">Pipeline + policy engine</text>
+              <text class="svg-small" x="84" y="272">idempotent entity and run writes</text>
+              <text class="svg-small" x="84" y="294">append-only assessments</text>
             </g>
-            <g>
-              <rect class="node node-process" x="375" y="410" width="225" height="120" rx="10"></rect>
-              <text class="svg-label" x="400" y="444">Canonical hashes</text>
-              <text class="svg-small" x="400" y="471">content · report · template</text>
-              <text class="svg-small" x="400" y="493">replay detects drift</text>
-              <text class="svg-small" x="400" y="515">corrections create versions</text>
+            <g id="state-postgres" class="node-group">
+              <rect class="node node-storage" x="500" y="210" width="400" height="100" rx="10"></rect>
+              <text class="svg-label" x="524" y="244">PostgreSQL</text>
+              <text class="svg-small" x="524" y="272">runs · evidence · findings · usage · feedback</text>
+              <text class="svg-small" x="524" y="294">durable queue and policy decisions</text>
             </g>
-            <g>
-              <rect class="node node-experience" x="695" y="410" width="225" height="120" rx="10"></rect>
-              <text class="svg-label" x="720" y="444">Analytics sync</text>
-              <text class="svg-small" x="720" y="471">re-index rp_*.json</text>
-              <text class="svg-small" x="720" y="493">safe after DB loss</text>
-              <text class="svg-small" x="720" y="515">never mutates reports</text>
-            </g>
-            <g>
-              <rect class="node node-disabled" x="1015" y="410" width="225" height="120" rx="10"></rect>
-              <text class="svg-label" x="1040" y="444">Not state owners</text>
-              <text class="svg-small" x="1040" y="471">chat history · browser</text>
-              <text class="svg-small" x="1040" y="493">model context · portal cache</text>
-              <text class="svg-small" x="1040" y="515">never authoritative</text>
+            <g id="state-workers" class="node-group">
+              <rect class="node node-process" x="1040" y="210" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="1064" y="244">Workers + evaluators</text>
+              <text class="svg-small" x="1064" y="272">claim work by durable ID</text>
+              <text class="svg-small" x="1064" y="294">sessions are disposable</text>
             </g>
 
-            <text class="svg-small" x="444" y="360">hash-linked provenance</text>
-            <text class="svg-small" x="845" y="360">source of truth for published output</text>
-            <text class="svg-small" x="955" y="452">rebuild</text>
+            <g id="state-renderer" class="node-group">
+              <rect class="node node-process" x="60" y="340" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="84" y="374">Deterministic renderer</text>
+              <text class="svg-small" x="84" y="402">verified report JSON input</text>
+              <text class="svg-small" x="84" y="424">escaped fixed templates</text>
+            </g>
+            <g id="state-reports" class="node-group">
+              <rect class="node node-storage" x="500" y="340" width="400" height="100" rx="10"></rect>
+              <text class="svg-label" x="524" y="374">Immutable report files</text>
+              <text class="svg-small" x="524" y="402">versioned JSON · HTML · delivery plans</text>
+              <text class="svg-small" x="524" y="424">corrections create new versions</text>
+            </g>
+            <g id="state-portal" class="node-group">
+              <rect class="node node-experience" x="1040" y="340" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="1064" y="374">Private portal</text>
+              <text class="svg-small" x="1064" y="402">read-only report experience</text>
+              <text class="svg-small" x="1064" y="424">no workflow authority</text>
+            </g>
+
+            <g id="state-indexer" class="node-group">
+              <rect class="node node-process" x="60" y="470" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="84" y="504">Analytics indexer</text>
+              <text class="svg-small" x="84" y="532">reads immutable reports</text>
+              <text class="svg-small" x="84" y="554">recomputes derived views</text>
+            </g>
+            <g id="state-sqlite" class="node-group">
+              <rect class="node node-storage" x="500" y="470" width="400" height="100" rx="10"></rect>
+              <text class="svg-label" x="524" y="504">SQLite read model</text>
+              <text class="svg-small" x="524" y="532">trends · sources · cost · feedback summaries</text>
+              <text class="svg-small" x="524" y="554">fully rebuildable</text>
+            </g>
+            <g id="state-analytics" class="node-group">
+              <rect class="node node-experience" x="1040" y="470" width="300" height="100" rx="10"></rect>
+              <text class="svg-label" x="1064" y="504">Portal analytics</text>
+              <text class="svg-small" x="1064" y="532">filters and exports</text>
+              <text class="svg-small" x="1064" y="554">never source of truth</text>
+            </g>
           </svg>
         </div>
       </div>
@@ -1049,128 +1002,567 @@
 
     <section id="deployment">
       <div class="section-heading">
-        <div><p class="section-kicker">06 · Topology</p><h2>What runs where</h2></div>
-        <p>The production profile is intentionally local-first. Internet egress is source-specific;
-          storage and inference bind to loopback; only the read-only portal is available on the
-          trusted private LAN.</p>
+        <div><p class="section-kicker">06 · Deployment</p><h2>Mac mini topology</h2></div>
+        <p>The current system is intentionally single-host. Process, data, and private experience
+          layers remain distinct even though they share one encrypted machine.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill live">Mac mini M4 · 16 GB</span>
-          <span class="pill">FileVault required</span>
-          <span class="pill">Container ports loopback</span>
-          <span class="pill">Private CIDR portal</span>
+          <span class="pill live">Single encrypted host</span>
+          <span class="pill">Loopback services</span>
+          <span class="pill">Private LAN portal</span>
         </div>
         <div class="svg-wrap">
-          <svg viewBox="0 0 1400 760" role="img" aria-labelledby="deployment-title deployment-desc">
-            <title id="deployment-title">Single-host production deployment topology</title>
-            <desc id="deployment-desc">External APIs connect to a Mac mini that contains OpenClaw,
-              the Python radar, Keychain, Ollama, Colima services, reports, analytics, and a
-              LaunchAgent portal read by private LAN clients.</desc>
+          <svg viewBox="0 0 1400 700" role="img" aria-labelledby="deployment-title deployment-desc">
+            <title id="deployment-title">Mac mini deployment topology</title>
+            <desc id="deployment-desc">Four horizontal deployment layers show control processes,
+              application processes, data services, and the private user experience.</desc>
             <defs>
-              <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c8b86"></path>
-              </marker>
-              <marker id="a6s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7543a5"></path>
+              <marker id="deployment-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
               </marker>
             </defs>
 
-            <rect class="zone" x="260" y="45" width="900" height="660" rx="18"></rect>
-            <rect class="zone-fill" x="490" y="370" width="620" height="280" rx="14"></rect>
+            <rect class="boundary" x="25" y="35" width="1350" height="625" rx="16"></rect>
+            <text class="svg-micro" x="50" y="65">FILEVAULT-PROTECTED MAC MINI</text>
+            <path class="edge" data-from="deployment-openclaw" data-to="deployment-cron" d="M400 145 H575" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-cron" data-to="deployment-lobster" d="M825 145 H1000" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-lobster" data-to="deployment-python" d="M1125 180 V215 H265 V245" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-python" data-to="deployment-postgres" d="M275 355 V420" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-python" data-to="deployment-minio" d="M245 355 V390 H700 V420" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-python" data-to="deployment-ollama" d="M225 355 V375 H1125 V420" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-postgres" data-to="deployment-portal" d="M275 530 V585" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-minio" data-to="deployment-portal" d="M700 530 V555 H375 V585" marker-end="url(#deployment-arrow)"></path>
+            <path class="edge" data-from="deployment-ollama" data-to="deployment-metrics" d="M1125 530 V585" marker-end="url(#deployment-arrow)"></path>
 
-            <path class="edge" d="M 215 220 H 330" marker-end="url(#a6)"></path>
-            <path class="edge" d="M 510 190 H 615" marker-end="url(#a6)"></path>
-            <path class="edge" d="M 795 190 H 900" marker-end="url(#a6)"></path>
-            <path class="edge" d="M 705 255 V 390" marker-end="url(#a6)"></path>
-            <path class="edge" d="M 990 255 V 390" marker-end="url(#a6)"></path>
-            <path class="edge-shadow" d="M 795 245 H 900" marker-end="url(#a6s)"></path>
-            <path class="edge" d="M 705 540 H 770" marker-end="url(#a6)"></path>
-            <path class="edge" d="M 980 540 H 1230" marker-end="url(#a6)"></path>
-            <path class="edge-soft" d="M 420 255 V 540 H 540" marker-end="url(#a6)"></path>
-
-            <text class="svg-micro" x="42" y="94">PUBLIC INTERNET</text>
-            <text class="svg-micro" x="286" y="76">MAC MINI · ENCRYPTED LOCAL HOST</text>
-            <text class="svg-micro" x="512" y="400">COLIMA / DOCKER · LOOPBACK PORTS</text>
-            <text class="svg-micro" x="1205" y="94">TRUSTED PRIVATE LAN</text>
-
-            <g>
-              <rect class="node node-external" x="45" y="130" width="170" height="180" rx="10"></rect>
-              <text class="svg-label" x="68" y="164">Approved egress</text>
-              <text class="svg-small" x="68" y="194">Brave · xAI</text>
-              <text class="svg-small" x="68" y="216">CISA · CVE · NVD</text>
-              <text class="svg-small" x="68" y="238">EPSS · OSV · GitHub</text>
-              <text class="svg-small" x="68" y="270">HTTPS + host allowlists</text>
-              <text class="svg-small" x="68" y="291">no browser collection</text>
+            <text class="svg-micro" x="50" y="94">CONTROL</text>
+            <g id="deployment-openclaw" class="node-group">
+              <rect class="node node-control" x="150" y="110" width="250" height="70" rx="10"></rect>
+              <text class="svg-label" x="174" y="141">OpenClaw Gateway</text>
+              <text class="svg-small" x="174" y="164">scheduler + policy boundary</text>
             </g>
-            <g>
-              <rect class="node node-control" x="330" y="125" width="180" height="130" rx="10"></rect>
-              <text class="svg-label" x="353" y="159">OpenClaw Gateway</text>
-              <text class="svg-small" x="353" y="185">cron · isolated session</text>
-              <text class="svg-small" x="353" y="207">Lobster-only capability</text>
-              <text class="svg-small" x="353" y="229">failure alert only</text>
+            <g id="deployment-cron" class="node-group">
+              <rect class="node node-control" x="575" y="110" width="250" height="70" rx="10"></rect>
+              <text class="svg-label" x="599" y="141">Isolated cron session</text>
+              <text class="svg-small" x="599" y="164">no message delivery tools</text>
             </g>
-            <g>
-              <rect class="node node-process" x="615" y="125" width="180" height="130" rx="10"></rect>
-              <text class="svg-label" x="638" y="159">Python radar</text>
-              <text class="svg-small" x="638" y="185">uv · CLI · pipeline</text>
-              <text class="svg-small" x="638" y="207">schemas · policies</text>
-              <text class="svg-small" x="638" y="229">deterministic render</text>
-            </g>
-            <g>
-              <rect class="node node-shadow" x="900" y="125" width="180" height="130" rx="10"></rect>
-              <text class="svg-label" x="923" y="159">Ollama</text>
-              <text class="svg-small" x="923" y="185">127.0.0.1:11434</text>
-              <text class="svg-small" x="923" y="207">Nomic embeddings</text>
-              <text class="svg-small" x="923" y="229">Qwen excluded</text>
-            </g>
-            <g>
-              <rect class="node node-security" x="330" y="390" width="180" height="150" rx="10"></rect>
-              <text class="svg-label" x="353" y="424">Host safeguards</text>
-              <text class="svg-small" x="353" y="450">macOS Keychain</text>
-              <text class="svg-small" x="353" y="472">FileVault gate</text>
-              <text class="svg-small" x="353" y="494">scoped credentials</text>
-              <text class="svg-small" x="353" y="516">LaunchAgents</text>
-            </g>
-            <g>
-              <rect class="node node-storage" x="540" y="435" width="165" height="210" rx="10"></rect>
-              <text class="svg-label" x="563" y="469">PostgreSQL 16</text>
-              <text class="svg-small" x="563" y="495">127.0.0.1:55432</text>
-              <text class="svg-small" x="563" y="517">durable records</text>
-              <text class="svg-small" x="563" y="539">idempotency</text>
-              <text class="svg-small" x="563" y="561">migrations</text>
-              <text class="svg-small" x="563" y="583">restore target</text>
-            </g>
-            <g>
-              <rect class="node node-storage" x="770" y="435" width="210" height="210" rx="10"></rect>
-              <text class="svg-label" x="793" y="469">MinIO</text>
-              <text class="svg-small" x="793" y="495">127.0.0.1:19000</text>
-              <text class="svg-small" x="793" y="517">threat-radar-raw</text>
-              <text class="svg-small" x="793" y="539">versioning</text>
-              <text class="svg-small" x="793" y="561">governance object lock</text>
-              <text class="svg-small" x="793" y="583">content-addressed bytes</text>
-            </g>
-            <g>
-              <rect class="node node-experience" x="1005" y="435" width="90" height="210" rx="10"></rect>
-              <text class="svg-label" x="1020" y="469">Local</text>
-              <text class="svg-small" x="1020" y="495">reports</text>
-              <text class="svg-small" x="1020" y="517">SQLite</text>
-              <text class="svg-small" x="1020" y="539">portal</text>
-              <text class="svg-small" x="1020" y="561">8088</text>
-              <text class="svg-small" x="1020" y="583">read only</text>
-            </g>
-            <g>
-              <rect class="node node-experience" x="1230" y="455" width="135" height="170" rx="10"></rect>
-              <text class="svg-label" x="1252" y="489">Private client</text>
-              <text class="svg-small" x="1252" y="515">browser</text>
-              <text class="svg-small" x="1252" y="537">private CIDR</text>
-              <text class="svg-small" x="1252" y="559">token optional</text>
-              <text class="svg-small" x="1252" y="581">TLS / overlay</text>
-              <text class="svg-small" x="1252" y="603">no public route</text>
+            <g id="deployment-lobster" class="node-group">
+              <rect class="node node-control" x="1000" y="110" width="250" height="70" rx="10"></rect>
+              <text class="svg-label" x="1024" y="141">Reviewed Lobster</text>
+              <text class="svg-small" x="1024" y="164">fixed workflow definitions</text>
             </g>
 
-            <text class="svg-small" x="1360" y="681" text-anchor="end">Private portal is the host's only read boundary crossing.</text>
+            <text class="svg-micro" x="50" y="228">APPLICATION</text>
+            <g id="deployment-python" class="node-group">
+              <rect class="node node-process" x="150" y="245" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="174" y="279">Python 3.12 worker</text>
+              <text class="svg-small" x="174" y="307">connectors · gateway</text>
+              <text class="svg-small" x="174" y="329">scoring · verification</text>
+            </g>
+            <g id="deployment-renderer" class="node-group">
+              <rect class="node node-process" x="585" y="245" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="609" y="279">Renderer + indexer</text>
+              <text class="svg-small" x="609" y="307">immutable HTML</text>
+              <text class="svg-small" x="609" y="329">SQLite analytics</text>
+            </g>
+            <g id="deployment-portal-service" class="node-group">
+              <rect class="node node-experience" x="1010" y="245" width="230" height="110" rx="10"></rect>
+              <text class="svg-label" x="1034" y="279">FastAPI portal</text>
+              <text class="svg-small" x="1034" y="307">authenticated read only</text>
+              <text class="svg-small" x="1034" y="329">private-LAN bind</text>
+            </g>
+
+            <text class="svg-micro" x="50" y="403">DATA + LOCAL AI</text>
+            <g id="deployment-postgres" class="node-group">
+              <rect class="node node-storage" x="150" y="420" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="174" y="454">PostgreSQL</text>
+              <text class="svg-small" x="174" y="482">127.0.0.1:55432</text>
+              <text class="svg-small" x="174" y="506">authoritative metadata</text>
+            </g>
+            <g id="deployment-minio" class="node-group">
+              <rect class="node node-storage" x="575" y="420" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="599" y="454">MinIO</text>
+              <text class="svg-small" x="599" y="482">127.0.0.1:19000</text>
+              <text class="svg-small" x="599" y="506">immutable raw objects</text>
+            </g>
+            <g id="deployment-ollama" class="node-group">
+              <rect class="node node-shadow" x="1000" y="420" width="250" height="110" rx="10"></rect>
+              <text class="svg-label" x="1024" y="454">Ollama + Nomic</text>
+              <text class="svg-small" x="1024" y="482">127.0.0.1:11434</text>
+              <text class="svg-small" x="1024" y="506">shadow embeddings only</text>
+            </g>
+
+            <text class="svg-micro" x="50" y="573">EXPERIENCE</text>
+            <g id="deployment-portal" class="node-group">
+              <rect class="node node-experience" x="150" y="585" width="450" height="55" rx="10"></rect>
+              <text class="svg-label" x="174" y="619">Authenticated private portal · LAN clients</text>
+            </g>
+            <g id="deployment-metrics" class="node-group">
+              <rect class="node node-shadow" x="910" y="585" width="340" height="55" rx="10"></rect>
+              <text class="svg-label" x="934" y="619">Local semantic telemetry · $0 API cost</text>
+            </g>
           </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="agents">
+      <div class="section-heading">
+        <div><p class="section-kicker">07 · Agent communication</p><h2>Live path versus configured graph</h2></div>
+        <p>The live production path is currently an orchestrator launching deterministic Python.
+          Every finding now emits a typed shadow graph and route plan, but no agent is dispatched yet.</p>
+      </div>
+      <div class="diagram-card">
+        <div class="diagram-meta">
+          <span class="pill live">Orchestrator live</span>
+          <span class="pill shadow">Shadow plan live</span>
+          <span class="pill shadow">Review chain fixture/test</span>
+          <span class="pill configured">Agent roles configured</span>
+          <span class="pill proposed">Execution adapter next</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1400 830" role="img" aria-labelledby="agents-title agents-desc">
+            <title id="agents-title">Current and configured agent communication paths</title>
+            <desc id="agents-desc">The upper panel shows the live control path. The lower panel
+              shows the configured specialist review graph and its missing typed dispatcher.</desc>
+            <defs>
+              <marker id="agents-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
+              </marker>
+              <marker id="agents-proposed-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8a6412"></path>
+              </marker>
+            </defs>
+
+            <rect class="panel" x="25" y="35" width="1350" height="270" rx="14"></rect>
+            <text class="svg-micro" x="50" y="68">CURRENT PRODUCTION COMMUNICATION</text>
+            <path class="edge" data-from="agents-cron" data-to="agents-orchestrator" d="M280 175 H340" marker-end="url(#agents-arrow)"></path>
+            <path class="edge" data-from="agents-orchestrator" data-to="agents-lobster" d="M590 175 H650" marker-end="url(#agents-arrow)"></path>
+            <path class="edge" data-from="agents-lobster" data-to="agents-worker" d="M900 175 H960" marker-end="url(#agents-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-packet" data-to="agents-dispatch" d="M270 560 H330" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-dispatch" data-to="agents-specialist" d="M540 520 H575 V460 H610" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-dispatch" data-to="agents-impact" d="M540 560 H610" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-dispatch" data-to="agents-skeptic" d="M540 600 H575 V660 H610" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-specialist" data-to="agents-verifier" d="M820 460 H860 V535 H930" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-impact" data-to="agents-verifier" d="M820 560 H930" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-skeptic" data-to="agents-verifier" d="M820 660 H860 V585 H930" marker-end="url(#agents-proposed-arrow)"></path>
+            <path class="edge-proposed" data-from="agents-verifier" data-to="agents-chief" d="M1140 560 H1190" marker-end="url(#agents-proposed-arrow)"></path>
+
+            <g id="agents-cron" class="node-group">
+              <rect class="node node-control" x="60" y="115" width="220" height="120" rx="10"></rect>
+              <text class="svg-label" x="84" y="149">OpenClaw cron</text>
+              <text class="svg-small" x="84" y="177">creates isolated session</text>
+              <text class="svg-small" x="84" y="200">fixed edition argument</text>
+              <rect class="status-live" x="194" y="213" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="227" y="226">LIVE</text>
+            </g>
+            <g id="agents-orchestrator" class="node-group">
+              <rect class="node node-control" x="340" y="115" width="250" height="120" rx="10"></rect>
+              <text class="svg-label" x="364" y="149">Radar orchestrator</text>
+              <text class="svg-small" x="364" y="177">Lobster + flow tools only</text>
+              <text class="svg-small" x="364" y="200">no research or messaging</text>
+              <rect class="status-live" x="504" y="213" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="537" y="226">LIVE</text>
+            </g>
+            <g id="agents-lobster" class="node-group">
+              <rect class="node node-control" x="650" y="115" width="250" height="120" rx="10"></rect>
+              <text class="svg-label" x="674" y="149">Reviewed Lobster</text>
+              <text class="svg-small" x="674" y="177">validate mode</text>
+              <text class="svg-small" x="674" y="200">launch fixed shell script</text>
+              <rect class="status-live" x="814" y="213" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="847" y="226">LIVE</text>
+            </g>
+            <g id="agents-worker" class="node-group">
+              <rect class="node node-process" x="960" y="115" width="350" height="120" rx="10"></rect>
+              <text class="svg-label" x="984" y="149">Deterministic Python pipeline</text>
+              <text class="svg-small" x="984" y="177">collect · sanitize · correlate · score</text>
+              <text class="svg-small" x="984" y="200">verify · persist · render</text>
+              <rect class="status-live" x="1224" y="213" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="1257" y="226">LIVE</text>
+            </g>
+
+            <rect class="panel" x="25" y="345" width="1350" height="445" rx="14"></rect>
+            <text class="svg-micro" x="50" y="378">CONFIGURED REVIEW GRAPH — NOT DISPATCHED IN THE LIVE DAILY RUN</text>
+            <g id="agents-packet" class="node-group">
+              <rect class="node node-storage" x="60" y="490" width="210" height="140" rx="10"></rect>
+              <text class="svg-label" x="84" y="524">Evidence packet</text>
+              <text class="svg-small" x="84" y="552">sanitized fields only</text>
+              <text class="svg-small" x="84" y="575">allowed evidence IDs</text>
+              <text class="svg-small" x="84" y="598">policy + score snapshot</text>
+            </g>
+            <g id="agents-dispatch" class="node-group">
+              <rect class="node node-shadow" x="330" y="490" width="210" height="140" rx="10"></rect>
+              <text class="svg-label" x="354" y="524">Shadow route plan</text>
+              <text class="svg-small" x="354" y="552">role allowlist</text>
+              <text class="svg-small" x="354" y="575">budget + deadline</text>
+              <text class="svg-small" x="354" y="598">zero calls + no authority</text>
+              <rect class="status-shadow" x="425" y="612" width="95" height="18" rx="9"></rect>
+              <text class="status-text" x="472.5" y="625">SHADOW LIVE</text>
+            </g>
+            <g id="agents-specialist" class="node-group">
+              <rect class="node node-process" x="610" y="420" width="210" height="80" rx="10"></rect>
+              <text class="svg-label" x="634" y="450">Threat specialist</text>
+              <text class="svg-small" x="634" y="475">technical judgment</text>
+              <text class="svg-small" x="634" y="494">cited claims only</text>
+            </g>
+            <g id="agents-impact" class="node-group">
+              <rect class="node node-process" x="610" y="520" width="210" height="80" rx="10"></rect>
+              <text class="svg-label" x="634" y="550">Impact analyst</text>
+              <text class="svg-small" x="634" y="575">exposure + relevance</text>
+              <text class="svg-small" x="634" y="594">inventory match only</text>
+            </g>
+            <g id="agents-skeptic" class="node-group">
+              <rect class="node node-security" x="610" y="620" width="210" height="80" rx="10"></rect>
+              <text class="svg-label" x="634" y="650">Adversarial skeptic</text>
+              <text class="svg-small" x="634" y="675">falsify + downgrade</text>
+              <text class="svg-small" x="634" y="694">surface contradictions</text>
+            </g>
+            <g id="agents-verifier" class="node-group">
+              <rect class="node node-security" x="930" y="490" width="210" height="140" rx="10"></rect>
+              <text class="svg-label" x="954" y="524">Citation verifier</text>
+              <text class="svg-small" x="954" y="552">direct support check</text>
+              <text class="svg-small" x="954" y="575">source independence</text>
+              <text class="svg-small" x="954" y="598">reject unsupported claims</text>
+            </g>
+            <g id="agents-chief" class="node-group">
+              <rect class="node node-control" x="1190" y="490" width="150" height="140" rx="10"></rect>
+              <text class="svg-label" x="1214" y="524">Chief</text>
+              <text class="svg-label" x="1214" y="544">coordinator</text>
+              <text class="svg-small" x="1214" y="575">final bounded</text>
+              <text class="svg-small" x="1214" y="597">disposition</text>
+            </g>
+            <text class="svg-note" x="60" y="740">Live reports now record this graph and each role's selected model route; frozen acceptance generates deterministic fixture assessments.</text>
+            <text class="svg-note" x="60" y="762">Production activation still requires a narrow execution adapter, shadow evaluation, and the promotion gates in view 10.</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="routing">
+      <div class="section-heading">
+        <div><p class="section-kicker">08 · Model routing</p><h2>Spend reasoning where ambiguity lives</h2></div>
+        <p>The daily pipeline now emits each role's selected route as a shadow plan. Deterministic
+          code remains live; economical, balanced, and chief models are not invoked.</p>
+      </div>
+      <div class="diagram-card">
+        <div class="diagram-meta">
+          <span class="pill live">Code route live</span>
+          <span class="pill shadow">Shadow plans live</span>
+          <span class="pill">Hard budget caps</span>
+          <span class="pill">No chief fallback</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1400 700" role="img" aria-labelledby="routing-title routing-desc">
+            <title id="routing-title">Deterministic-first model routing policy</title>
+            <desc id="routing-desc">A task and budget gate routes work into deterministic,
+              economical extractor, balanced analyst, or chief coordinator tiers.</desc>
+            <defs>
+              <marker id="routing-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
+              </marker>
+            </defs>
+
+            <path class="edge" data-from="routing-request" data-to="routing-budget" d="M300 335 H360" marker-end="url(#routing-arrow)"></path>
+            <path class="edge" data-from="routing-budget" data-to="routing-classifier" d="M610 335 H670" marker-end="url(#routing-arrow)"></path>
+            <path class="edge" data-from="routing-classifier" data-to="routing-deterministic" d="M920 305 H980 V130 H1030" marker-end="url(#routing-arrow)"></path>
+            <path class="edge" data-from="routing-classifier" data-to="routing-economical" d="M920 325 H980 V280 H1030" marker-end="url(#routing-arrow)"></path>
+            <path class="edge" data-from="routing-classifier" data-to="routing-balanced" d="M920 345 H980 V430 H1030" marker-end="url(#routing-arrow)"></path>
+            <path class="edge" data-from="routing-classifier" data-to="routing-chief" d="M920 365 H980 V580 H1030" marker-end="url(#routing-arrow)"></path>
+
+            <g id="routing-request" class="node-group">
+              <rect class="node node-storage" x="55" y="265" width="245" height="140" rx="10"></rect>
+              <text class="svg-label" x="79" y="299">Typed route request</text>
+              <text class="svg-small" x="79" y="329">task + priority score</text>
+              <text class="svg-small" x="79" y="352">Flash + disagreement flags</text>
+              <text class="svg-small" x="79" y="375">run + cluster + daily spend</text>
+            </g>
+            <g id="routing-budget" class="node-group">
+              <rect class="node node-security" x="360" y="245" width="250" height="180" rx="10"></rect>
+              <text class="svg-label" x="384" y="279">Budget + safety gate</text>
+              <text class="svg-small" x="384" y="309">cluster: $3 max</text>
+              <text class="svg-small" x="384" y="332">run: $12 max</text>
+              <text class="svg-small" x="384" y="355">day: $120 hard cap</text>
+              <text class="svg-small" x="384" y="378">$20 Flash reserve</text>
+              <text class="svg-small" x="384" y="401">deny when exhausted</text>
+            </g>
+            <g id="routing-classifier" class="node-group">
+              <rect class="node node-control" x="670" y="245" width="250" height="180" rx="10"></rect>
+              <text class="svg-label" x="694" y="279">Deterministic router</text>
+              <text class="svg-small" x="694" y="309">task family</text>
+              <text class="svg-small" x="694" y="332">promotion conditions</text>
+              <text class="svg-small" x="694" y="355">model allowlist</text>
+              <text class="svg-small" x="694" y="378">token + tool envelope</text>
+              <text class="svg-small" x="694" y="401">one retry maximum</text>
+            </g>
+            <g id="routing-deterministic" class="node-group">
+              <rect class="node node-process" x="1030" y="70" width="315" height="120" rx="10"></rect>
+              <text class="svg-label" x="1054" y="104">Deterministic code</text>
+              <text class="svg-small" x="1054" y="132">fetch · hash · normalize · score</text>
+              <text class="svg-small" x="1054" y="155">validate · render</text>
+              <rect class="status-live" x="1259" y="166" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="1292" y="179">LIVE</text>
+            </g>
+            <g id="routing-economical" class="node-group">
+              <rect class="node node-process" x="1030" y="220" width="315" height="120" rx="10"></rect>
+              <text class="svg-label" x="1054" y="254">Economical extractor</text>
+              <text class="svg-small" x="1054" y="282">structured extraction only</text>
+              <text class="svg-small" x="1054" y="305">12k input · 1.2k output · no tools</text>
+              <rect class="status-configured" x="1230" y="316" width="95" height="18" rx="9"></rect>
+              <text class="status-text" x="1277.5" y="329">NOT LIVE</text>
+            </g>
+            <g id="routing-balanced" class="node-group">
+              <rect class="node node-process" x="1030" y="370" width="315" height="120" rx="10"></rect>
+              <text class="svg-label" x="1054" y="404">Balanced analyst</text>
+              <text class="svg-small" x="1054" y="432">specialist · impact · skeptic</text>
+              <text class="svg-small" x="1054" y="455">evidence read + assessment submit</text>
+              <rect class="status-configured" x="1230" y="466" width="95" height="18" rx="9"></rect>
+              <text class="status-text" x="1277.5" y="479">NOT LIVE</text>
+            </g>
+            <g id="routing-chief" class="node-group">
+              <rect class="node node-control" x="1030" y="520" width="315" height="120" rx="10"></rect>
+              <text class="svg-label" x="1054" y="554">Chief coordinator</text>
+              <text class="svg-small" x="1054" y="582">GPT-5.6 Sol · Codex harness · max</text>
+              <text class="svg-small" x="1054" y="605">Flash or material disagreement only</text>
+              <rect class="status-configured" x="1230" y="616" width="95" height="18" rx="9"></rect>
+              <text class="status-text" x="1277.5" y="629">NOT LIVE</text>
+            </g>
+            <text class="svg-note" x="55" y="660">Current shadow output records routes only. Next, execute models without authority and compare disposition, citations, latency, and cost against frozen anchors.</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="loops">
+      <div class="section-heading">
+        <div><p class="section-kicker">09 · Loops and graphs</p><h2>Fast production, slow improvement</h2></div>
+        <p>The daily loop produces intelligence. A separate weekly DAG evaluates bounded challengers
+          against immutable reports and analyst labels, with a human gate before any policy change.</p>
+      </div>
+      <div class="diagram-card">
+        <div class="diagram-meta">
+          <span class="pill live">Daily loop live</span>
+          <span class="pill configured">DAG executor implemented</span>
+          <span class="pill disabled">Weekly schedule disabled</span>
+          <span class="pill">Approval + rollback</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1400 820" role="img" aria-labelledby="loops-title loops-desc">
+            <title id="loops-title">Daily production loop and weekly improvement DAG</title>
+            <desc id="loops-desc">The left panel shows the live daily production cycle. The right
+              panel shows the implemented but disabled weekly champion-challenger graph.</desc>
+            <defs>
+              <marker id="loops-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
+              </marker>
+              <marker id="loops-configured-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#25658f"></path>
+              </marker>
+            </defs>
+
+            <rect class="panel" x="25" y="35" width="430" height="740" rx="14"></rect>
+            <rect class="panel" x="485" y="35" width="890" height="740" rx="14"></rect>
+            <text class="svg-micro" x="50" y="68">LIVE DAILY PRODUCTION LOOP</text>
+            <text class="svg-micro" x="510" y="68">IMPLEMENTED WEEKLY IMPROVEMENT DAG · SCHEDULE DISABLED</text>
+
+            <path class="edge" data-from="loops-schedule" data-to="loops-observe" d="M240 185 V230" marker-end="url(#loops-arrow)"></path>
+            <path class="edge" data-from="loops-observe" data-to="loops-decide" d="M240 350 V395" marker-end="url(#loops-arrow)"></path>
+            <path class="edge" data-from="loops-decide" data-to="loops-publish" d="M240 515 V560" marker-end="url(#loops-arrow)"></path>
+            <path class="edge" data-from="loops-publish" data-to="loops-schedule" d="M90 620 H65 V125 H90" marker-end="url(#loops-arrow)"></path>
+            <path class="edge" data-from="loops-snapshot" data-to="loops-observation" d="M650 185 V225" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-snapshot" data-to="loops-acceptance" d="M650 185 V205 H1060 V225" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-observation" data-to="loops-baseline" d="M650 325 V370 H560 V400" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-observation" data-to="loops-low" d="M650 325 V400" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-observation" data-to="loops-high" d="M650 325 V370 H840 V400" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-baseline" data-to="loops-select" d="M620 500 V535 H890 V565" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-low" data-to="loops-select" d="M755 500 V535 H890 V565" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-high" data-to="loops-select" d="M890 500 V565" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-acceptance" data-to="loops-select" d="M1060 325 V535 H890 V565" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-select" data-to="loops-approval" d="M1015 625 H1065" marker-end="url(#loops-configured-arrow)"></path>
+            <path class="edge" data-from="loops-approval" data-to="loops-apply" d="M1190 680 V715 H1030" marker-end="url(#loops-configured-arrow)"></path>
+
+            <g id="loops-schedule" class="node-group">
+              <rect class="node node-control" x="90" y="100" width="300" height="85" rx="10"></rect>
+              <text class="svg-label" x="114" y="134">Schedule iteration</text>
+              <text class="svg-small" x="114" y="160">new run ID · fixed 24-hour window</text>
+            </g>
+            <g id="loops-observe" class="node-group">
+              <rect class="node node-external" x="90" y="230" width="300" height="120" rx="10"></rect>
+              <text class="svg-label" x="114" y="264">Observe</text>
+              <text class="svg-small" x="114" y="292">discover + corroborate</text>
+              <text class="svg-small" x="114" y="315">sanitize + preserve evidence</text>
+              <text class="svg-small" x="114" y="338">record source degradation</text>
+            </g>
+            <g id="loops-decide" class="node-group">
+              <rect class="node node-process" x="90" y="395" width="300" height="120" rx="10"></rect>
+              <text class="svg-label" x="114" y="429">Decide</text>
+              <text class="svg-small" x="114" y="457">correlate + score + verify</text>
+              <text class="svg-small" x="114" y="480">Nomic observes in shadow</text>
+              <text class="svg-small" x="114" y="503">select publication class</text>
+            </g>
+            <g id="loops-publish" class="node-group">
+              <rect class="node node-experience" x="90" y="560" width="300" height="120" rx="10"></rect>
+              <text class="svg-label" x="114" y="594">Publish + learn</text>
+              <text class="svg-small" x="114" y="622">immutable report + portal</text>
+              <text class="svg-small" x="114" y="645">append-only analyst feedback</text>
+              <text class="svg-small" x="114" y="668">next day uses new evidence</text>
+            </g>
+
+            <g id="loops-snapshot" class="node-group">
+              <rect class="node node-storage" x="535" y="100" width="230" height="85" rx="10"></rect>
+              <text class="svg-label" x="559" y="134">Policy snapshot</text>
+              <text class="svg-small" x="559" y="160">hash + frozen boundaries</text>
+            </g>
+            <g id="loops-observation" class="node-group">
+              <rect class="node node-storage" x="535" y="225" width="230" height="100" rx="10"></rect>
+              <text class="svg-label" x="559" y="259">Observe outcomes</text>
+              <text class="svg-small" x="559" y="287">reports + latest labels</text>
+              <text class="svg-small" x="559" y="309">security feedback gate</text>
+            </g>
+            <g id="loops-acceptance" class="node-group">
+              <rect class="node node-security" x="945" y="225" width="230" height="100" rx="10"></rect>
+              <text class="svg-label" x="969" y="259">Frozen acceptance</text>
+              <text class="svg-small" x="969" y="287">security + replay gates</text>
+              <text class="svg-small" x="969" y="309">must pass independently</text>
+            </g>
+            <g id="loops-baseline" class="node-group">
+              <rect class="node node-process" x="500" y="400" width="120" height="100" rx="10"></rect>
+              <text class="svg-label" x="520" y="434">Champion</text>
+              <text class="svg-small" x="520" y="462">current</text>
+              <text class="svg-small" x="520" y="484">threshold</text>
+            </g>
+            <g id="loops-low" class="node-group">
+              <rect class="node node-process" x="635" y="400" width="120" height="100" rx="10"></rect>
+              <text class="svg-label" x="655" y="434">Lower</text>
+              <text class="svg-small" x="655" y="462">bounded</text>
+              <text class="svg-small" x="655" y="484">challenger</text>
+            </g>
+            <g id="loops-high" class="node-group">
+              <rect class="node node-process" x="770" y="400" width="120" height="100" rx="10"></rect>
+              <text class="svg-label" x="790" y="434">Higher</text>
+              <text class="svg-small" x="790" y="462">bounded</text>
+              <text class="svg-small" x="790" y="484">challenger</text>
+            </g>
+            <g id="loops-select" class="node-group">
+              <rect class="node node-control" x="765" y="565" width="250" height="120" rx="10"></rect>
+              <text class="svg-label" x="789" y="599">Multi-metric selection</text>
+              <text class="svg-small" x="789" y="627">precision + recall</text>
+              <text class="svg-small" x="789" y="650">false alerts + utility</text>
+              <text class="svg-small" x="789" y="673">minimum 20 labels</text>
+            </g>
+            <g id="loops-approval" class="node-group">
+              <rect class="node node-security" x="1065" y="565" width="250" height="120" rx="10"></rect>
+              <text class="svg-label" x="1089" y="599">Human approval gate</text>
+              <text class="svg-small" x="1089" y="627">no automatic mutation</text>
+              <text class="svg-small" x="1089" y="650">base hash must match</text>
+              <text class="svg-small" x="1089" y="673">Lobster pauses here</text>
+            </g>
+            <g id="loops-apply" class="node-group">
+              <rect class="node node-storage" x="855" y="705" width="350" height="55" rx="10"></rect>
+              <text class="svg-label" x="879" y="739">Apply one bounded field + rollback receipt</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="section-heading">
+        <div><p class="section-kicker">10 · Activation plan</p><h2>Lean into advanced agents safely</h2></div>
+        <p>The right move is progressive activation: make communication typed and observable,
+          prove it in shadow, promote bounded analysis, then enable learning only after real labels.</p>
+      </div>
+      <div class="diagram-card">
+        <div class="diagram-meta">
+          <span class="pill live">Current baseline</span>
+          <span class="pill proposed">Recommended sequence</span>
+          <span class="pill">Fail-closed promotion gates</span>
+          <span class="pill">Rollback at every mutation</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1400 650" role="img" aria-labelledby="roadmap-title roadmap-desc">
+            <title id="roadmap-title">Four-stage advanced-agent activation plan</title>
+            <desc id="roadmap-desc">Four connected stages move from the current deterministic
+              baseline through shadow dispatch and gated agent analysis to grounded improvement.</desc>
+            <defs>
+              <marker id="roadmap-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8a6412"></path>
+              </marker>
+            </defs>
+
+            <path class="edge-proposed" data-from="roadmap-baseline" data-to="roadmap-dispatch" d="M330 275 H380" marker-end="url(#roadmap-arrow)"></path>
+            <path class="edge-proposed" data-from="roadmap-dispatch" data-to="roadmap-review" d="M670 275 H720" marker-end="url(#roadmap-arrow)"></path>
+            <path class="edge-proposed" data-from="roadmap-review" data-to="roadmap-learn" d="M1010 275 H1060" marker-end="url(#roadmap-arrow)"></path>
+
+            <g id="roadmap-baseline" class="node-group">
+              <rect class="node node-storage" x="40" y="120" width="290" height="310" rx="12"></rect>
+              <circle class="step-circle" cx="76" cy="157" r="18"></circle><text class="step-number" x="76" y="161">01</text>
+              <text class="svg-label" x="110" y="162">Keep deterministic anchor</text>
+              <text class="svg-small" x="68" y="208">Live today:</text>
+              <text class="svg-small" x="68" y="235">• safe acquisition + evidence</text>
+              <text class="svg-small" x="68" y="260">• lineage + scoring + verification</text>
+              <text class="svg-small" x="68" y="285">• immutable DB + private portal</text>
+              <text class="svg-small" x="68" y="325">Never delegate:</text>
+              <text class="svg-small" x="68" y="350">security controls, hard gates,</text>
+              <text class="svg-small" x="68" y="375">state ownership, or publishing</text>
+              <rect class="status-live" x="244" y="398" width="66" height="18" rx="9"></rect>
+              <text class="status-text" x="277" y="411">LIVE</text>
+            </g>
+            <g id="roadmap-dispatch" class="node-group">
+              <rect class="node node-shadow" x="380" y="120" width="290" height="310" rx="12"></rect>
+              <circle class="step-circle" cx="416" cy="157" r="18"></circle><text class="step-number" x="416" y="161">02</text>
+              <text class="svg-label" x="450" y="162">Shadow route + graph plan</text>
+              <text class="svg-small" x="408" y="208">Live report telemetry:</text>
+              <text class="svg-small" x="408" y="235">• three-layer role DAG</text>
+              <text class="svg-small" x="408" y="260">• deterministic model selection</text>
+              <text class="svg-small" x="408" y="285">• tools, tokens, harness, thinking</text>
+              <text class="svg-small" x="408" y="325">Safety posture:</text>
+              <text class="svg-small" x="408" y="350">zero model calls, no raw content,</text>
+              <text class="svg-small" x="408" y="375">no dispatch or publication authority</text>
+              <rect class="status-shadow" x="544" y="398" width="106" height="18" rx="9"></rect>
+              <text class="status-text" x="597" y="411">SHADOW LIVE</text>
+            </g>
+            <g id="roadmap-review" class="node-group">
+              <rect class="node node-proposed" x="720" y="120" width="290" height="310" rx="12"></rect>
+              <circle class="step-circle" cx="756" cy="157" r="18"></circle><text class="step-number" x="756" y="161">03</text>
+              <text class="svg-label" x="790" y="162">Execute bounded review</text>
+              <text class="svg-small" x="748" y="208">Parallel graph:</text>
+              <text class="svg-small" x="748" y="235">specialist + impact + skeptic</text>
+              <text class="svg-small" x="748" y="260">fan in to verifier + chief</text>
+              <text class="svg-small" x="748" y="300">Promotion gates:</text>
+              <text class="svg-small" x="748" y="325">• frozen acceptance passes</text>
+              <text class="svg-small" x="748" y="350">• quality improves without drift</text>
+              <text class="svg-small" x="748" y="375">• spend and timeout stay bounded</text>
+              <rect class="status-proposed" x="904" y="398" width="86" height="18" rx="9"></rect>
+              <text class="status-text" x="947" y="411">NEXT</text>
+            </g>
+            <g id="roadmap-learn" class="node-group">
+              <rect class="node node-proposed" x="1060" y="120" width="300" height="310" rx="12"></rect>
+              <circle class="step-circle" cx="1096" cy="157" r="18"></circle><text class="step-number" x="1096" y="161">04</text>
+              <text class="svg-label" x="1130" y="162">Enable grounded learning</text>
+              <text class="svg-small" x="1088" y="208">Only after feedback is real:</text>
+              <text class="svg-small" x="1088" y="235">• 20+ labeled findings</text>
+              <text class="svg-small" x="1088" y="260">• positive + negative examples</text>
+              <text class="svg-small" x="1088" y="285">• weekly frozen acceptance</text>
+              <text class="svg-small" x="1088" y="325">Human approval remains required.</text>
+              <text class="svg-small" x="1088" y="350">Every apply writes a rollback</text>
+              <text class="svg-small" x="1088" y="375">snapshot and immutable receipt.</text>
+              <rect class="status-proposed" x="1254" y="398" width="86" height="18" rx="9"></rect>
+              <text class="status-text" x="1297" y="411">GATED</text>
+            </g>
+
+            <rect class="panel" x="40" y="480" width="1320" height="110" rx="10"></rect>
+            <text class="svg-label" x="68" y="516">Why this order</text>
+            <text class="svg-small" x="68" y="546">Graph structure improves parallel reasoning and disagreement visibility; loops improve policy over time.</text>
+            <text class="svg-small" x="68" y="570">Neither is allowed to replace deterministic evidence, security, verification, budgets, human approval, or rollback.</text>
+          </svg>
+        </div>
+        <div class="callouts">
+          <div class="callout"><strong>First slice shipped</strong><span>Every live finding now
+            carries a typed shadow DAG and model-route plan with zero calls and zero authority.</span></div>
+          <div class="callout"><strong>First promotion gate</strong><span>Require better citation
+            coverage or contradiction detection with bounded latency and spend across frozen fixtures.</span></div>
+          <div class="callout"><strong>Do not shortcut labels</strong><span>The improvement loop
+            stays disabled until analyst feedback has enough positive and negative examples.</span></div>
         </div>
       </div>
     </section>
@@ -1178,8 +1570,8 @@
 
   <footer>
     <div>
-      <span>Threat Radar visual architecture · as-built reference</span>
-      <span>Source of truth: repository code, schemas, policies, ADRs, and runtime configuration</span>
+      <span>OpenClaw Emerging Threat Radar · as-built architecture and gated evolution path</span>
+      <span>Standalone HTML · inline CSS/SVG · no scripts or external assets</span>
     </div>
   </footer>
 </body>

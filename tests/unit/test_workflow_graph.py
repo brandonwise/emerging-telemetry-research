@@ -1,6 +1,6 @@
 import pytest
 
-from packages.workflow.graph import GraphNode, execute_graph
+from packages.workflow.graph import GraphNode, execute_graph, plan_graph
 
 
 def test_graph_executes_ready_nodes_as_a_parallel_layer() -> None:
@@ -39,3 +39,29 @@ def test_graph_rejects_cycles() -> None:
                 GraphNode("b", ("a",), lambda _outputs: {}),
             )
         )
+
+
+def test_graph_plan_exposes_layers_without_executing_handlers() -> None:
+    plan = plan_graph(
+        {
+            "specialist": (),
+            "impact": (),
+            "skeptic": (),
+            "verifier": ("specialist", "impact", "skeptic"),
+            "coordinator": ("verifier",),
+        }
+    )
+
+    assert plan.to_contract() == {
+        "layers": [
+            ["impact", "skeptic", "specialist"],
+            ["verifier"],
+            ["coordinator"],
+        ],
+        "edges": [
+            {"from": "specialist", "to": "verifier"},
+            {"from": "impact", "to": "verifier"},
+            {"from": "skeptic", "to": "verifier"},
+            {"from": "verifier", "to": "coordinator"},
+        ],
+    }

@@ -19,7 +19,7 @@ fail-closed.
 
 - `docs/index.html` — self-contained visual architecture and implementation guide.
 - `docs/architecture-visual.html` — as-built end-to-end architecture, runtime, trust, data, local
-  inference, and deployment diagrams.
+  inference, deployment, agent communication, model routing, loops, graph, and activation diagrams.
 - `docs/sample-daily-brief.html` — rich sample threat intelligence report.
 
 ## Build assets

@@ -166,6 +166,8 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 - Raw, sanitized, evidence, report, policy, and security records are append-only where required.
 - Local Nomic embeddings are loopback-only, bounded, vector-validated, and shadow-only; vectors are
   never persisted and have no publication authority.
+- Live findings emit content-free shadow agent plans with the configured DAG, model route, token
+  envelope, tools, harness, and reasoning tier; no agent or model is invoked by that planning step.
 - CI actions and service images are version pinned; CI runs schema, lint, type, test, PostgreSQL,
   replay, security, and frozen acceptance gates.
 - OpenTelemetry exposes bounded, content-free workflow/source/model/delivery/security metrics.
@@ -174,7 +176,7 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 
 [Open the complete visual architecture](docs/architecture-visual.html) for the as-built system map,
 scheduled run sequence, trust boundaries, local-inference rail, state ownership, and deployment
-topology.
+topology, plus explicit agent-communication, model-routing, graph, loop, and activation views.
 
 ```text
 approved source plan
@@ -184,10 +186,14 @@ approved source plan
   → schema-bound observations
   → entity + source-lineage graph
   → deterministic scoring
-  → specialist → skeptic → citation verifier → coordinator
   → verified report JSON
   → PostgreSQL + analytics index → deterministic HTML + private portal
 ```
+
+The role-specific specialist, impact, skeptic, verifier, and chief agents are configured and their
+contracts are exercised by frozen deterministic fixtures. The live daily pipeline now emits their
+three-layer DAG and selected model routes in shadow telemetry, but does not dispatch agents or call
+models. The visual architecture separates that live shadow plan from the gated execution sequence.
 
 OpenClaw cron and reviewed Lobster workflows can own orchestration, but Claude Code, Codex, shell,
 cron, launchd, systemd, and CI can invoke the same CLI. PostgreSQL or SQLite owns durable state.

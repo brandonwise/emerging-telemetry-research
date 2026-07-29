@@ -5,6 +5,7 @@ import py_compile
 import re
 import shutil
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,74 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED_PARTS = {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".venv", "reports"}
+
+
+class ArchitectureVisualParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+        self.duplicate_ids: set[str] = set()
+        self.anchor_targets: set[str] = set()
+        self.node_ids: set[str] = set()
+        self.edge_targets: list[tuple[str | None, str | None]] = []
+        self.edge_without_marker = 0
+        self.edge_after_node = 0
+        self.section_count = 0
+        self.svg_count = 0
+        self.svg_title_count = 0
+        self.svg_desc_count = 0
+        self.forbidden_elements: set[str] = set()
+        self.remote_assets: set[str] = set()
+        self._svg_depth = 0
+        self._svg_node_seen = False
+
+    def handle_starttag(
+        self,
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
+        values = dict(attrs)
+        identifier = values.get("id")
+        if identifier is not None:
+            if identifier in self.ids:
+                self.duplicate_ids.add(identifier)
+            self.ids.add(identifier)
+        href = values.get("href")
+        if tag == "a" and href is not None and href.startswith("#"):
+            self.anchor_targets.add(href[1:])
+        if tag == "section":
+            self.section_count += 1
+        if tag == "svg":
+            self.svg_count += 1
+            self._svg_depth += 1
+            self._svg_node_seen = False
+        elif self._svg_depth and tag == "title":
+            self.svg_title_count += 1
+        elif self._svg_depth and tag == "desc":
+            self.svg_desc_count += 1
+        if self._svg_depth and tag == "g" and identifier is not None:
+            self.node_ids.add(identifier)
+            self._svg_node_seen = True
+        if self._svg_depth and tag in {"path", "line", "polyline"}:
+            source = values.get("data-from")
+            target = values.get("data-to")
+            if source is not None or target is not None:
+                self.edge_targets.append((source, target))
+                if values.get("marker-end") is None:
+                    self.edge_without_marker += 1
+                if self._svg_node_seen:
+                    self.edge_after_node += 1
+        if tag in {"script", "foreignobject"}:
+            self.forbidden_elements.add(tag)
+        for attribute in ("src", "href"):
+            value = values.get(attribute)
+            if value is not None and value.startswith(("http://", "https://", "//")):
+                self.remote_assets.add(value)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "svg":
+            self._svg_depth -= 1
+            self._svg_node_seen = False
 
 
 def repository_files(pattern: str) -> list[Path]:
@@ -226,6 +295,54 @@ def check_supply_chain(failures: list[str]) -> None:
             failures.append("OpenClaw boundary plugin syntax: " + result.stderr.strip())
 
 
+def check_architecture_visual(failures: list[str]) -> None:
+    path = ROOT / "docs/architecture-visual.html"
+    parser = ArchitectureVisualParser()
+    try:
+        parser.feed(path.read_text(encoding="utf-8"))
+        parser.close()
+    except (OSError, ValueError) as exc:
+        failures.append(f"Architecture visual could not be parsed: {exc}")
+        return
+    if parser.section_count != 10 or parser.svg_count != 10:
+        failures.append(
+            "Architecture visual must contain exactly ten sections and ten SVG diagrams"
+        )
+    if parser.svg_title_count != parser.svg_count or parser.svg_desc_count != parser.svg_count:
+        failures.append("Every architecture SVG must contain one title and one description")
+    if parser.duplicate_ids:
+        failures.append(
+            "Architecture visual contains duplicate IDs: "
+            + ", ".join(sorted(parser.duplicate_ids))
+        )
+    missing_anchors = sorted(parser.anchor_targets - parser.ids)
+    if missing_anchors:
+        failures.append(
+            "Architecture visual contains broken anchors: " + ", ".join(missing_anchors)
+        )
+    broken_edges = sorted(
+        f"{source or '<missing>'}->{target or '<missing>'}"
+        for source, target in parser.edge_targets
+        if source not in parser.node_ids or target not in parser.node_ids
+    )
+    if broken_edges:
+        failures.append(
+            "Architecture visual contains connectors with missing endpoints: "
+            + ", ".join(broken_edges)
+        )
+    if parser.edge_without_marker:
+        failures.append("Every directed architecture connector must have an arrow marker")
+    if parser.edge_after_node:
+        failures.append("Architecture connectors must be drawn before nodes")
+    if parser.forbidden_elements:
+        failures.append(
+            "Architecture visual contains forbidden elements: "
+            + ", ".join(sorted(parser.forbidden_elements))
+        )
+    if parser.remote_assets:
+        failures.append("Architecture visual must not load remote assets")
+
+
 def main() -> None:
     failures: list[str] = []
 
@@ -274,6 +391,7 @@ def main() -> None:
     check_contracts(failures)
     check_migrations(failures)
     check_supply_chain(failures)
+    check_architecture_visual(failures)
 
     if failures:
         raise SystemExit("Validation failed:\n- " + "\n- ".join(failures))
