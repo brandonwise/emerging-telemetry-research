@@ -198,3 +198,41 @@ async def test_explicit_expected_not_found_response_is_returned() -> None:
     )
     assert result.status_code == 404
     assert result.content == b'{"message":"not found"}'
+
+
+@pytest.mark.asyncio
+async def test_safe_fetch_supports_bounded_post_without_following_redirects() -> None:
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        assert request.method == "POST"
+        assert request.content == b'{"query":"security"}'
+        return httpx.Response(
+            200,
+            headers={"Content-Type": "application/json"},
+            content=b'{"ok":true}',
+            request=request,
+        )
+
+    service = SafeFetchService(
+        resolver=SequenceResolver(
+            {"api.example": iter([("93.184.216.34",), ("93.184.216.34",)])}
+        ),
+        transport=httpx.MockTransport(handler),
+    )
+    result = await service.fetch(
+        SafeFetchRequest(
+            source_id="fixture-post",
+            url="https://api.example/query",
+            allowed_hosts=("api.example",),
+            allowed_content_types=("application/json",),
+            method="POST",
+            body=b'{"query":"security"}',
+            headers={"Content-Type": "application/json"},
+            max_redirects=0,
+        )
+    )
+
+    assert result.content == b'{"ok":true}'
+    assert len(calls) == 1

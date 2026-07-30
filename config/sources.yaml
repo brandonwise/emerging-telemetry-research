@@ -153,18 +153,63 @@ sources:
       - curated_accounts
       - query_templates
 
-  - id: reddit-security
-    name: Curated Reddit Security Signals
+  - id: reddit-security-web
+    name: Reddit Security Surface Search
     class: social_research
     trust_tier: 2
-    enabled: false
-    adapter: reddit
+    enabled: true
+    collection_approval_id: discord-1532390370367901717
+    adapter: brave_surface_search
     schedule: "13 * * * *"
     rate_limit_per_minute: 10
     confirmation_role: discovery
     configuration_required:
       - approved_access
       - communities
+
+  - id: reddit-security
+    name: Reddit OAuth Security Signals
+    class: social_research
+    trust_tier: 2
+    enabled: false
+    adapter: reddit_oauth
+    schedule: "17 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    configuration_required:
+      - approved_api_access
+      - oauth_access_token
+      - descriptive_user_agent
+      - communities
+
+  - id: tiktok-security
+    name: TikTok Security Signals
+    class: social_research
+    trust_tier: 2
+    enabled: true
+    collection_approval_id: discord-1532390370367901717
+    adapter: brave_surface_search
+    schedule: "19 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    configuration_required:
+      - approved_access
+      - query_templates
+
+  - id: tiktok-research
+    name: TikTok Research API Security Signals
+    class: social_research
+    trust_tier: 2
+    enabled: false
+    adapter: tiktok_research_api
+    schedule: "29 * * * *"
+    rate_limit_per_minute: 10
+    confirmation_role: discovery
+    configuration_required:
+      - approved_research_project
+      - research_data_basic_scope
+      - client_access_token
+      - keywords
 
   - id: brave-web
     name: Brave Web Discovery

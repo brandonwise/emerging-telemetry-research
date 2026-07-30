@@ -312,8 +312,7 @@ def check_architecture_visual(failures: list[str]) -> None:
         failures.append("Every architecture SVG must contain one title and one description")
     if parser.duplicate_ids:
         failures.append(
-            "Architecture visual contains duplicate IDs: "
-            + ", ".join(sorted(parser.duplicate_ids))
+            "Architecture visual contains duplicate IDs: " + ", ".join(sorted(parser.duplicate_ids))
         )
     missing_anchors = sorted(parser.anchor_targets - parser.ids)
     if missing_anchors:
@@ -341,6 +340,64 @@ def check_architecture_visual(failures: list[str]) -> None:
         )
     if parser.remote_assets:
         failures.append("Architecture visual must not load remote assets")
+
+
+def check_universal_runtime_visual(failures: list[str]) -> None:
+    path = ROOT / "docs/universal-agent-runtime.html"
+    parser = ArchitectureVisualParser()
+    try:
+        text = path.read_text(encoding="utf-8")
+        parser.feed(text)
+        parser.close()
+    except (OSError, ValueError) as exc:
+        failures.append(f"Universal runtime visual could not be parsed: {exc}")
+        return
+    if parser.svg_count != 1:
+        failures.append("Universal runtime visual must contain exactly one SVG")
+    if parser.svg_title_count != 1 or parser.svg_desc_count != 1:
+        failures.append("Universal runtime SVG must contain one title and one description")
+    if parser.duplicate_ids:
+        failures.append(
+            "Universal runtime visual contains duplicate IDs: "
+            + ", ".join(sorted(parser.duplicate_ids))
+        )
+    broken_edges = sorted(
+        f"{source or '<missing>'}->{target or '<missing>'}"
+        for source, target in parser.edge_targets
+        if source not in parser.node_ids or target not in parser.node_ids
+    )
+    if broken_edges:
+        failures.append(
+            "Universal runtime visual contains connectors with missing endpoints: "
+            + ", ".join(broken_edges)
+        )
+    if parser.edge_without_marker:
+        failures.append("Every universal runtime connector must have an arrow marker")
+    if parser.edge_after_node:
+        failures.append("Universal runtime connectors must be drawn before nodes")
+    if parser.forbidden_elements:
+        failures.append(
+            "Universal runtime visual contains forbidden elements: "
+            + ", ".join(sorted(parser.forbidden_elements))
+        )
+    if parser.remote_assets:
+        failures.append("Universal runtime visual must not load remote assets")
+    required_labels = {
+        "X researchers",
+        "Reddit security",
+        "TikTok security",
+        "GitHub security",
+        "OpenClaw",
+        "Codex",
+        "Claude",
+        "Perplexity",
+        "Hard gate",
+    }
+    missing_labels = sorted(label for label in required_labels if label not in text)
+    if missing_labels:
+        failures.append(
+            "Universal runtime visual omits required labels: " + ", ".join(missing_labels)
+        )
 
 
 def main() -> None:
@@ -377,9 +434,13 @@ def main() -> None:
         "THREAT_MODEL.md",
         "THREAT_MODEL_APPROVAL.md",
         "EVALS.md",
+        "docs/SETUP.md",
+        "docs/EXTENDING.md",
         "docs/index.html",
         "docs/sample-daily-brief.html",
+        "docs/universal-agent-runtime.html",
         "openapi/openapi.yaml",
+        "scripts/setup_openclaw_agents.py",
         "openclaw/plugins/threat-radar-boundary/openclaw.plugin.json",
         "openclaw/workflows/frozen-acceptance.lobster",
     ]
@@ -392,6 +453,7 @@ def main() -> None:
     check_migrations(failures)
     check_supply_chain(failures)
     check_architecture_visual(failures)
+    check_universal_runtime_visual(failures)
 
     if failures:
         raise SystemExit("Validation failed:\n- " + "\n- ".join(failures))

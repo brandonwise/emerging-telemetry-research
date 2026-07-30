@@ -64,6 +64,9 @@ export RADAR_S3_SECRET_ACCESS_KEY="${MINIO_ROOT_PASSWORD}"
 export RADAR_S3_BUCKET="threat-radar-raw"
 export RADAR_S3_REGION="us-east-1"
 export RADAR_S3_SERVER_SIDE_ENCRYPTION="none"
+export RADAR_AGENT_MODE="${RADAR_AGENT_MODE:-shadow}"
+export RADAR_AGENT_ADAPTER="${RADAR_AGENT_ADAPTER:-openclaw}"
+export RADAR_AGENT_TIMEOUT_SECONDS="${RADAR_AGENT_TIMEOUT_SECONDS:-300}"
 
 cd "${radar_repo_root}"
 exec uv run threat-radar live run \

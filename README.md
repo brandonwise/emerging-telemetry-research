@@ -1,12 +1,13 @@
 # Emerging Threat Radar
 
-A security-first, evidence-backed cyber-threat early-warning system with optional OpenClaw,
-Claude Code, Codex, and generic automation adapters.
+A security-first, evidence-backed cyber-threat early-warning system that runs with OpenClaw,
+Claude Code, Codex, Perplexity, any OpenAI-compatible API, or a plain scheduler.
 
-The approved local production path uses Brave Search API and xAI server-side X Search for bounded
-source-native discovery, including pre-CVE supply-chain, malicious-package, campaign, identity,
-cloud, vendor, and AI/LLM activity. When identifiers exist, it corroborates CVEs with CISA KEV,
-CVE List V5, NVD, FIRST EPSS, OSV, and GitHub Global Security Advisories. It captures evidence in
+The approved local production path uses surface-tagged Brave searches across the open web, security
+research sites, GitHub, Reddit, and TikTok, plus xAI server-side X Search. It looks for pre-CVE
+supply-chain, malicious-package, campaign, identity, cloud, vendor, and AI/LLM activity. When
+identifiers exist, it corroborates CVEs with CISA KEV, CVE List V5, NVD, FIRST EPSS, OSV, and
+GitHub Global Security Advisories. It captures evidence in
 PostgreSQL and an
 object-locked, versioned S3-compatible store; sanitizes hostile content; normalizes entities; builds
 source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
@@ -24,11 +25,8 @@ own evidence, workflow state, analytics, or report history.
 Requires Python 3.12 and `uv`.
 
 ```bash
-uv sync --extra dev --python 3.12
-uv run python scripts/validate_repo.py
-uv run pytest
-uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
-uv run python scripts/verify_restore.py --output /tmp/radar-restore
+make setup
+make check
 ```
 
 Generate one complete fixture report:
@@ -45,7 +43,7 @@ Run the zero-infrastructure portable profile:
 ```bash
 export BRAVE_API_KEY="from-your-secret-store"
 export XAI_API_KEY="from-your-secret-store"
-uv run threat-radar portable run --json
+make agent-shadow AGENT_ADAPTER=openai-compatible
 ```
 
 This writes immutable evidence objects to `state/objects`, verified reports to
@@ -64,11 +62,12 @@ bucket retention, writes one verified report to PostgreSQL and the analytics ind
 file-only audit plan. Scheduled runs do not send Discord messages.
 
 Live output reports `source_native_signal_count`, `qualified_emerging_count`, and
-`emerging_signal_count` so operators can distinguish discovery volume from qualified and
-published pre-CVE intelligence. The five-item brief reserves two slots for qualifying source-native
-findings. Strong title-level matches are clustered with complete-link agreement, and source-native
-coverage that maps to exactly one CVE established in the same run is reconciled into that CVE
-finding instead of appearing twice.
+`emerging_signal_count`. Every Brave query also keeps its surface ID, so GitHub, Reddit, TikTok,
+general web research, and X no longer collapse into one vague bucket. `make eval-coverage` measures
+surface count, X share, largest-source concentration, attribution, and whether every finding has
+non-X evidence. The five-item brief reserves two slots for qualifying source-native findings.
+Generic explainers and evergreen guidance are filtered before source-native promotion so a freshly
+indexed tutorial cannot masquerade as an emerging event.
 
 The approved local profile also sends bounded sanitized signal text to the installed
 `nomic-embed-text:latest` model through loopback-only Ollama. It runs as a shadow observer: semantic
@@ -113,7 +112,7 @@ access token by default. Trusted-network deployments can explicitly use
 `scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
 as Tailscale. The portal is read-only and includes a filterable findings archive, categories and
-tags, source-native website/X excerpts and links, taxonomy trends, report search/detail, source
+tags, source-native web/social excerpts and links, taxonomy trends, report search/detail, source
 health, provider/model/workflow cost analysis, print styling, and finding/report CSV/JSON/HTML
 exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
@@ -127,12 +126,13 @@ Choose one first-class adapter and generate it into a project checkout:
 uv run threat-radar setup generate --platform codex --json
 ```
 
-Replace `codex` with `openclaw`, `claude-code`, or `generic` for another adapter.
+Replace `codex` with `openclaw`, `claude-code`, `perplexity`, or `generic` for another adapter.
 
 The Claude Code adapter creates `CLAUDE.md` plus a project skill; the Codex adapter creates
-`AGENTS.md` plus a repository skill; OpenClaw receives a Lobster workflow; generic deployments get
-a shell/cron path. All call `threat-radar portable run`, keep secrets outside prompt context, and
-leave external delivery as a separate approval boundary.
+`AGENTS.md` plus a repository skill; OpenClaw receives a Lobster workflow; Perplexity uses the
+OpenAI-compatible HTTPS boundary; generic deployments get a shell/cron path. All call the same
+CLI, keep secrets outside prompt context, and leave external delivery as a separate approval
+boundary.
 
 These adapter shapes follow the official
 [Claude Code project configuration and skills model](https://code.claude.com/docs/en/features-overview)
@@ -166,34 +166,43 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 - Raw, sanitized, evidence, report, policy, and security records are append-only where required.
 - Local Nomic embeddings are loopback-only, bounded, vector-validated, and shadow-only; vectors are
   never persisted and have no publication authority.
-- Live findings emit content-free shadow agent plans with the configured DAG, model route, token
-  envelope, tools, harness, and reasoning tier; no agent or model is invoked by that planning step.
+- Bounded agents have no tools, memory, collection credentials, delivery credentials, or
+  publication authority.
+- `plan` records routes without calls; `shadow` executes and records reviews; `active` may add
+  bounded narrative analysis while deterministic publication gates stay final.
+- Specialist, impact, and skeptic roles run in parallel, then fan into citation verification and a
+  coordinator. A failed layer stops downstream dispatch.
+- Agent evals persist every returned assessment plus role completion, claim-level citation
+  coverage, per-role disposition agreement, latency, tokens, cost, and fixture stability.
 - CI actions and service images are version pinned; CI runs schema, lint, type, test, PostgreSQL,
   replay, security, and frozen acceptance gates.
 - OpenTelemetry exposes bounded, content-free workflow/source/model/delivery/security metrics.
 
 ## Architecture
 
-[Open the complete visual architecture](docs/architecture-visual.html) for the as-built system map,
-scheduled run sequence, trust boundaries, local-inference rail, state ownership, and deployment
-topology, plus explicit agent-communication, model-routing, graph, loop, and activation views.
+[Open the complete visual architecture](docs/architecture-visual.html) for the as-built system map
+and [the universal runtime diagram](docs/universal-agent-runtime.html) for the provider-neutral
+agent and source boundaries.
 
 ```text
-approved source plan
+X · Reddit · TikTok · GitHub · web · official sources
   → centralized safe fetch
   → immutable quarantine
   → content-security gateway
   → schema-bound observations
   → entity + source-lineage graph
   → deterministic scoring
+  → bounded specialist + impact + skeptic
+  → citation verifier → coordinator
+  → deterministic publication gate
   → verified report JSON
   → PostgreSQL + analytics index → deterministic HTML + private portal
 ```
 
-The role-specific specialist, impact, skeptic, verifier, and chief agents are configured and their
-contracts are exercised by frozen deterministic fixtures. The live daily pipeline now emits their
-three-layer DAG and selected model routes in shadow telemetry, but does not dispatch agents or call
-models. The visual architecture separates that live shadow plan from the gated execution sequence.
+The role-specific specialist, impact, skeptic, verifier, and coordinator are live behind one
+provider-neutral runtime. OpenClaw, Codex, Claude, and OpenAI-compatible adapters all consume the
+same sanitized packet and return the same strict assessment contract. The deterministic pipeline,
+not the coordinator, owns publication.
 
 OpenClaw cron and reviewed Lobster workflows can own orchestration, but Claude Code, Codex, shell,
 cron, launchd, systemd, and CI can invoke the same CLI. PostgreSQL or SQLite owns durable state.
@@ -253,8 +262,9 @@ limited to this local OpenClaw instance, the explicitly enabled sources, and the
 Discord destination. Browser collection, arbitrary web execution, authenticated vendor portals,
 malware detonation, organization inventory, and autonomous defensive action remain out of scope.
 
-Disabled source classes stay fail-closed until their terms, credentials, and threat-model changes
-receive separate approval.
+Direct Reddit OAuth and TikTok Research API adapters are included but stay fail-closed until their
+platform approval, source-policy record, and credentials exist. Their default surface coverage
+comes through Brave search and is tagged separately in telemetry.
 
 ## Documentation
 
@@ -268,6 +278,9 @@ receive separate approval.
 - `docs/adr/` — architecture decisions and security deviations
 - `docs/adr/0008-grounded-self-improvement-graph.md` — loop, graph, approval, and rollback design
 - `docs/PORTABILITY.md` — portable profiles and platform onboarding
+- `docs/SETUP.md` — install, configure, run, evaluate, and promote
+- `docs/EXTENDING.md` — add a source, provider, role, or platform safely
 - `docs/PORTAL.md` — local/private-LAN portal operations and security
 - `docs/architecture-visual.html` — standalone end-to-end visual architecture
+- `docs/universal-agent-runtime.html` — standalone source and provider-neutral runtime diagram
 - `docs/adr/0009-portable-analytics-and-portal.md` — storage and portal decision record

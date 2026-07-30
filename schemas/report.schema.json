@@ -24,12 +24,18 @@
     "findings": {"type": "array", "maxItems": 100, "items": {"$ref": "finding.schema.json"}},
     "degraded_sources": {"type": "array", "items": {"type": "string"}},
     "source_health": {"type": "array", "items": {"$ref": "#/$defs/source_health"}},
+    "discovery_telemetry": {"$ref": "#/$defs/discovery_telemetry"},
     "usage": {"type": "array", "items": {"$ref": "#/$defs/usage"}},
     "semantic_shadow": {"$ref": "#/$defs/semantic_shadow"},
     "agent_shadow_plans": {
       "type": "array",
       "maxItems": 100,
       "items": {"$ref": "#/$defs/agent_shadow_plan"}
+    },
+    "agent_reviews": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/agent_review"}
     },
     "verification": {
       "type": "object",
@@ -43,6 +49,55 @@
     }
   },
   "$defs": {
+    "discovery_telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovered_signal_count",
+        "prepared_signal_count",
+        "cited_evidence_count",
+        "surfaces"
+      ],
+      "properties": {
+        "discovered_signal_count": {"type": "integer", "minimum": 0},
+        "prepared_signal_count": {"type": "integer", "minimum": 0},
+        "cited_evidence_count": {"type": "integer", "minimum": 0},
+        "surfaces": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {"$ref": "#/$defs/discovery_surface"}
+        }
+      }
+    },
+    "discovery_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "status",
+        "requests",
+        "discovered_signal_count",
+        "prepared_signal_count",
+        "cited_evidence_count",
+        "selected_finding_count",
+        "source_types"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1, "maxLength": 100},
+        "status": {"enum": ["healthy", "degraded", "failed", "disabled"]},
+        "requests": {"type": "integer", "minimum": 0},
+        "discovered_signal_count": {"type": "integer", "minimum": 0},
+        "prepared_signal_count": {"type": "integer", "minimum": 0},
+        "cited_evidence_count": {"type": "integer", "minimum": 0},
+        "selected_finding_count": {"type": "integer", "minimum": 0},
+        "source_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 20,
+          "items": {"type": "string", "minLength": 1, "maxLength": 100}
+        }
+      }
+    },
     "source_health": {
       "type": "object",
       "additionalProperties": false,
@@ -218,6 +273,66 @@
             }
           }
         }
+      }
+    },
+    "agent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "status",
+        "review_id",
+        "run_id",
+        "finding_id",
+        "created_at",
+        "graph",
+        "assessments",
+        "failures",
+        "duration_ms",
+        "raw_source_content_included",
+        "dispatch_executed",
+        "report_mutation_executed",
+        "publication_authority"
+      ],
+      "properties": {
+        "mode": {"enum": ["shadow", "active"]},
+        "status": {"enum": ["completed", "degraded"]},
+        "review_id": {"type": "string", "pattern": "^ar_[A-Za-z0-9_-]+$"},
+        "run_id": {"type": "string", "pattern": "^run_[A-Za-z0-9_-]+$"},
+        "finding_id": {"type": "string", "pattern": "^fd_[A-Za-z0-9_-]+$"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "graph": {"$ref": "#/$defs/agent_graph"},
+        "assessments": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {"$ref": "assessment.schema.json"}
+        },
+        "failures": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "error"],
+            "properties": {
+              "role": {
+                "enum": [
+                  "specialist",
+                  "impact",
+                  "skeptic",
+                  "citation_verifier",
+                  "coordinator"
+                ]
+              },
+              "error": {"type": "string", "maxLength": 500}
+            }
+          }
+        },
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "raw_source_content_included": {"const": false},
+        "dispatch_executed": {"const": true},
+        "report_mutation_executed": {"type": "boolean"},
+        "publication_authority": {"const": false}
       }
     },
     "agent_route": {

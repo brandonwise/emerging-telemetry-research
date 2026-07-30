@@ -31,6 +31,8 @@
     .source { padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
     .source a { color:var(--accent); font-weight:700; }
     .source p { font-size:.9rem; }
+    .review { border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:12px; background:var(--panel); }
+    .review-role { border-left:3px solid var(--accent); padding-left:12px; margin-top:14px; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-top:14px; }
     .metric { background:var(--panel); border-radius:8px; padding:12px; }
     .metric dt { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
@@ -50,7 +52,7 @@
 <body>
 <main>
   <header>
-    <div class="eyebrow">OpenClaw Emerging Threat Radar</div>
+    <div class="eyebrow">Emerging Threat Radar</div>
     <h1>{{ report.edition | replace('_', ' ') | title }}</h1>
     <p class="meta">{{ report.window.start }} through {{ report.window.end }} · {{ report.window.timezone }}</p>
   </header>
@@ -119,19 +121,44 @@
     {% endif %}
   </section>
 
-  <section>
+  {% if report.get('agent_reviews', []) %}
+  <section id="agent-review">
+    <h2>Bounded agent review</h2>
+    {% for review in report.get('agent_reviews', []) %}
+    <article class="review">
+      <p><strong>{{ review.status | title }}</strong> · {{ review.mode }} mode · {{ review.duration_ms }} ms</p>
+      {% for assessment in review.assessments %}
+      <div class="review-role">
+        <h3>{{ assessment.agent_role | replace('_', ' ') | title }}</h3>
+        <p>{{ assessment.judgment }}</p>
+        <p class="muted">Recommendation: {{ assessment.recommended_disposition | title }} · {{ assessment.model }}</p>
+        {% if assessment.uncertainties %}<p><strong>Uncertainty:</strong> {{ assessment.uncertainties | join(' ') }}</p>{% endif %}
+        {% if assessment.contradictions %}<p><strong>Contradictions:</strong> {{ assessment.contradictions | join(' ') }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      {% if review.failures %}<p class="degraded"><strong>Agent failures:</strong> {% for failure in review.failures %}{{ failure.role }}: {{ failure.error }}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section id="source-coverage">
     <h2>Source coverage</h2>
+    {% set surface_metrics = {} %}
+    {% for surface in report.get('discovery_telemetry', {}).get('surfaces', []) %}
+      {% set _ = surface_metrics.update({surface.source_id: surface}) %}
+    {% endfor %}
     <table>
-      <thead><tr><th>Source</th><th>Status</th><th>Last success</th><th>Error rate</th></tr></thead>
-      <tbody>{% for source in report.source_health %}<tr><td>{{ source.source_id }}</td><td>{{ source.status }}</td><td>{{ source.last_success_at or "none" }}</td><td>{{ "%.1f%%" | format((source.error_rate or 0) * 100) }}</td></tr>{% endfor %}</tbody>
+      <thead><tr><th>Source</th><th>Status</th><th>Signals</th><th>Cited</th><th>Findings</th><th>Last success</th></tr></thead>
+      <tbody>{% for source in report.source_health %}{% set metric = surface_metrics.get(source.source_id, {}) %}<tr><td>{{ source.source_id }}</td><td>{{ source.status }}</td><td>{{ metric.get('discovered_signal_count', 0) }}</td><td>{{ metric.get('cited_evidence_count', 0) }}</td><td>{{ metric.get('selected_finding_count', 0) }}</td><td>{{ source.last_success_at or "none" }}</td></tr>{% endfor %}</tbody>
     </table>
   </section>
 
-  <section>
+  <section id="usage">
     <h2>Usage and estimated cost</h2>
     <table>
-      <thead><tr><th>Stage</th><th>Provider / model</th><th>Requests</th><th>Tokens</th><th>Estimated cost</th></tr></thead>
-      <tbody>{% for item in report.usage %}<tr><td>{{ item.stage }}</td><td>{{ item.provider }} / {{ item.model }}</td><td>{{ item.requests }}</td><td>{{ item.input_tokens + item.output_tokens }}</td><td>${{ "%.4f" | format(item.estimated_currency) }}</td></tr>{% endfor %}</tbody>
+      <thead><tr><th>Stage</th><th>Surface / agent</th><th>Provider / model</th><th>Requests</th><th>Tokens</th><th>Estimated cost</th></tr></thead>
+      <tbody>{% for item in report.usage %}<tr><td>{{ item.stage }}</td><td>{{ item.source_id or item.agent_id or "system" }}</td><td>{{ item.provider }} / {{ item.model }}</td><td>{{ item.requests }}</td><td>{{ item.input_tokens + item.output_tokens }}</td><td>${{ "%.4f" | format(item.estimated_currency) }}</td></tr>{% endfor %}</tbody>
     </table>
   </section>
 

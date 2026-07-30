@@ -135,8 +135,43 @@ def test_unrelated_live_topics_do_not_form_one_confident_cluster(
 
     clusters = cluster_non_cve_signals(prepared)
 
-    assert len(clusters) == 3
+    assert len(clusters) == 2
     assert all(len(cluster) == 1 for cluster in clusters)
+    assert all("HackTricks" not in cluster[0].signal.title for cluster in clusters)
+
+
+def test_evergreen_explainers_are_not_promoted_as_emerging_events(
+    tmp_path: Path,
+) -> None:
+    generated_at = datetime(2026, 7, 30, 13, tzinfo=UTC)
+    signals = [
+        DiscoverySignal(
+            source_id="supply-chain-web",
+            title="Dependency Confusion - HackTricks",
+            url="https://hacktricks.wiki/dependency-confusion",
+            summary=(
+                "If an attacker compromises a maintainer account, they can publish a "
+                "malicious version of a legitimate package."
+            ),
+            published_at=generated_at,
+            identifiers=(),
+        ),
+        DiscoverySignal(
+            source_id="supply-chain-web",
+            title="Dependency Confusion Attacks — How They Work and How to Protect Your Pipeline",
+            url="https://dev.example/dependency-confusion-explained",
+            summary="A dependency confusion attack uses trust and resolution mistakes.",
+            published_at=generated_at,
+            identifiers=(),
+        ),
+    ]
+    prepared = prepare_discovery_signals(
+        signals,
+        generated_at=generated_at,
+        object_store=LocalImmutableObjectStore(tmp_path / "objects"),
+    )
+
+    assert cluster_non_cve_signals(prepared) == ()
 
 
 def test_repeat_collection_creates_distinct_immutable_artifact_events(
@@ -235,6 +270,45 @@ def test_source_native_cluster_links_to_exactly_one_known_cve(
     prepared = prepare_discovery_signals(
         signals,
         generated_at=generated_at + timedelta(hours=1),
+        object_store=LocalImmutableObjectStore(tmp_path / "objects"),
+    )
+    cluster = cluster_non_cve_signals(prepared)[0]
+
+    assert related_cves(cluster, prepared) == ("CVE-2026-16232",)
+
+
+def test_product_entity_overlap_links_verbose_pre_cve_title_to_known_cve(
+    tmp_path: Path,
+) -> None:
+    generated_at = datetime(2026, 7, 30, 13, tzinfo=UTC)
+    signals = [
+        DiscoverySignal(
+            source_id="web-security-research",
+            title=(
+                "Check Point SmartConsole Zero-Day Lets Unauthenticated Attackers "
+                "Gain Full Admin Access"
+            ),
+            url="https://cyberpress.example/check-point-smartconsole-zero-day/",
+            summary="A Check Point SmartConsole flaw is reportedly exploited in the wild.",
+            published_at=generated_at,
+            identifiers=(),
+        ),
+        DiscoverySignal(
+            source_id="x-researchers",
+            title=(
+                "Public PoC released for actively exploited Check Point SmartConsole "
+                "auth bypass CVE-2026-16232"
+            ),
+            url="https://x.com/researcher/status/16232",
+            summary="The SmartConsole authentication bypass has a public proof of concept.",
+            published_at=generated_at,
+            identifiers=("CVE-2026-16232",),
+            source_handle="researcher",
+        ),
+    ]
+    prepared = prepare_discovery_signals(
+        signals,
+        generated_at=generated_at,
         object_store=LocalImmutableObjectStore(tmp_path / "objects"),
     )
     cluster = cluster_non_cve_signals(prepared)[0]

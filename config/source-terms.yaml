@@ -51,10 +51,22 @@ sources:
     status: approved
     retention_days: 1
     license: xAI-X-Search-discovery-only-no-raw-retention
+  reddit-security-web:
+    status: approved
+    retention_days: 1
+    license: Brave-Search-discovery-only-no-Reddit-API-response-retention
   reddit-security:
     status: pending
-    retention_days: 90
-    license: reddit-api-terms-review-required
+    retention_days: 1
+    license: Reddit-Data-API-approval-and-terms-review-required
+  tiktok-security:
+    status: approved
+    retention_days: 1
+    license: Brave-Search-discovery-only-no-TikTok-API-response-retention
+  tiktok-research:
+    status: pending
+    retention_days: 1
+    license: TikTok-Research-API-approval-and-terms-review-required
   brave-web:
     status: approved
     retention_days: 1

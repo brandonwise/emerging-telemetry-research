@@ -1,0 +1,52 @@
+{
+  "discovery_telemetry": {
+    "surfaces": [
+      {
+        "source_id": "x-researchers",
+        "discovered_signal_count": 2
+      },
+      {
+        "source_id": "reddit-security-web",
+        "discovered_signal_count": 3
+      },
+      {
+        "source_id": "tiktok-security",
+        "discovered_signal_count": 1
+      },
+      {
+        "source_id": "github-security-web",
+        "discovered_signal_count": 2
+      },
+      {
+        "source_id": "web-security-research",
+        "discovered_signal_count": 4
+      }
+    ]
+  },
+  "findings": [
+    {
+      "source_evidence": [
+        {
+          "source_id": "x-researchers",
+          "source_type": "x_post"
+        },
+        {
+          "source_id": "reddit-security-web",
+          "source_type": "reddit_post"
+        },
+        {
+          "source_id": "tiktok-security",
+          "source_type": "tiktok_video"
+        },
+        {
+          "source_id": "github-security-web",
+          "source_type": "github_activity"
+        },
+        {
+          "source_id": "web-security-research",
+          "source_type": "website"
+        }
+      ]
+    }
+  ]
+}

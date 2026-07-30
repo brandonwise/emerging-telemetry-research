@@ -17,6 +17,13 @@ uv run python scripts/verify_restore.py --output /tmp/radar-restore
 Stop if a command fails. Do not enable a source, schedule, model fallback, or delivery channel to
 work around a failed gate.
 
+The Makefile exposes the same gates with shorter commands:
+
+```bash
+make help
+make check
+```
+
 For the approved local daily brief, run:
 
 ```bash
@@ -37,6 +44,51 @@ Before live collection, confirm all of the following:
 - The malware-scanner hook reports `clean`, not `not_configured`.
 - PostgreSQL restore, object-lock restore, OpenClaw deep audit, and alert delivery evidence are
   attached to the production-readiness review.
+
+## Agent operating modes
+
+- `plan`: build and persist routes; make no model calls.
+- `shadow`: execute all five roles and persist their assessments; do not apply them to findings.
+- `active`: execute all five roles and add bounded narrative analysis. Deterministic scoring and
+  publication remain authoritative.
+
+Start with one real-provider fixture:
+
+```bash
+uv run threat-radar eval agents \
+  --adapter openclaw \
+  --case flash \
+  --repeats 1 \
+  --output reports/generated/agent-evaluation-openclaw \
+  --json
+```
+
+Inspect both `agent-eval-results.json` and every file under `reviews/`. A pass requires complete
+roles, evidence citations, disposition agreement, bounded latency/tokens, and zero publication
+authority. If one layer fails, downstream roles must not run.
+
+Run a live shadow:
+
+```bash
+make agent-shadow AGENT_ADAPTER=openclaw
+```
+
+Use `agent-active` only after the real-provider eval and frozen acceptance suite both pass.
+
+## Source coverage
+
+The default collector uses separate Brave query IDs for web research, supply chain, campaigns,
+AI security, identity/cloud, GitHub, Reddit, and TikTok, plus xAI X Search and authoritative
+vulnerability sources. Run:
+
+```bash
+make eval-coverage
+```
+
+Do not call Reddit's unauthenticated `.json` routes. Direct Reddit collection requires explicit
+Reddit Data API approval, an OAuth token, a descriptive user agent, `reddit.enabled: true`, and an
+updated source-terms record. TikTok direct Research API collection requires TikTok approval and is
+not part of the default profile.
 
 ## Daily operator review
 

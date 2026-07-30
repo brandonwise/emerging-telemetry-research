@@ -18,3 +18,4 @@ runtime/
 artifacts/
 reports/generated/
 state/
+openclaw/agents/*/openclaw-workspace-state.json

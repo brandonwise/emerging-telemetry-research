@@ -6,6 +6,48 @@ Evaluate the complete system, not just model responses. The important question i
 
 ## Evaluation suites
 
+### Implemented local suites
+
+Run the complete set with:
+
+```bash
+make eval-all
+```
+
+The current executable suites are:
+
+- `threat-radar eval acceptance`: frozen Flash, Watch, archive, false-positive, and hostile-content
+  cases with byte-stable replay checks.
+- `threat-radar eval agents`: repeats the five-role DAG over historical fixtures. It records every
+  role response under `reviews/`, hashes the artifact, and measures role completion, assessment
+  claim presence, claim-level citation coverage, per-role and coordinator agreement, latency,
+  input/output tokens, estimated cost, and fixture reproducibility.
+- `threat-radar eval coverage`: inspects immutable reports for source attribution, surface count,
+  largest-source concentration, X share, non-X evidence, and findings backed only by X.
+- `scripts/verify_restore.py`: restores immutable state and compares replayed output.
+
+Source-native promotion rejects generic explainers, tutorials, and evergreen guidance that match a
+broad query but do not describe a concrete event. A regression test preserves the false positive
+that exposed this gap. Another regression links verbose pre-CVE product coverage back to its
+known-CVE cluster so the same event cannot consume two report slots.
+
+Use the deterministic fixture adapter in CI:
+
+```bash
+make eval-agents AGENT_ADAPTER=fixture AGENT_REPEATS=3
+```
+
+Use a real provider before promotion:
+
+```bash
+make eval-agents AGENT_ADAPTER=openclaw AGENT_REPEATS=1
+```
+
+The default agent gates require five of five roles, at least one claim in every assessment, a
+citation on every factual claim, at least 80% coordinator agreement, no publication authority,
+mean review latency no greater than 300 seconds, and mean token use no greater than 100,000 tokens.
+Fixture repeats must also be identical after volatile IDs and timestamps are removed.
+
 ### 1. Historical emerging-event replay
 
 Each case is a time-ordered set of artifacts. The runner reveals artifacts only when their historical timestamp is reached.
@@ -92,6 +134,33 @@ Measure:
 - Queue age and run completion time
 - Report size and rendering time
 - Maximum safe source volume
+
+### 7. Source diversity suite
+
+Measure surface diversity separately from raw result volume. Ten reposts from one origin are still
+one signal family.
+
+- Distinct source IDs and source types
+- Largest-source evidence share
+- X evidence share
+- Non-X evidence count
+- Unattributed evidence count
+- Findings with no non-X support
+- Source health and request counts, including zero-result surfaces
+
+The default gate requires at least four surfaces, no single source above 60% of cited evidence, X
+at or below 50%, full attribution, and non-X evidence on every finding.
+
+## Evaluation loop
+
+1. Run the frozen acceptance suite.
+2. Run the agent suite with the fixture adapter to catch contract and orchestration regressions.
+3. Run one real-provider case and inspect the full role artifacts, not only the aggregate result.
+4. Run a live collection in `plan` or `shadow` mode.
+5. Run source coverage against that exact report set.
+6. Change one prompt, route, threshold, or source query.
+7. Repeat the same cases and compare quality, latency, tokens, and source concentration.
+8. Promote to `active` only when the deterministic anchors still pass.
 
 ## Scoring quality metrics
 

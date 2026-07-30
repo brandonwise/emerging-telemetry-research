@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from packages.agents.runtime import FixtureAgentProvider
 from packages.common.canonical import canonical_json_bytes
 from packages.delivery.discord import build_discord_delivery_plan
 from packages.delivery.local import build_local_delivery_plan
@@ -24,6 +25,7 @@ from packages.pipeline.live import (
     _existing_morning_result,
     _prioritized_candidates,
     _select_report_findings,
+    _web_queries,
     run_live_radar,
 )
 from packages.storage.object_store import LocalImmutableObjectStore
@@ -54,6 +56,25 @@ def test_discovery_baseline_uses_first_current_signal_per_cve() -> None:
     assert _discovery_baselines(signals, generated_at) == {
         "CVE-2026-12345": datetime(2026, 7, 24, 9, tzinfo=UTC)
     }
+
+
+def test_web_queries_allow_surface_specific_freshness() -> None:
+    assert _web_queries(
+        {
+            "freshness": "pd",
+            "queries": [
+                {"source_id": "web", "query": "security research"},
+                {
+                    "source_id": "social",
+                    "query": "site:example.com security",
+                    "freshness": "pw",
+                },
+            ],
+        }
+    ) == (
+        ("web", "security research", "pd"),
+        ("social", "site:example.com security", "pw"),
+    )
 
 
 def test_critical_exploitation_language_prioritizes_authoritative_corroboration() -> None:
@@ -243,8 +264,9 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
             *,
             freshness: str,
             count: int,
+            source_id: str = "brave-web",
         ) -> tuple[DiscoverySignal, ...]:
-            del query, freshness, count
+            del query, freshness, count, source_id
             return (brave_signal,)
 
     class FakeX:
@@ -289,6 +311,7 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
         LiveRunSettings(
             output_root=tmp_path / "reports",
             edition="afternoon_delta",
+            agent_mode="active",
         ),
         brave_client=FakeBrave(),  # type: ignore[arg-type]
         x_search_client=FakeX(),  # type: ignore[arg-type]
@@ -299,6 +322,7 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
             load_semantic_shadow_settings(Path("config/embeddings.yaml")),
             FakeEmbeddings(),
         ),
+        agent_provider=FixtureAgentProvider(),
         now=generated_at,
     )
 
@@ -310,9 +334,28 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
         "website",
         "x_post",
     }
-    brave_usage = next(item for item in result.report["usage"] if item["provider"] == "brave")
-    assert brave_usage["requests"] == 5
-    assert brave_usage["estimated_currency"] == 0.025
+    brave_usage = [item for item in result.report["usage"] if item["provider"] == "brave"]
+    assert sum(item["requests"] for item in brave_usage) == 8
+    assert sum(item["estimated_currency"] for item in brave_usage) == 0.04
+    assert {item["source_id"] for item in brave_usage} == {
+        "ai-security-web",
+        "campaign-web",
+        "github-security-web",
+        "identity-cloud-web",
+        "reddit-security-web",
+        "supply-chain-web",
+        "tiktok-security",
+        "web-security-research",
+    }
+    surface_metrics = {
+        item["source_id"]: item for item in result.report["discovery_telemetry"]["surfaces"]
+    }
+    assert result.report["discovery_telemetry"]["discovered_signal_count"] == 9
+    assert surface_metrics["brave-web"]["discovered_signal_count"] == 8
+    assert surface_metrics["x-researchers"]["discovered_signal_count"] == 1
+    assert surface_metrics["reddit-security-web"]["discovered_signal_count"] == 0
+    assert surface_metrics["reddit-security-web"]["cited_evidence_count"] == 0
+    assert surface_metrics["x-researchers"]["selected_finding_count"] == 1
     assert result.semantic_shadow is not None
     assert result.semantic_shadow["status"] == "completed"
     assert result.semantic_shadow["candidate_pair_count"] == 1
@@ -330,9 +373,18 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
         ["coordinator"],
     ]
     routing_usage = next(
-        item
-        for item in result.report["usage"]
-        if item["stage"] == "agent_routing_shadow"
+        item for item in result.report["usage"] if item["stage"] == "agent_routing_shadow"
     )
     assert routing_usage["requests"] == 0
     assert routing_usage["estimated_currency"] == 0
+    assert result.report["agent_reviews"][0]["status"] == "completed"
+    assert result.report["agent_reviews"][0]["report_mutation_executed"] is True
+    assert len(result.report["agent_reviews"][0]["assessments"]) == 5
+    assert len(repository.assessments) == 5
+    health_by_source = {
+        item["source_id"]: item["status"] for item in result.report["source_health"]
+    }
+    assert all(
+        health_by_source[source_id] != "healthy"
+        for source_id in result.report["degraded_sources"]
+    )

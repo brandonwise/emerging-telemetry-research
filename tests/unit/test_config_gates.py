@@ -17,6 +17,8 @@ def test_only_approved_sources_and_schedules_are_enabled() -> None:
         "osv",
         "github-advisories",
         "x-researchers",
+        "reddit-security-web",
+        "tiktok-security",
         "brave-web",
     }
     assert all(

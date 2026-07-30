@@ -4,7 +4,13 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-SUPPORTED_PLATFORMS = ("openclaw", "claude-code", "codex", "generic")
+SUPPORTED_PLATFORMS = (
+    "openclaw",
+    "claude-code",
+    "codex",
+    "perplexity",
+    "generic",
+)
 DEFAULT_TEMPLATES_ROOT = Path(__file__).resolve().parents[2] / "integrations" / "templates"
 
 

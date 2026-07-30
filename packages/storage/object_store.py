@@ -27,7 +27,7 @@ class ImmutableObjectStore(Protocol):
 
 
 class LocalImmutableObjectStore:
-    """Filesystem adapter for tests and frozen replay; never use for production raw evidence."""
+    """Content-addressed filesystem store with first-write immutable object metadata."""
 
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
@@ -52,8 +52,13 @@ class LocalImmutableObjectStore:
         }
         encoded_metadata = canonical_json_bytes(normalized_metadata)
         if metadata_path.exists():
-            if metadata_path.read_bytes() != encoded_metadata:
-                raise ImmutableObjectError(f"metadata mutation denied for {key}")
+            existing_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if (
+                not isinstance(existing_metadata, dict)
+                or existing_metadata.get("content_hash") != content_hash
+                or existing_metadata.get("size") != str(len(content))
+            ):
+                raise ImmutableObjectError(f"object metadata mismatch for {key}")
         else:
             with metadata_path.open("xb") as handle:
                 handle.write(encoded_metadata)

@@ -14,10 +14,11 @@ def test_local_store_is_content_addressed_and_immutable(tmp_path: Path) -> None:
     store = LocalImmutableObjectStore(tmp_path)
     first = store.put(b"evidence", {"source_id": "one"})
     second = store.put(b"evidence", {"source_id": "one"})
+    third = store.put(b"evidence", {"source_id": "two"})
     assert first == second
+    assert first == third
     assert store.get(first.key) == b"evidence"
-    with pytest.raises(ImmutableObjectError, match="metadata mutation"):
-        store.put(b"evidence", {"source_id": "two"})
+    assert store.metadata(first.key)["source_id"] == "one"
 
 
 def test_object_key_cannot_escape_root(tmp_path: Path) -> None:

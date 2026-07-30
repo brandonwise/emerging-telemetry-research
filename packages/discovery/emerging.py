@@ -286,6 +286,50 @@ STOP_WORDS = {
     "your",
 }
 
+GENERIC_EXPLAINER_PATTERNS = (
+    r"\bwhat is\b",
+    r"\bhow (?:it|they|this) works?\b",
+    r"\bhow to\b",
+    r"\bguide\b",
+    r"\btutorial\b",
+    r"\bexplained\b",
+    r"\bbest practices\b",
+    r"\bprotect (?:against|from|your)\b",
+    r"\bprevention\b",
+    r"\bchecklist\b",
+    r"\bhacktricks\b",
+)
+
+EVENT_SPECIFIC_PATTERNS = (
+    r"\bactive(?:ly)? exploit",
+    r"\battack(?:ed|s|ing)?\b",
+    r"\bbreach(?:ed|es)?\b",
+    r"\bcampaign\b",
+    r"\bcompromis(?:e|ed|es|ing)\b",
+    r"\bdelivered\b",
+    r"\bdeployed\b",
+    r"\bdetected\b",
+    r"\bdiscovered\b",
+    r"\bexposed\b",
+    r"\bexploited\b",
+    r"\bfound\b",
+    r"\bhijacked\b",
+    r"\bincident\b",
+    r"\binjected\b",
+    r"\bleaked\b",
+    r"\bmalicious (?:npm|pypi|software )?package",
+    r"\bnewly observed\b",
+    r"\bongoing\b",
+    r"\bpoisoned\b",
+    r"\bransomware\b",
+    r"\bstole(?:n)?\b",
+    r"\btarget(?:ed|ing|s)\b",
+    r"\bthreat actor",
+    r"\buncovered\b",
+    r"\bwarn(?:ed|s|ing)\b",
+    r"\bzero[ -]?day\b",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class Taxonomy:
@@ -346,7 +390,9 @@ def prepare_discovery_signals(
         if dedupe_key in seen:
             continue
         seen.add(dedupe_key)
-        source_type = "x_post" if signal.source_id == "x-researchers" else "website"
+        source_type = signal.source_type or (
+            "x_post" if signal.source_id == "x-researchers" else "website"
+        )
         origin = _origin(signal)
         taxonomy = classify_taxonomy(
             signal.title,
@@ -354,11 +400,7 @@ def prepare_discovery_signals(
             identifiers=signal.identifiers,
         )
         excerpt = signal.summary[:1200]
-        source_label = (
-            f"@{signal.source_handle} on X"
-            if signal.source_handle
-            else urlsplit(signal.url).hostname or signal.source_id
-        )
+        source_label = _source_label(signal, source_type)
         claim = _bounded(f"{source_label} reported: {excerpt}", 800)
         published_at = (
             format_timestamp(signal.published_at.astimezone(UTC))
@@ -396,7 +438,11 @@ def prepare_discovery_signals(
         evidence = {
             "evidence_id": evidence_id,
             "source_id": signal.source_id,
-            "source_role": ("researcher_observation" if source_type == "x_post" else "precursor"),
+            "source_role": (
+                "researcher_observation"
+                if source_type in {"x_post", "reddit_post", "tiktok_video"}
+                else "precursor"
+            ),
             "canonical_uri": signal.url,
             "retrieved_at": retrieved_at,
             "published_at": published_at,
@@ -442,12 +488,28 @@ def prepare_discovery_signals(
     return tuple(prepared)
 
 
+def _source_label(signal: DiscoverySignal, source_type: str) -> str:
+    if signal.source_handle:
+        surface = {
+            "x_post": "X",
+            "reddit_post": "Reddit",
+            "tiktok_video": "TikTok",
+            "github_activity": "GitHub",
+        }.get(source_type, "the source")
+        return f"{signal.source_handle} on {surface}"
+    return urlsplit(signal.url).hostname or signal.source_id
+
+
 def cluster_non_cve_signals(
     signals: tuple[PreparedSignal, ...],
 ) -> tuple[tuple[PreparedSignal, ...], ...]:
     clusters: list[list[PreparedSignal]] = []
     for signal in sorted(
-        (item for item in signals if not _cves(item.signal)),
+        (
+            item
+            for item in signals
+            if not _cves(item.signal) and _is_event_specific(item.signal)
+        ),
         key=lambda item: (
             item.signal.published_at or datetime.max.replace(tzinfo=UTC),
             item.signal.title,
@@ -750,11 +812,20 @@ def _related(left: PreparedSignal, right: PreparedSignal) -> bool:
     intersection = left_tokens.intersection(right_tokens)
     union = left_tokens.union(right_tokens)
     smaller = min(len(left_tokens), len(right_tokens))
+    strong_entity_overlap = (
+        len(intersection) >= 3
+        and len(intersection) / max(len(union), 1) >= 0.15
+    )
     return (
         "other" not in categories
         and len(intersection) >= 2
-        and len(intersection) / max(smaller, 1) >= 0.5
-        and len(intersection) / max(len(union), 1) >= 0.25
+        and (
+            (
+                len(intersection) / max(smaller, 1) >= 0.5
+                and len(intersection) / max(len(union), 1) >= 0.25
+            )
+            or strong_entity_overlap
+        )
     )
 
 
@@ -765,6 +836,16 @@ def _title_tokens(signal: DiscoverySignal) -> set[str]:
         for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", text)
         if token not in STOP_WORDS and not CVE_PATTERN.fullmatch(token)
     }
+
+
+def _is_event_specific(signal: DiscoverySignal) -> bool:
+    title = signal.title.lower()
+    if any(re.search(pattern, title, re.IGNORECASE) for pattern in GENERIC_EXPLAINER_PATTERNS):
+        return False
+    text = "\n".join(
+        item for item in (signal.title, signal.summary, signal.rationale) if item is not None
+    )
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in EVENT_SPECIFIC_PATTERNS)
 
 
 def _origin(signal: DiscoverySignal) -> str:

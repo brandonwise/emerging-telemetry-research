@@ -11,11 +11,24 @@ from uuid import uuid4
 
 import typer
 
+from packages.agents.runtime import (
+    AGENT_ADAPTERS,
+    AGENT_MODES,
+    AgentProvider,
+    build_agent_provider,
+)
 from packages.analytics.store import AnalyticsStore
 from packages.common.canonical import canonical_json_bytes
 from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
-from packages.discovery.clients import BraveSearchClient, XaiXSearchClient
+from packages.discovery.clients import (
+    BraveSearchClient,
+    RedditSearchClient,
+    TikTokResearchClient,
+    XaiXSearchClient,
+)
+from packages.evaluation.agent_harness import run_agent_evaluation
+from packages.evaluation.coverage_harness import evaluate_source_coverage
 from packages.evaluation.harness import run_acceptance_suite
 from packages.improvement.controller import (
     ALL_TAXONOMIES,
@@ -136,6 +149,13 @@ def live_run(
     output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
     edition: Annotated[str, typer.Option("--edition")] = "morning",
     analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
+    agent_mode: Annotated[str, typer.Option("--agent-mode")] = os.environ.get(
+        "RADAR_AGENT_MODE", "plan"
+    ),
+    agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = os.environ.get(
+        "RADAR_AGENT_ADAPTER", "openclaw"
+    ),
+    agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
@@ -152,19 +172,25 @@ def live_run(
         ),
         migrations_root=Path("migrations"),
     )
+    provider = _agent_runtime(agent_mode, agent_adapter)
     result = asyncio.run(
         run_live_radar(
             LiveRunSettings(
                 output_root=output,
                 discord_channel_id=None,
                 edition=edition,
+                agent_mode=agent_mode,
+                agent_max_concurrency=agent_concurrency,
             ),
             brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
             x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
+            reddit_client=_optional_reddit_client(),
+            tiktok_client=_optional_tiktok_client(),
             official_client=OfficialSourceClient(),
             object_store=stores.object_store,
             repository=stores.repository,
             semantic_evaluator=build_semantic_shadow_evaluator(DEFAULT_EMBEDDINGS_CONFIG),
+            agent_provider=provider,
         )
     )
     indexed = AnalyticsStore(analytics_db).index_path(result.report_json_path)
@@ -180,7 +206,10 @@ def live_run(
             "emerging_signal_count": result.emerging_signal_count,
             "qualified_emerging_count": result.qualified_emerging_count,
             "source_native_signal_count": result.source_native_signal_count,
+            "discovery_telemetry": result.report.get("discovery_telemetry"),
             "semantic_shadow": result.semantic_shadow,
+            "agent_mode": agent_mode,
+            "agent_review_count": len(result.report.get("agent_reviews", [])),
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(analytics_db.resolve()),
             "analytics_indexed": indexed.inserted,
@@ -196,24 +225,37 @@ def portable_run(
     database: Annotated[Path, typer.Option("--database")] = DEFAULT_ANALYTICS_DB,
     objects: Annotated[Path, typer.Option("--objects")] = DEFAULT_OBJECT_ROOT,
     edition: Annotated[str, typer.Option("--edition")] = "morning",
+    agent_mode: Annotated[str, typer.Option("--agent-mode")] = os.environ.get(
+        "RADAR_AGENT_MODE", "plan"
+    ),
+    agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = os.environ.get(
+        "RADAR_AGENT_ADAPTER", "codex"
+    ),
+    agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Run live discovery with SQLite, local immutable objects, and no external delivery."""
     if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
         raise typer.BadParameter("unsupported live edition")
+    provider = _agent_runtime(agent_mode, agent_adapter)
     result = asyncio.run(
         run_live_radar(
             LiveRunSettings(
                 output_root=output,
                 discord_channel_id=None,
                 edition=edition,
+                agent_mode=agent_mode,
+                agent_max_concurrency=agent_concurrency,
             ),
             brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
             x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
+            reddit_client=_optional_reddit_client(),
+            tiktok_client=_optional_tiktok_client(),
             official_client=OfficialSourceClient(),
             object_store=LocalImmutableObjectStore(objects),
             repository=SQLiteRepository(database),
             semantic_evaluator=build_semantic_shadow_evaluator(DEFAULT_EMBEDDINGS_CONFIG),
+            agent_provider=provider,
         )
     )
     indexed = AnalyticsStore(database).index_path(result.report_json_path)
@@ -230,7 +272,10 @@ def portable_run(
             "emerging_signal_count": result.emerging_signal_count,
             "qualified_emerging_count": result.qualified_emerging_count,
             "source_native_signal_count": result.source_native_signal_count,
+            "discovery_telemetry": result.report.get("discovery_telemetry"),
             "semantic_shadow": result.semantic_shadow,
+            "agent_mode": agent_mode,
+            "agent_review_count": len(result.report.get("agent_reviews", [])),
             "degraded_sources": list(result.degraded_sources),
             "analytics_db": str(database.resolve()),
             "analytics_indexed": indexed.inserted,
@@ -356,6 +401,19 @@ def _s3_encryption_mode() -> str | None:
     raise typer.BadParameter("RADAR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none")
 
 
+def _agent_runtime(mode: str, adapter: str) -> AgentProvider | None:
+    if mode not in AGENT_MODES:
+        raise typer.BadParameter("agent mode must be one of: " + ", ".join(AGENT_MODES))
+    if mode == "plan":
+        return None
+    if adapter not in AGENT_ADAPTERS:
+        raise typer.BadParameter("agent adapter must be one of: " + ", ".join(AGENT_ADAPTERS))
+    try:
+        return build_agent_provider(adapter)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+
 @report_app.command("delivery-plan")
 def delivery_plan(
     report_json: Annotated[
@@ -412,6 +470,77 @@ def eval_acceptance(
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     result = run_acceptance_suite(fixtures, output)
+    emit(result, pretty=not json_output)
+    if result["passed"] is not True:
+        raise typer.Exit(code=1)
+
+
+@eval_app.command("agents")
+def eval_agents(
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/generated/agent-evaluation"),
+    fixtures: Annotated[
+        Path,
+        typer.Option(
+            "--fixtures",
+            exists=True,
+            file_okay=False,
+            readable=True,
+        ),
+    ] = Path("tests/fixtures/vertical_slice"),
+    adapter: Annotated[str, typer.Option("--adapter")] = os.environ.get(
+        "RADAR_AGENT_ADAPTER", "fixture"
+    ),
+    case: Annotated[str | None, typer.Option("--case")] = None,
+    repeats: Annotated[int, typer.Option("--repeats", min=1, max=10)] = 3,
+    maximum_mean_duration_ms: Annotated[
+        int, typer.Option("--maximum-mean-duration-ms", min=1)
+    ] = 300_000,
+    maximum_mean_tokens: Annotated[int, typer.Option("--maximum-mean-tokens", min=1)] = 100_000,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Run the bounded agent DAG repeatedly and report quality, cost, and stability."""
+    if adapter not in AGENT_ADAPTERS:
+        raise typer.BadParameter("agent adapter must be one of: " + ", ".join(AGENT_ADAPTERS))
+    try:
+        provider = build_agent_provider(adapter)
+        result = asyncio.run(
+            run_agent_evaluation(
+                fixtures_root=fixtures,
+                output_root=output,
+                provider=provider,
+                adapter_name=adapter,
+                repeats=repeats,
+                case=case,
+                maximum_mean_review_duration_ms=maximum_mean_duration_ms,
+                maximum_mean_review_tokens=maximum_mean_tokens,
+            )
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(result, pretty=not json_output)
+    if result["passed"] is not True:
+        raise typer.Exit(code=1)
+
+
+@eval_app.command("coverage")
+def eval_coverage(
+    reports: Annotated[Path, typer.Option("--reports")] = Path("reports/generated"),
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/generated/source-evaluation"),
+    minimum_surfaces: Annotated[int, typer.Option("--minimum-surfaces", min=1, max=20)] = 4,
+    maximum_surface_share: Annotated[
+        float, typer.Option("--maximum-surface-share", min=0.01, max=1.0)
+    ] = 0.6,
+    maximum_x_share: Annotated[float, typer.Option("--maximum-x-share", min=0.0, max=1.0)] = 0.5,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Measure source diversity, attribution, and X concentration in generated reports."""
+    result = evaluate_source_coverage(
+        reports_root=reports,
+        output_root=output,
+        minimum_surface_count=minimum_surfaces,
+        maximum_single_surface_share=maximum_surface_share,
+        maximum_x_share=maximum_x_share,
+    )
     emit(result, pretty=not json_output)
     if result["passed"] is not True:
         raise typer.Exit(code=1)
@@ -602,6 +731,21 @@ def _required_env(name: str) -> str:
     if not value:
         raise typer.BadParameter(f"{name} is required")
     return value
+
+
+def _optional_reddit_client() -> RedditSearchClient | None:
+    access_token = os.environ.get("REDDIT_ACCESS_TOKEN")
+    user_agent = os.environ.get("REDDIT_USER_AGENT")
+    if not access_token or not user_agent:
+        return None
+    return RedditSearchClient(access_token, user_agent=user_agent)
+
+
+def _optional_tiktok_client() -> TikTokResearchClient | None:
+    access_token = os.environ.get("TIKTOK_RESEARCH_ACCESS_TOKEN")
+    if not access_token:
+        return None
+    return TikTokResearchClient(access_token)
 
 
 if __name__ == "__main__":

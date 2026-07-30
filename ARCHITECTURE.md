@@ -10,9 +10,13 @@ the recommended activation sequence.
 - The live daily path is OpenClaw cron → reviewed Lobster → deterministic Python pipeline.
 - Nomic embeddings run in shadow mode and have no publication authority.
 - The model router, role-specific agent definitions, typed assessment contracts, and DAG executor
-  are implemented and tested. Every live finding records the resulting graph and model routes as
-  a content-free shadow plan; the live daily pipeline still does not dispatch those agents.
-- The specialist → impact/skeptic → verifier → chief graph is the configured target review topology.
+  are implemented and tested. `plan`, `shadow`, and `active` modes control whether the graph is
+  recorded, executed for evaluation, or allowed to add bounded report narrative.
+- Specialist, impact, and skeptic run in parallel. Their typed assessments fan into the citation
+  verifier, then the coordinator.
+- OpenClaw, Codex, Claude, fixture, and OpenAI-compatible providers implement the same invocation
+  boundary. Perplexity uses the OpenAI-compatible path.
+- Agents never receive raw artifacts or own scoring, verification, durable state, or publication.
 - The weekly champion/challenger improvement DAG is implemented with approval and rollback, but its
   schedule remains disabled until sufficient analyst labels exist.
 
@@ -75,15 +79,20 @@ the recommended activation sequence.
               DB / portal  Discord disabled
 ```
 
-Configured bounded-agent review graph, not yet live:
+Live bounded-agent review graph:
 
 ```text
 typed evidence packet
   → specialist + impact + skeptic
   → citation verifier
-  → chief coordinator
+  → coordinator
   → deterministic verification and publication gate
 ```
+
+The first three roles execute concurrently. A failed layer stops the rest of the graph and marks
+the review degraded. Shadow results are recorded but cannot mutate a finding. Active results may
+add the skeptic summary, contradictions, and requested follow-ups; they still cannot change the
+deterministic publication class.
 
 ## Deployment topology
 
@@ -204,4 +213,5 @@ A queue item includes:
 - Agent memory must not be used as the source of truth.
 - Reports are immutable versions; corrections create a new version and link to the prior one.
 - The analytics index is a derived read model and can be rebuilt from immutable reports.
-- OpenClaw, Claude Code, Codex, and conversation history are execution surfaces, not state owners.
+- OpenClaw, Claude Code, Codex, Perplexity, generic HTTP providers, and conversation history are
+  execution surfaces, not state owners.

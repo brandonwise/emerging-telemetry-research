@@ -14,6 +14,7 @@ import yaml
 
 from apps.report_renderer.render import TEMPLATE_REVISION, RenderedReport, render_report
 from packages.agents.planning import build_shadow_agent_plans
+from packages.agents.runtime import AgentProvider, execute_agent_reviews
 from packages.common.canonical import (
     canonical_json_bytes,
     format_timestamp,
@@ -34,6 +35,8 @@ from packages.discovery.clients import (
     BraveSearchClient,
     DiscoverySignal,
     DiscoveryUsage,
+    RedditSearchClient,
+    TikTokResearchClient,
     XaiXSearchClient,
     candidate_cves,
 )
@@ -106,6 +109,8 @@ class LiveRunSettings:
     discovery_config: Path = Path("config/discovery.yaml")
     scoring_config: Path = Path("config/scoring.yaml")
     models_config: Path = Path("config/models.yaml")
+    agent_mode: str = "plan"
+    agent_max_concurrency: int = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +138,10 @@ async def run_live_radar(
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
     repository: RadarRepository,
+    reddit_client: RedditSearchClient | None = None,
+    tiktok_client: TikTokResearchClient | None = None,
     semantic_evaluator: SemanticShadowEvaluator | None = None,
+    agent_provider: AgentProvider | None = None,
     now: datetime | None = None,
 ) -> LiveRunResult:
     generated_at = (now or datetime.now(UTC)).astimezone(UTC)
@@ -148,8 +156,10 @@ async def run_live_radar(
     config = _load_discovery_config(settings.discovery_config)
     brave_config = _mapping(config, "brave")
     x_config = _mapping(config, "x_search")
+    reddit_config = _optional_mapping(config, "reddit")
+    tiktok_config = _optional_mapping(config, "tiktok_research")
     promotion = _mapping(config, "promotion")
-    queries = _string_tuple(brave_config, "queries")
+    queries = _web_queries(brave_config)
     allowed_handles = _string_tuple(x_config, "allowed_handles")
     maximum_candidates = int(promotion.get("maximum_candidates_per_run", 6))
     maximum_signal_candidates = int(promotion.get("maximum_signal_candidates_per_run", 8))
@@ -167,28 +177,155 @@ async def run_live_radar(
     source_health: dict[str, dict[str, Any]] = {}
     usage: list[dict[str, Any]] = []
 
-    for query in queries:
+    brave_requests: Counter[str] = Counter()
+    brave_successes: Counter[str] = Counter()
+    for source_id, query, freshness in queries:
+        brave_requests[source_id] += 1
         try:
             signals.extend(
                 await brave_client.search(
                     query,
-                    freshness=str(brave_config.get("freshness", "pd")),
+                    freshness=freshness,
                     count=int(brave_config.get("maximum_results_per_query", 20)),
+                    source_id=source_id,
                 )
             )
-            source_health["brave-web"] = _health("brave-web", generated_at, healthy=True)
+            brave_successes[source_id] += 1
         except Exception:
-            degraded.add("brave-web")
-            source_health["brave-web"] = _health("brave-web", generated_at, healthy=False)
-    usage.append(
-        _usage_record(
-            stage="web_discovery",
-            provider="brave",
-            model="brave-web-search-v1",
-            requests=len(queries),
-            estimated_currency=round(len(queries) * BRAVE_COST_PER_REQUEST, 6),
+            degraded.add(source_id)
+    for source_id, requests in sorted(brave_requests.items()):
+        successful = brave_successes[source_id]
+        source_health[source_id] = _health(
+            source_id,
+            generated_at,
+            healthy=successful == requests,
         )
-    )
+        usage.append(
+            _usage_record(
+                stage="web_discovery",
+                provider="brave",
+                model="brave-web-search-v1",
+                requests=requests,
+                estimated_currency=round(requests * BRAVE_COST_PER_REQUEST, 6),
+                source_id=source_id,
+            )
+        )
+
+    if bool(reddit_config.get("enabled", False)):
+        communities = _string_tuple(reddit_config, "communities")
+        if reddit_client is None:
+            degraded.add("reddit-security")
+            source_health["reddit-security"] = _health(
+                "reddit-security",
+                generated_at,
+                healthy=False,
+            )
+            usage.append(
+                _usage_record(
+                    stage="social_discovery",
+                    provider="reddit-oauth",
+                    model="deterministic-json-parser",
+                    requests=0,
+                    source_id="reddit-security",
+                )
+            )
+        else:
+            try:
+                reddit_signals = await reddit_client.search(
+                    communities,
+                    maximum_per_community=int(
+                        reddit_config.get("maximum_results_per_community", 25)
+                    ),
+                )
+                signals.extend(reddit_signals)
+                source_health["reddit-security"] = _health(
+                    "reddit-security",
+                    generated_at,
+                    healthy=True,
+                )
+                usage.append(
+                    _usage_record(
+                        stage="social_discovery",
+                        provider="reddit-oauth",
+                        model="deterministic-json-parser",
+                        requests=len(communities),
+                        source_id="reddit-security",
+                    )
+                )
+            except Exception:
+                degraded.add("reddit-security")
+                source_health["reddit-security"] = _health(
+                    "reddit-security",
+                    generated_at,
+                    healthy=False,
+                )
+                usage.append(
+                    _usage_record(
+                        stage="social_discovery",
+                        provider="reddit-oauth",
+                        model="deterministic-json-parser",
+                        requests=0,
+                        source_id="reddit-security",
+                    )
+                )
+
+    if bool(tiktok_config.get("enabled", False)):
+        keywords = _string_tuple(tiktok_config, "keywords")
+        if tiktok_client is None:
+            degraded.add("tiktok-research")
+            source_health["tiktok-research"] = _health(
+                "tiktok-research",
+                generated_at,
+                healthy=False,
+            )
+            usage.append(
+                _usage_record(
+                    stage="social_discovery",
+                    provider="tiktok-research",
+                    model="deterministic-json-parser",
+                    requests=0,
+                    source_id="tiktok-research",
+                )
+            )
+        else:
+            try:
+                tiktok_signals = await tiktok_client.search(
+                    keywords,
+                    start_date=window_start.date(),
+                    end_date=generated_at.date(),
+                    maximum_results=int(tiktok_config.get("maximum_results", 100)),
+                )
+                signals.extend(tiktok_signals)
+                source_health["tiktok-research"] = _health(
+                    "tiktok-research",
+                    generated_at,
+                    healthy=True,
+                )
+                usage.append(
+                    _usage_record(
+                        stage="social_discovery",
+                        provider="tiktok-research",
+                        model="deterministic-json-parser",
+                        requests=1,
+                        source_id="tiktok-research",
+                    )
+                )
+            except Exception:
+                degraded.add("tiktok-research")
+                source_health["tiktok-research"] = _health(
+                    "tiktok-research",
+                    generated_at,
+                    healthy=False,
+                )
+                usage.append(
+                    _usage_record(
+                        stage="social_discovery",
+                        provider="tiktok-research",
+                        model="deterministic-json-parser",
+                        requests=0,
+                        source_id="tiktok-research",
+                    )
+                )
 
     try:
         x_result = await x_search_client.search(
@@ -343,6 +480,25 @@ async def run_live_radar(
         generated_at=generated_at,
         router=ModelRouter.from_path(settings.models_config),
     )
+    agent_reviews: list[dict[str, Any]] = []
+    agent_assessments: list[dict[str, Any]] = []
+    if settings.agent_mode != "plan":
+        if settings.agent_mode not in {"shadow", "active"}:
+            raise ValueError("agent mode must be plan, shadow, or active")
+        if agent_provider is None:
+            raise ValueError("agent provider is required when agent execution is enabled")
+        execution = await execute_agent_reviews(
+            findings=findings,
+            plans=agent_shadow_plans,
+            run_id=run_id,
+            generated_at=generated_at,
+            provider=agent_provider,
+            mode=settings.agent_mode,
+            max_concurrency=settings.agent_max_concurrency,
+        )
+        agent_reviews.extend(execution.reviews)
+        agent_assessments.extend(execution.assessments)
+        usage.extend(execution.usage)
     discovery_evidence, discovery_artifacts = referenced_discovery_records(
         findings,
         prepared_signals,
@@ -363,6 +519,7 @@ async def run_live_radar(
             requests=0,
         )
     )
+    _reconcile_degraded_source_health(source_health, degraded)
     report = _aggregate_report(
         run_id=run_id,
         settings=settings,
@@ -370,10 +527,18 @@ async def run_live_radar(
         window_start=window_start,
         findings=findings,
         source_health=list(source_health.values()),
+        discovery_telemetry=_discovery_telemetry(
+            signals=signals,
+            prepared_signals=prepared_signals,
+            findings=findings,
+            source_health=list(source_health.values()),
+            usage=usage,
+        ),
         degraded=degraded,
         usage=usage,
         semantic_shadow=semantic_shadow,
         agent_shadow_plans=agent_shadow_plans,
+        agent_reviews=agent_reviews,
     )
     report_json_path = run_root / f"{report['report_id']}.json"
     _write_immutable(report_json_path, canonical_json_bytes(report) + b"\n")
@@ -396,6 +561,7 @@ async def run_live_radar(
         candidate_results=candidate_results,
         discovery_evidence=discovery_evidence,
         discovery_artifacts=discovery_artifacts,
+        agent_assessments=agent_assessments,
         delivery_plan=delivery_plan,
     )
     summary = str(delivery_plan["summary"])
@@ -789,10 +955,12 @@ def _aggregate_report(
     window_start: datetime,
     findings: list[dict[str, Any]],
     source_health: list[dict[str, Any]],
+    discovery_telemetry: dict[str, Any],
     degraded: set[str],
     usage: list[dict[str, Any]],
     semantic_shadow: dict[str, Any] | None,
     agent_shadow_plans: list[dict[str, Any]],
+    agent_reviews: list[dict[str, Any]],
 ) -> dict[str, Any]:
     material = len(findings)
     if material:
@@ -820,6 +988,7 @@ def _aggregate_report(
         "findings": findings,
         "degraded_sources": sorted(degraded),
         "source_health": sorted(source_health, key=lambda item: str(item["source_id"])),
+        "discovery_telemetry": discovery_telemetry,
         "usage": usage,
         "agent_shadow_plans": agent_shadow_plans,
         "verification": {
@@ -828,9 +997,73 @@ def _aggregate_report(
             "verifier_revision": "deterministic-verifier-v1",
         },
     }
+    if agent_reviews:
+        report["agent_reviews"] = agent_reviews
     if semantic_shadow is not None:
         report["semantic_shadow"] = semantic_shadow
     return report
+
+
+def _discovery_telemetry(
+    *,
+    signals: list[DiscoverySignal],
+    prepared_signals: tuple[PreparedSignal, ...],
+    findings: list[dict[str, Any]],
+    source_health: list[dict[str, Any]],
+    usage: list[dict[str, Any]],
+) -> dict[str, Any]:
+    discovered: Counter[str] = Counter(item.source_id for item in signals)
+    prepared: Counter[str] = Counter(item.signal.source_id for item in prepared_signals)
+    cited: Counter[str] = Counter()
+    selected_findings: Counter[str] = Counter()
+    source_types: dict[str, set[str]] = {}
+    for signal in signals:
+        if signal.source_type:
+            source_types.setdefault(signal.source_id, set()).add(signal.source_type)
+    for finding in findings:
+        finding_sources: set[str] = set()
+        for evidence in finding.get("source_evidence", []):
+            if not isinstance(evidence, dict):
+                continue
+            source_id = str(evidence.get("source_id", ""))
+            source_type = str(evidence.get("source_type", ""))
+            if not source_id:
+                continue
+            cited[source_id] += 1
+            finding_sources.add(source_id)
+            if source_type:
+                source_types.setdefault(source_id, set()).add(source_type)
+        selected_findings.update(finding_sources)
+    requests: Counter[str] = Counter()
+    for item in usage:
+        if isinstance(item.get("source_id"), str) and item["source_id"]:
+            requests[str(item["source_id"])] += int(item["requests"])
+    statuses = {
+        str(item["source_id"]): str(item["status"])
+        for item in source_health
+        if isinstance(item.get("source_id"), str)
+    }
+    surface_ids = sorted(
+        set(statuses) | set(discovered) | set(prepared) | set(cited) | set(requests)
+    )
+    return {
+        "discovered_signal_count": sum(discovered.values()),
+        "prepared_signal_count": sum(prepared.values()),
+        "cited_evidence_count": sum(cited.values()),
+        "surfaces": [
+            {
+                "source_id": source_id,
+                "status": statuses.get(source_id, "disabled"),
+                "requests": requests[source_id],
+                "discovered_signal_count": discovered[source_id],
+                "prepared_signal_count": prepared[source_id],
+                "cited_evidence_count": cited[source_id],
+                "selected_finding_count": selected_findings[source_id],
+                "source_types": sorted(source_types.get(source_id, set())),
+            }
+            for source_id in surface_ids
+        ],
+    }
 
 
 async def _persist_run(
@@ -841,6 +1074,7 @@ async def _persist_run(
     candidate_results: list[FrozenRunResult],
     discovery_evidence: list[dict[str, Any]],
     discovery_artifacts: list[dict[str, Any]],
+    agent_assessments: list[dict[str, Any]],
     delivery_plan: dict[str, Any],
 ) -> None:
     if not await repository.available():
@@ -881,6 +1115,13 @@ async def _persist_run(
             "evidence",
             str(evidence["evidence_id"]),
             evidence,
+        )
+    for assessment in agent_assessments:
+        await _put(
+            repository,
+            "assessments",
+            str(assessment["assessment_id"]),
+            assessment,
         )
     await _put(repository, "reports", str(report["report_id"]), report)
     await _put(
@@ -936,12 +1177,15 @@ def _usage_record(
     input_tokens: int = 0,
     output_tokens: int = 0,
     estimated_currency: float = 0,
+    source_id: str | None = None,
+    finding_id: str | None = None,
+    agent_id: str | None = None,
 ) -> dict[str, Any]:
     return {
         "stage": stage,
-        "agent_id": None,
-        "source_id": None,
-        "finding_id": None,
+        "agent_id": agent_id,
+        "source_id": source_id,
+        "finding_id": finding_id,
         "provider": provider,
         "model": model,
         "requests": requests,
@@ -960,6 +1204,7 @@ def _x_usage_record(usage: DiscoveryUsage) -> dict[str, Any]:
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
         estimated_currency=usage.estimated_currency,
+        source_id="x-researchers",
     )
 
 
@@ -971,6 +1216,21 @@ def _health(source_id: str, now: datetime, *, healthy: bool) -> dict[str, Any]:
         "freshness_seconds": 0 if healthy else None,
         "error_rate": 0.0 if healthy else 1.0,
     }
+
+
+def _reconcile_degraded_source_health(
+    source_health: dict[str, dict[str, Any]],
+    degraded: set[str],
+) -> None:
+    for source_id in degraded:
+        current = source_health.get(source_id)
+        if current is None or current.get("status") != "healthy":
+            continue
+        source_health[source_id] = {
+            **current,
+            "status": "degraded",
+            "error_rate": max(float(current.get("error_rate", 0)), 0.01),
+        }
 
 
 def _load_discovery_config(path: Path) -> dict[str, Any]:
@@ -985,6 +1245,41 @@ def _mapping(value: dict[str, Any], key: str) -> dict[str, Any]:
     if not isinstance(item, dict):
         raise ValueError(f"discovery configuration omitted {key}")
     return item
+
+
+def _optional_mapping(value: dict[str, Any], key: str) -> dict[str, Any]:
+    item = value.get(key, {})
+    if not isinstance(item, dict):
+        raise ValueError(f"discovery configuration {key} must be an object")
+    return item
+
+
+def _web_queries(value: dict[str, Any]) -> tuple[tuple[str, str, str], ...]:
+    items = value.get("queries")
+    if not isinstance(items, list) or not items:
+        raise ValueError("discovery configuration queries must be a non-empty list")
+    default_freshness = str(value.get("freshness", "pd"))
+    if default_freshness not in {"pd", "pw", "pm"}:
+        raise ValueError("unsupported default Brave freshness window")
+    queries: list[tuple[str, str, str]] = []
+    for item in items:
+        if isinstance(item, str) and item:
+            queries.append(("brave-web", item, default_freshness))
+            continue
+        if (
+            isinstance(item, dict)
+            and isinstance(item.get("source_id"), str)
+            and isinstance(item.get("query"), str)
+            and item["source_id"]
+            and item["query"]
+        ):
+            freshness = str(item.get("freshness", default_freshness))
+            if freshness not in {"pd", "pw", "pm"}:
+                raise ValueError("unsupported Brave query freshness window")
+            queries.append((str(item["source_id"]), str(item["query"]), freshness))
+            continue
+        raise ValueError("each Brave query must be a string or source_id/query/freshness object")
+    return tuple(queries)
 
 
 def _string_tuple(value: dict[str, Any], key: str) -> tuple[str, ...]:

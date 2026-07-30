@@ -144,7 +144,16 @@
         },
         "source_id": {"type": "string", "minLength": 1, "maxLength": 100},
         "source_type": {
-          "enum": ["website", "x_post", "advisory", "database", "other"]
+          "enum": [
+            "website",
+            "x_post",
+            "reddit_post",
+            "tiktok_video",
+            "github_activity",
+            "advisory",
+            "database",
+            "other"
+          ]
         },
         "title": {"type": "string", "minLength": 1, "maxLength": 180},
         "url": {"type": "string", "format": "uri"},

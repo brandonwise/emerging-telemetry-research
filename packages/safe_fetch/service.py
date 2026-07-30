@@ -70,6 +70,8 @@ class SafeFetchRequest:
     url: str
     allowed_hosts: tuple[str, ...]
     allowed_content_types: tuple[str, ...]
+    method: str = "GET"
+    body: bytes | None = None
     headers: dict[str, str] = field(default_factory=dict)
     max_response_bytes: int = 10_485_760
     max_redirects: int = 3
@@ -108,6 +110,13 @@ class SafeFetchService:
     async def fetch(self, request: SafeFetchRequest) -> SafeFetchResult:
         if request.max_response_bytes <= 0:
             raise SafeFetchError("response byte limit must be positive")
+        method = request.method.upper()
+        if method not in {"GET", "POST"}:
+            raise SafeFetchError("only GET and POST requests are allowed")
+        if method == "GET" and request.body is not None:
+            raise SafeFetchError("GET requests cannot include a body")
+        if request.body is not None and len(request.body) > 100_000:
+            raise SafeFetchError("request body exceeds policy")
         if any(code < 400 or code > 499 for code in request.accepted_status_codes):
             raise SafeFetchError("accepted non-success statuses must be 4xx responses")
         await self.rate_limiter.acquire(request.source_id, request.rate_limit_per_minute)
@@ -131,8 +140,15 @@ class SafeFetchService:
                 before = validate_resolved_addresses(await self.resolver.resolve(host))
                 resolutions.append(before)
                 try:
-                    async with client.stream("GET", current_url, headers=headers) as response:
+                    async with client.stream(
+                        method,
+                        current_url,
+                        headers=headers,
+                        content=request.body,
+                    ) as response:
                         if response.status_code in REDIRECT_STATUSES:
+                            if method != "GET":
+                                raise SafeFetchError("redirects are forbidden for POST requests")
                             location = response.headers.get("location")
                             if not location:
                                 raise SafeFetchError("redirect response omitted Location")

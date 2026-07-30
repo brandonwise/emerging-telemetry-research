@@ -4,20 +4,62 @@ brave:
   freshness: pd
   maximum_results_per_query: 20
   queries:
-    - >-
-      (cybersecurity OR vulnerability OR exploit) (zero-day OR actively exploited
-      OR exploited-in-the-wild OR exploit-chain)
-    - >-
-      (software supply-chain OR malicious package OR dependency confusion)
-      (attack OR campaign OR compromise)
-    - >-
-      (ransomware OR intrusion campaign) (new exploit OR vulnerability OR initial access)
-    - >-
-      (AI security OR LLM security OR model poisoning OR prompt injection OR MCP security)
-      (attack OR compromise OR vulnerability OR abuse)
-    - >-
-      (identity attack OR credential theft OR cloud compromise OR vendor incident)
-      (emerging OR newly observed OR active campaign)
+    - source_id: web-security-research
+      query: >-
+        (cybersecurity OR vulnerability OR exploit) (zero-day OR actively exploited
+        OR exploited-in-the-wild OR exploit-chain)
+    - source_id: supply-chain-web
+      query: >-
+        (software supply-chain OR malicious package OR dependency confusion)
+        (attack OR campaign OR compromise)
+    - source_id: campaign-web
+      query: >-
+        (ransomware OR intrusion campaign) (new exploit OR vulnerability OR initial access)
+    - source_id: ai-security-web
+      query: >-
+        (AI security OR LLM security OR model poisoning OR prompt injection OR MCP security)
+        (attack OR compromise OR vulnerability OR abuse)
+    - source_id: identity-cloud-web
+      query: >-
+        (identity attack OR credential theft OR cloud compromise OR vendor incident)
+        (emerging OR newly observed OR active campaign)
+    - source_id: github-security-web
+      query: >-
+        site:github.com (security advisory OR exploit OR proof-of-concept OR malicious package)
+        (new OR active OR zero-day)
+    - source_id: reddit-security-web
+      freshness: pw
+      query: >-
+        site:reddit.com cybersecurity
+        (breach OR ransomware OR malware OR vulnerability OR exploit)
+    - source_id: tiktok-security
+      freshness: pw
+      query: >-
+        site:tiktok.com cybersecurity news malware exploit
+
+reddit:
+  enabled: false
+  maximum_results_per_community: 25
+  communities:
+    - netsec
+    - blueteamsec
+    - malware
+    - reverseengineering
+    - cybersecurity
+    - AskNetsec
+    - redteamsec
+    - exploitdev
+
+tiktok_research:
+  enabled: false
+  maximum_results: 100
+  keywords:
+    - cybersecurity
+    - ransomware
+    - malware
+    - zero day
+    - data breach
+    - vulnerability
 
 x_search:
   model: grok-4.5
