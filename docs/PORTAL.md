@@ -90,6 +90,8 @@ CIDR allowlist.
 - verified report detail, deterministic score anatomy, claim ledger, and defensive checks
 - bounded agent-review status and role chain when a report contains review artifacts
 - latest source-health snapshots
+- immersive animated runtime architecture with a reduced-motion control
+- linked ten-view blueprint covering trust, agents, routing, storage, deployment, and activation
 - CSV and JSON archive exports
 - finding-level CSV and JSON exports with tags and discovery-source types
 - per-report JSON and deterministic HTML exports

@@ -29,6 +29,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from packages.analytics.store import AnalyticsStore
 
 PORTAL_ROOT = Path(__file__).resolve().parent
+DOCUMENTS_ROOT = PORTAL_ROOT.parents[1] / "docs"
+ARCHITECTURE_MOTION_PATH = DOCUMENTS_ROOT / "architecture-motion.html"
+ARCHITECTURE_BLUEPRINT_PATH = DOCUMENTS_ROOT / "architecture-visual.html"
 SESSION_COOKIE = "radar_session"
 SESSION_SECONDS = 12 * 60 * 60
 CSV_FIELDS = (
@@ -54,6 +57,16 @@ CSV_FINDING_FIELDS = (
     "confidence_level",
     "confidence_probability",
 )
+
+
+def _inline_style_hash(path: Path) -> str:
+    document = path.read_text(encoding="utf-8")
+    _, start, remainder = document.partition("<style>")
+    stylesheet, end, _ = remainder.partition("</style>")
+    if not start or not end:
+        raise ValueError(f"Architecture document has no inline stylesheet: {path}")
+    digest = hashlib.sha256(stylesheet.encode("utf-8")).digest()
+    return base64.b64encode(digest).decode("ascii")
 
 
 class PortalSettings(BaseSettings):
@@ -110,6 +123,10 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
     store = AnalyticsStore(portal_settings.analytics_db)
     store.sync_reports(portal_settings.reports_root)
     templates = _templates()
+    architecture_style_hashes = {
+        "/architecture": _inline_style_hash(ARCHITECTURE_MOTION_PATH),
+        "/architecture/blueprint": _inline_style_hash(ARCHITECTURE_BLUEPRINT_PATH),
+    }
     application = FastAPI(
         title=f"{portal_settings.title} portal",
         version="1.0.0",
@@ -145,10 +162,18 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             return RedirectResponse("/login", status_code=303)
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'none'; style-src 'self'; img-src 'self' data:; "
-            "font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
-        )
+        architecture_style_hash = architecture_style_hashes.get(request.url.path)
+        if architecture_style_hash is not None:
+            response.headers["Content-Security-Policy"] = (
+                f"default-src 'none'; style-src 'sha256-{architecture_style_hash}'; "
+                "img-src data:; "
+                "form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
+            )
+        else:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; style-src 'self'; img-src 'self' data:; "
+                "font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+            )
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), payment=()"
@@ -341,6 +366,34 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             local_inference=store.local_inference_status(),
             days=bounded_days,
         )
+
+    @application.get("/architecture", response_class=HTMLResponse)
+    async def architecture() -> HTMLResponse:
+        document = ARCHITECTURE_MOTION_PATH.read_text(encoding="utf-8")
+        document = document.replace(
+            '<div class="hero-actions">',
+            '<div class="hero-actions"><a href="/">Return to command center ↙</a>',
+            1,
+        )
+        document = document.replace(
+            'href="architecture-visual.html"',
+            'href="/architecture/blueprint"',
+        )
+        return HTMLResponse(document)
+
+    @application.get("/architecture/blueprint", response_class=HTMLResponse)
+    async def architecture_blueprint() -> HTMLResponse:
+        document = ARCHITECTURE_BLUEPRINT_PATH.read_text(encoding="utf-8")
+        document = document.replace(
+            "<ol>",
+            '<ol><li><a href="/">← Command center</a></li>',
+            1,
+        )
+        document = document.replace(
+            'href="architecture-motion.html"',
+            'href="/architecture"',
+        )
+        return HTMLResponse(document)
 
     @application.get("/exports/reports.csv")
     async def export_csv() -> Response:

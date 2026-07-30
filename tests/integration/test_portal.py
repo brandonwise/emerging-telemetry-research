@@ -119,6 +119,8 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     detail = client.get(f"/reports/{result.report['report_id']}")
     findings = client.get(f"/findings?category={finding_category}&tag=ai&source=x_post")
     trends = client.get("/trends")
+    architecture = client.get("/architecture")
+    architecture_blueprint = client.get("/architecture/blueprint")
     csv_export = client.get("/exports/reports.csv")
     json_export = client.get("/exports/reports.json")
     finding_csv_export = client.get("/exports/findings.csv")
@@ -156,6 +158,19 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert trends.status_code == 200
     assert "Cross-cutting themes" in trends.text
     assert "Where findings are coming from" in trends.text
+    assert 'href="/architecture"' in dashboard.text
+    assert architecture.status_code == 200
+    assert "See the system" in architecture.text
+    assert "<animateMotion" in architecture.text
+    assert 'href="/architecture/blueprint"' in architecture.text
+    assert 'href="/">Return to command center' in architecture.text
+    assert "style-src 'sha256-" in architecture.headers["content-security-policy"]
+    assert "'unsafe-inline'" not in architecture.headers["content-security-policy"]
+    assert architecture.headers["x-frame-options"] == "DENY"
+    assert architecture_blueprint.status_code == 200
+    assert "Emerging Threat Radar, end to end" in architecture_blueprint.text
+    assert 'href="/architecture"' in architecture_blueprint.text
+    assert 'href="/">← Command center' in architecture_blueprint.text
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
     assert json_export.headers["content-disposition"].endswith('"threat-radar-reports.json"')
