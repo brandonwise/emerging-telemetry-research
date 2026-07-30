@@ -348,20 +348,21 @@
   <header>
     <div class="hero">
       <div>
-        <p class="eyebrow">As-built system architecture · corrected July 2026</p>
+        <p class="eyebrow">As-built system architecture · expanded July 2026</p>
         <h1>Emerging Threat Radar, end to end</h1>
         <p class="hero-copy">
-          A security-first map of the live pipeline, its trust boundaries, state, local inference,
-          agent topology, model-routing policy, and grounded improvement graph. Each advanced
-          capability is labeled by actual runtime status so configured intent is never mistaken
-          for production execution.
+          A security-first map of the multi-surface pipeline, its trust boundaries, durable state,
+          local inference, five-agent topology, replaceable providers, model-routing policy, and
+          measured improvement graph. Each capability is labeled by actual runtime status so
+          implemented options are never mistaken for the default production mode.
         </p>
       </div>
       <aside class="status-card" aria-label="Architecture status">
         <strong>Current production posture</strong>
         <span>Daily deterministic run on the Mac mini</span>
         <span>PostgreSQL + MinIO + private read-only portal</span>
-        <span>Nomic embeddings observe in shadow mode</span>
+        <span>Multi-surface collection + bounded agents in shadow</span>
+        <span>Portable CLI supports alternate schedulers and providers</span>
         <div class="status-row"><span class="dot"></span><span>Routine Discord delivery remains disabled</span></div>
       </aside>
     </div>
@@ -399,6 +400,7 @@
       <div class="diagram-card">
         <div class="diagram-meta">
           <span class="pill live">Live production</span>
+          <span class="pill">Six measured surfaces</span>
           <span class="pill">One-way publication</span>
           <span class="pill shadow">Nomic shadow</span>
           <span class="pill disabled">Discord off</span>
@@ -437,10 +439,10 @@
 
             <g id="landscape-discovery" class="node-group">
               <rect class="node node-external" x="45" y="190" width="175" height="110" rx="10"></rect>
-              <text class="svg-label" x="69" y="222">Discovery</text>
-              <text class="svg-small" x="69" y="248">Brave Search</text>
-              <text class="svg-small" x="69" y="269">curated X search</text>
-              <text class="svg-small" x="69" y="290">early web signals</text>
+              <text class="svg-label" x="69" y="222">Discovery surfaces</text>
+              <text class="svg-small" x="69" y="248">X · Reddit · TikTok</text>
+              <text class="svg-small" x="69" y="269">GitHub · research/web</text>
+              <text class="svg-small" x="69" y="290">independent source IDs</text>
             </g>
             <g id="landscape-authority" class="node-group">
               <rect class="node node-external" x="45" y="370" width="175" height="110" rx="10"></rect>
@@ -451,15 +453,15 @@
             </g>
             <g id="landscape-cron" class="node-group">
               <rect class="node node-control" x="300" y="110" width="190" height="90" rx="10"></rect>
-              <text class="svg-label" x="324" y="143">OpenClaw cron</text>
-              <text class="svg-small" x="324" y="168">07:30 ET · isolated</text>
-              <text class="svg-small" x="324" y="189">delivery: none</text>
+              <text class="svg-label" x="324" y="143">Current scheduler</text>
+              <text class="svg-small" x="324" y="168">OpenClaw · 07:30 ET</text>
+              <text class="svg-small" x="324" y="189">isolated · delivery none</text>
             </g>
             <g id="landscape-workflow" class="node-group">
               <rect class="node node-control" x="560" y="110" width="180" height="90" rx="10"></rect>
-              <text class="svg-label" x="584" y="143">Lobster + CLI</text>
-              <text class="svg-small" x="584" y="168">reviewed workflow</text>
-              <text class="svg-small" x="584" y="189">typed run arguments</text>
+              <text class="svg-label" x="584" y="143">Portable CLI</text>
+              <text class="svg-small" x="584" y="168">Lobster · shell · CI</text>
+              <text class="svg-small" x="584" y="189">one typed run contract</text>
             </g>
             <g id="landscape-acquisition" class="node-group">
               <rect class="node node-security" x="300" y="285" width="210" height="160" rx="10"></rect>
@@ -509,9 +511,10 @@
               <text class="status-text" x="978" y="488">NO AUTHORITY</text>
             </g>
             <g id="landscape-metrics" class="node-group">
-              <rect class="node node-shadow" x="1080" y="510" width="70" height="80" rx="10"></rect>
-              <text class="svg-small" x="1095" y="544">shadow</text>
-              <text class="svg-small" x="1095" y="564">metrics</text>
+              <rect class="node node-shadow" x="1060" y="510" width="90" height="80" rx="10"></rect>
+              <text class="svg-small" x="1075" y="538">surface</text>
+              <text class="svg-small" x="1075" y="558">coverage</text>
+              <text class="svg-small" x="1075" y="578">+ X share</text>
             </g>
             <g id="landscape-discord" class="node-group">
               <rect class="node node-disabled" x="1210" y="515" width="140" height="82" rx="10"></rect>
@@ -579,9 +582,9 @@
             <g id="run-01" class="node-group">
               <rect class="node node-control" x="45" y="120" width="290" height="120" rx="10"></rect>
               <circle class="step-circle" cx="72" cy="146" r="16"></circle><text class="step-number" x="72" y="150">01</text>
-              <text class="svg-label" x="100" y="151">Create isolated run</text>
-              <text class="svg-small" x="69" y="181">OpenClaw cron · fixed edition</text>
-              <text class="svg-small" x="69" y="204">Lobster is the only workflow tool</text>
+              <text class="svg-label" x="100" y="151">Create bounded run</text>
+              <text class="svg-small" x="69" y="181">OpenClaw · cron · systemd · CI</text>
+              <text class="svg-small" x="69" y="204">same CLI + versioned contracts</text>
               <text class="svg-small" x="69" y="227">external delivery disabled</text>
             </g>
             <g id="run-02" class="node-group">
@@ -596,9 +599,9 @@
               <rect class="node node-external" x="725" y="120" width="290" height="120" rx="10"></rect>
               <circle class="step-circle" cx="752" cy="146" r="16"></circle><text class="step-number" x="752" y="150">03</text>
               <text class="svg-label" x="780" y="151">Discover early signals</text>
-              <text class="svg-small" x="749" y="181">five bounded Brave queries</text>
-              <text class="svg-small" x="749" y="204">curated X handles</text>
-              <text class="svg-small" x="749" y="227">capture usage and source health</text>
+              <text class="svg-small" x="749" y="181">X · Reddit · TikTok · GitHub</text>
+              <text class="svg-small" x="749" y="204">research/web · official feeds</text>
+              <text class="svg-small" x="749" y="227">usage, origin ID, source health</text>
             </g>
             <g id="run-04" class="node-group">
               <rect class="node node-process" x="1065" y="120" width="290" height="120" rx="10"></rect>
@@ -635,25 +638,25 @@
             <g id="run-08" class="node-group">
               <rect class="node node-shadow" x="45" y="380" width="290" height="120" rx="10"></rect>
               <circle class="step-circle" cx="72" cy="406" r="16"></circle><text class="step-number" x="72" y="410">08</text>
-              <text class="svg-label" x="100" y="411">Observe semantic pairs</text>
-              <text class="svg-small" x="69" y="441">Nomic embeddings via loopback</text>
-              <text class="svg-small" x="69" y="464">compare with deterministic pairs</text>
-              <text class="svg-small" x="69" y="487">never changes publication</text>
+              <text class="svg-label" x="100" y="411">Run bounded review</text>
+              <text class="svg-small" x="69" y="441">specialist + impact + skeptic</text>
+              <text class="svg-small" x="69" y="464">verifier → coordinator</text>
+              <text class="svg-small" x="69" y="487">shadow cannot mutate findings</text>
             </g>
             <g id="run-09" class="node-group">
               <rect class="node node-process" x="45" y="640" width="290" height="120" rx="10"></rect>
               <circle class="step-circle" cx="72" cy="666" r="16"></circle><text class="step-number" x="72" y="670">09</text>
-              <text class="svg-label" x="100" y="671">Build + verify findings</text>
-              <text class="svg-small" x="69" y="701">claim-to-evidence checks</text>
-              <text class="svg-small" x="69" y="724">publication-class selection</text>
-              <text class="svg-small" x="69" y="747">degraded sources recorded</text>
+              <text class="svg-label" x="100" y="671">Evaluate + hard-gate</text>
+              <text class="svg-small" x="69" y="701">claim and citation checks</text>
+              <text class="svg-small" x="69" y="724">surface diversity + X share</text>
+              <text class="svg-small" x="69" y="747">code selects publication class</text>
             </g>
             <g id="run-10" class="node-group">
               <rect class="node node-storage" x="385" y="640" width="290" height="120" rx="10"></rect>
               <circle class="step-circle" cx="412" cy="666" r="16"></circle><text class="step-number" x="412" y="670">10</text>
               <text class="svg-label" x="440" y="671">Persist immutable state</text>
-              <text class="svg-small" x="409" y="701">report JSON + HTML</text>
-              <text class="svg-small" x="409" y="724">PostgreSQL records</text>
+              <text class="svg-small" x="409" y="701">report + reviews + evals</text>
+              <text class="svg-small" x="409" y="724">PostgreSQL + object store</text>
               <text class="svg-small" x="409" y="747">idempotent delivery plan</text>
             </g>
             <g id="run-11" class="node-group">
@@ -1002,15 +1005,16 @@
 
     <section id="deployment">
       <div class="section-heading">
-        <div><p class="section-kicker">06 · Deployment</p><h2>Mac mini topology</h2></div>
-        <p>The current system is intentionally single-host. Process, data, and private experience
-          layers remain distinct even though they share one encrypted machine.</p>
+        <div><p class="section-kicker">06 · Deployment</p><h2>Current host, portable boundary</h2></div>
+        <p>The current production profile is intentionally single-host. The CLI and JSON contracts
+          keep scheduler, agent provider, and storage substitutions outside the intelligence core.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
           <span class="pill live">Single encrypted host</span>
           <span class="pill">Loopback services</span>
           <span class="pill">Private LAN portal</span>
+          <span class="pill configured">Portable profile available</span>
         </div>
         <div class="svg-wrap">
           <svg viewBox="0 0 1400 700" role="img" aria-labelledby="deployment-title deployment-desc">
@@ -1056,8 +1060,8 @@
             <g id="deployment-python" class="node-group">
               <rect class="node node-process" x="150" y="245" width="230" height="110" rx="10"></rect>
               <text class="svg-label" x="174" y="279">Python 3.12 worker</text>
-              <text class="svg-small" x="174" y="307">connectors · gateway</text>
-              <text class="svg-small" x="174" y="329">scoring · verification</text>
+              <text class="svg-small" x="174" y="307">portable CLI · connectors</text>
+              <text class="svg-small" x="174" y="329">scoring · agents · verification</text>
             </g>
             <g id="deployment-renderer" class="node-group">
               <rect class="node node-process" x="585" y="245" width="230" height="110" rx="10"></rect>
@@ -1103,6 +1107,14 @@
             </g>
           </svg>
         </div>
+        <div class="callouts">
+          <div class="callout"><strong>Current profile</strong><span>OpenClaw, Lobster,
+            PostgreSQL, MinIO, Ollama, and the private portal share one encrypted Mac mini.</span></div>
+          <div class="callout"><strong>Portable profile</strong><span>Any scheduler can call the
+            same CLI with SQLite, local content-addressed objects, and file-only delivery.</span></div>
+          <div class="callout"><strong>Replaceable edge</strong><span>Codex, Claude,
+            Perplexity, OpenAI-compatible APIs, and fixture mode attach only at the review boundary.</span></div>
+        </div>
       </div>
     </section>
 
@@ -1116,7 +1128,8 @@
         <div class="diagram-meta">
           <span class="pill live">Orchestrator live</span>
           <span class="pill live">Dispatcher live</span>
-          <span class="pill shadow">Plan · shadow · active</span>
+          <span class="pill shadow">Shadow default</span>
+          <span class="pill configured">Active available</span>
           <span class="pill configured">Five tool-free roles</span>
           <span class="pill">No publication authority</span>
         </div>
@@ -1182,7 +1195,7 @@
             </g>
 
             <rect class="panel" x="25" y="345" width="1350" height="445" rx="14"></rect>
-            <text class="svg-micro" x="50" y="378">PROVIDER-NEUTRAL REVIEW GRAPH — EXECUTED IN SHADOW OR ACTIVE MODE</text>
+              <text class="svg-micro" x="50" y="378">PROVIDER-NEUTRAL REVIEW GRAPH — PLAN, SHADOW, OR ACTIVE MODE</text>
             <g id="agents-packet" class="node-group">
               <rect class="node node-storage" x="60" y="490" width="210" height="140" rx="10"></rect>
               <text class="svg-label" x="84" y="524">Evidence packet</text>
@@ -1247,7 +1260,7 @@
       <div class="diagram-card">
         <div class="diagram-meta">
           <span class="pill live">Code route live</span>
-          <span class="pill live">Agent routes live</span>
+          <span class="pill shadow">Agent calls shadow live</span>
           <span class="pill">Hard budget caps</span>
           <span class="pill">No chief fallback</span>
         </div>
@@ -1315,18 +1328,18 @@
               <text class="svg-label" x="1054" y="404">Balanced analyst</text>
               <text class="svg-small" x="1054" y="432">specialist · impact · skeptic</text>
               <text class="svg-small" x="1054" y="455">evidence read + assessment submit</text>
-              <rect class="status-configured" x="1230" y="466" width="95" height="18" rx="9"></rect>
-              <text class="status-text" x="1277.5" y="479">NOT LIVE</text>
+              <rect class="status-shadow" x="1221" y="466" width="104" height="18" rx="9"></rect>
+              <text class="status-text" x="1273" y="479">SHADOW LIVE</text>
             </g>
             <g id="routing-chief" class="node-group">
               <rect class="node node-control" x="1030" y="520" width="315" height="120" rx="10"></rect>
-              <text class="svg-label" x="1054" y="554">Chief coordinator</text>
-              <text class="svg-small" x="1054" y="582">GPT-5.6 Sol · Codex harness · max</text>
-              <text class="svg-small" x="1054" y="605">Flash or material disagreement only</text>
-              <rect class="status-configured" x="1230" y="616" width="95" height="18" rx="9"></rect>
-              <text class="status-text" x="1277.5" y="629">NOT LIVE</text>
+              <text class="svg-label" x="1054" y="554">Coordinator route</text>
+              <text class="svg-small" x="1054" y="582">balanced by default · chief on promotion</text>
+              <text class="svg-small" x="1054" y="605">Flash or material disagreement</text>
+              <rect class="status-shadow" x="1221" y="616" width="104" height="18" rx="9"></rect>
+              <text class="status-text" x="1273" y="629">SHADOW LIVE</text>
             </g>
-            <text class="svg-note" x="55" y="660">Current shadow output records routes only. Next, execute models without authority and compare disposition, citations, latency, and cost against frozen anchors.</text>
+            <text class="svg-note" x="55" y="660">Shadow invokes the selected provider and stores full reviews without mutation. Active may enrich narrative; hard publication decisions remain deterministic.</text>
           </svg>
         </div>
       </div>
@@ -1334,22 +1347,25 @@
 
     <section id="loops">
       <div class="section-heading">
-        <div><p class="section-kicker">09 · Loops and graphs</p><h2>Fast production, slow improvement</h2></div>
-        <p>The daily loop produces intelligence. A separate weekly DAG evaluates bounded challengers
-          against immutable reports and analyst labels, with a human gate before any policy change.</p>
+        <div><p class="section-kicker">09 · Evals, loops, and graphs</p><h2>Measure every layer, change one thing</h2></div>
+        <p>The daily loop produces intelligence. The evaluation DAG inspects frozen acceptance,
+          five-role reviews, source diversity, security, replay, latency, tokens, and cost before
+          any weekly challenger can reach a human approval gate.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
           <span class="pill live">Daily loop live</span>
+          <span class="pill live">Agent + coverage evals live</span>
           <span class="pill configured">DAG executor implemented</span>
           <span class="pill disabled">Weekly schedule disabled</span>
           <span class="pill">Approval + rollback</span>
         </div>
         <div class="svg-wrap">
           <svg viewBox="0 0 1400 820" role="img" aria-labelledby="loops-title loops-desc">
-            <title id="loops-title">Daily production loop and weekly improvement DAG</title>
+            <title id="loops-title">Daily production loop, evaluation harness, and weekly improvement DAG</title>
             <desc id="loops-desc">The left panel shows the live daily production cycle. The right
-              panel shows the implemented but disabled weekly champion-challenger graph.</desc>
+              panel shows executable agent, coverage, security, and replay evaluations feeding the
+              implemented but disabled weekly champion-challenger graph.</desc>
             <defs>
               <marker id="loops-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
@@ -1362,7 +1378,7 @@
             <rect class="panel" x="25" y="35" width="430" height="740" rx="14"></rect>
             <rect class="panel" x="485" y="35" width="890" height="740" rx="14"></rect>
             <text class="svg-micro" x="50" y="68">LIVE DAILY PRODUCTION LOOP</text>
-            <text class="svg-micro" x="510" y="68">IMPLEMENTED WEEKLY IMPROVEMENT DAG · SCHEDULE DISABLED</text>
+            <text class="svg-micro" x="510" y="68">EXECUTABLE EVAL DAG + WEEKLY IMPROVEMENT · POLICY SCHEDULE DISABLED</text>
 
             <path class="edge" data-from="loops-schedule" data-to="loops-observe" d="M240 185 V230" marker-end="url(#loops-arrow)"></path>
             <path class="edge" data-from="loops-observe" data-to="loops-decide" d="M240 350 V395" marker-end="url(#loops-arrow)"></path>
@@ -1409,20 +1425,20 @@
 
             <g id="loops-snapshot" class="node-group">
               <rect class="node node-storage" x="535" y="100" width="230" height="85" rx="10"></rect>
-              <text class="svg-label" x="559" y="134">Policy snapshot</text>
-              <text class="svg-small" x="559" y="160">hash + frozen boundaries</text>
+              <text class="svg-label" x="559" y="134">Frozen eval snapshot</text>
+              <text class="svg-small" x="559" y="160">fixtures + report set + policy hash</text>
             </g>
             <g id="loops-observation" class="node-group">
               <rect class="node node-storage" x="535" y="225" width="230" height="100" rx="10"></rect>
-              <text class="svg-label" x="559" y="259">Observe outcomes</text>
-              <text class="svg-small" x="559" y="287">reports + latest labels</text>
-              <text class="svg-small" x="559" y="309">security feedback gate</text>
+              <text class="svg-label" x="559" y="259">Five-role agent harness</text>
+              <text class="svg-small" x="559" y="287">5/5 roles · cited claims · agreement</text>
+              <text class="svg-small" x="559" y="309">latency · tokens · cost · replay</text>
             </g>
             <g id="loops-acceptance" class="node-group">
               <rect class="node node-security" x="945" y="225" width="230" height="100" rx="10"></rect>
-              <text class="svg-label" x="969" y="259">Frozen acceptance</text>
-              <text class="svg-small" x="969" y="287">security + replay gates</text>
-              <text class="svg-small" x="969" y="309">must pass independently</text>
+              <text class="svg-label" x="969" y="259">Coverage + safety gates</text>
+              <text class="svg-small" x="969" y="287">≥4 surfaces · max 60% · X ≤50%</text>
+              <text class="svg-small" x="969" y="309">hostile content + restore replay</text>
             </g>
             <g id="loops-baseline" class="node-group">
               <rect class="node node-process" x="500" y="400" width="120" height="100" rx="10"></rect>
@@ -1445,9 +1461,9 @@
             <g id="loops-select" class="node-group">
               <rect class="node node-control" x="765" y="565" width="250" height="120" rx="10"></rect>
               <text class="svg-label" x="789" y="599">Multi-metric selection</text>
-              <text class="svg-small" x="789" y="627">precision + recall</text>
-              <text class="svg-small" x="789" y="650">false alerts + utility</text>
-              <text class="svg-small" x="789" y="673">minimum 20 labels</text>
+              <text class="svg-small" x="789" y="627">precision + recall + agreement</text>
+              <text class="svg-small" x="789" y="650">citations + diversity + cost</text>
+              <text class="svg-small" x="789" y="673">minimum 20 human labels</text>
             </g>
             <g id="loops-approval" class="node-group">
               <rect class="node node-security" x="1065" y="565" width="250" height="120" rx="10"></rect>
@@ -1462,18 +1478,29 @@
             </g>
           </svg>
         </div>
+        <div class="callouts">
+          <div class="callout"><strong>Inspect returned data</strong><span>Keep every role
+            assessment, citation, failure, provider/model ID, latency, token count, and estimated cost.</span></div>
+          <div class="callout"><strong>Measure surface concentration</strong><span>Count origins,
+            largest-source share, X share, non-X evidence, zero-result surfaces, and attribution gaps.</span></div>
+          <div class="callout"><strong>Repeat cleanly</strong><span>Change one prompt, route,
+            threshold, or source query; replay the same fixtures; promote only when anchors still pass.</span></div>
+        </div>
       </div>
     </section>
 
     <section id="roadmap">
       <div class="section-heading">
-        <div><p class="section-kicker">10 · Activation</p><h2>What is live and what stays gated</h2></div>
-        <p>Typed dispatch and bounded analysis are implemented. Grounded policy learning remains
-          gated until enough real analyst labels exist.</p>
+        <div><p class="section-kicker">10 · Activation</p><h2>What runs by default and what stays gated</h2></div>
+        <p>Plan and shadow execution are operational. Active bounded narrative is implemented but
+          requires measured promotion; grounded policy learning remains gated until enough real
+          analyst labels exist.</p>
       </div>
       <div class="diagram-card">
         <div class="diagram-meta">
-          <span class="pill live">Stages 1–3 live</span>
+          <span class="pill live">Deterministic baseline live</span>
+          <span class="pill shadow">Shadow default live</span>
+          <span class="pill configured">Active implemented</span>
           <span class="pill proposed">Learning remains gated</span>
           <span class="pill">Fail-closed promotion gates</span>
           <span class="pill">Rollback at every mutation</span>
@@ -1510,7 +1537,7 @@
             <g id="roadmap-dispatch" class="node-group">
               <rect class="node node-shadow" x="380" y="120" width="290" height="310" rx="12"></rect>
               <circle class="step-circle" cx="416" cy="157" r="18"></circle><text class="step-number" x="416" y="161">02</text>
-              <text class="svg-label" x="450" y="162">Dispatch + graph runtime</text>
+              <text class="svg-label" x="450" y="162">Dispatch + shadow runtime</text>
               <text class="svg-small" x="408" y="208">Provider-neutral runtime:</text>
               <text class="svg-small" x="408" y="235">• three-layer role DAG</text>
               <text class="svg-small" x="408" y="260">• deterministic model selection</text>
@@ -1518,13 +1545,13 @@
               <text class="svg-small" x="408" y="325">Safety posture:</text>
               <text class="svg-small" x="408" y="350">no raw content, tools, memory,</text>
               <text class="svg-small" x="408" y="375">credentials, or publication authority</text>
-              <rect class="status-live" x="584" y="398" width="66" height="18" rx="9"></rect>
-              <text class="status-text" x="617" y="411">LIVE</text>
+              <rect class="status-shadow" x="544" y="398" width="106" height="18" rx="9"></rect>
+              <text class="status-text" x="597" y="411">SHADOW LIVE</text>
             </g>
             <g id="roadmap-review" class="node-group">
               <rect class="node node-process" x="720" y="120" width="290" height="310" rx="12"></rect>
               <circle class="step-circle" cx="756" cy="157" r="18"></circle><text class="step-number" x="756" y="161">03</text>
-              <text class="svg-label" x="790" y="162">Execute bounded review</text>
+              <text class="svg-label" x="790" y="162">Promote bounded review</text>
               <text class="svg-small" x="748" y="208">Parallel graph:</text>
               <text class="svg-small" x="748" y="235">specialist + impact + skeptic</text>
               <text class="svg-small" x="748" y="260">fan in to verifier + chief</text>
@@ -1532,8 +1559,8 @@
               <text class="svg-small" x="748" y="325">• role + citation completion</text>
               <text class="svg-small" x="748" y="350">• disposition agreement</text>
               <text class="svg-small" x="748" y="375">• latency + tokens + cost</text>
-              <rect class="status-live" x="924" y="398" width="66" height="18" rx="9"></rect>
-              <text class="status-text" x="957" y="411">LIVE</text>
+              <rect class="status-configured" x="895" y="398" width="95" height="18" rx="9"></rect>
+              <text class="status-text" x="942.5" y="411">IMPLEMENTED</text>
             </g>
             <g id="roadmap-learn" class="node-group">
               <rect class="node node-proposed" x="1060" y="120" width="300" height="310" rx="12"></rect>

@@ -14,8 +14,8 @@ def verify_frozen_restore(fixture: Path, output_root: Path) -> dict[str, Any]:
     original = run_frozen_fixture(fixture, output_root / "original")
     backup = output_root / "backup" / "objects"
     restored_objects = output_root / "restored-objects"
-    shutil.copytree(output_root / "original" / "objects", backup)
-    shutil.copytree(backup, restored_objects)
+    shutil.copytree(output_root / "original" / "objects", backup, dirs_exist_ok=True)
+    shutil.copytree(backup, restored_objects, dirs_exist_ok=True)
     restored = run_frozen_fixture(
         fixture,
         output_root / "restored",
