@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Threat Radar · Living Architecture</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06110f;
+      --surface: #0b1916;
+      --surface-2: #10231e;
+      --ink: #edf7f4;
+      --muted: #8da49e;
+      --faint: #506a63;
+      --line: #1b3a32;
+      --line-soft: #112a24;
+      --input: #5de5cd;
+      --input-soft: #123b33;
+      --process: #83b8ff;
+      --process-soft: #142b46;
+      --storage: #71e39c;
+      --storage-soft: #123a25;
+      --model: #f2ba68;
+      --model-soft: #3a2a13;
+      --risk: #ff756d;
+      --risk-soft: #3c1715;
+      --control: #b1a0ff;
+      --control-soft: #282044;
+      --white: #fff;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background: var(--bg);
+      font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    .skip-link {
+      position: fixed;
+      top: -80px;
+      left: 18px;
+      z-index: 100;
+      padding: 10px 14px;
+      color: #04100d;
+      background: var(--input);
+      font-weight: 800;
+    }
+    .skip-link:focus { top: 14px; }
+    .motion-input {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .shell {
+      width: min(1720px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
+      gap: 54px;
+      align-items: end;
+      padding: 42px 0 34px;
+    }
+    .brand-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 38px;
+    }
+    .radar-mark {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--input);
+      border-radius: 50%;
+    }
+    .radar-mark::before,
+    .radar-mark::after {
+      position: absolute;
+      content: "";
+      background: var(--line);
+    }
+    .radar-mark::before { width: 1px; height: 28px; }
+    .radar-mark::after { width: 28px; height: 1px; }
+    .radar-mark i {
+      width: 13px;
+      height: 1px;
+      display: block;
+      background: var(--input);
+      transform: translateX(6px) rotate(-34deg);
+      transform-origin: left;
+    }
+    .brand-copy { display: grid; gap: 1px; }
+    .brand-copy strong { font-size: .9rem; letter-spacing: -.02em; }
+    .brand-copy small,
+    .eyebrow,
+    .diagram-kicker,
+    .phase-index {
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .62rem;
+      font-weight: 780;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow { margin: 0 0 13px; color: var(--input); }
+    h1 {
+      max-width: 1100px;
+      margin: 0;
+      font-size: clamp(3.25rem, 7vw, 7.5rem);
+      font-weight: 630;
+      line-height: .84;
+      letter-spacing: -.075em;
+    }
+    h1 em {
+      color: var(--input);
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+    }
+    .hero-copy {
+      max-width: 850px;
+      margin: 25px 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.5vw, 1.22rem);
+      line-height: 1.7;
+    }
+    .hero-side {
+      display: grid;
+      gap: 12px;
+    }
+    .posture-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--input);
+      background: var(--bg);
+    }
+    .posture-card > span {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .62rem;
+      font-weight: 760;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .posture-card strong { display: block; margin-bottom: 7px; font-size: 1.05rem; }
+    .posture-card small { color: var(--muted); line-height: 1.55; }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+    .hero-actions a,
+    .motion-toggle {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--surface-2);
+      cursor: pointer;
+      font-size: .72rem;
+      font-weight: 760;
+      text-decoration: none;
+    }
+    .hero-actions a:hover,
+    .motion-toggle:hover { color: var(--input); border-color: var(--input-soft); }
+    #motion:focus-visible ~ header .motion-toggle {
+      outline: 2px solid var(--input);
+      outline-offset: 3px;
+    }
+    .toggle-dot {
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--input);
+    }
+    .motion-off { display: none; }
+    #motion:not(:checked) ~ header .motion-on { display: none; }
+    #motion:not(:checked) ~ header .motion-off { display: inline; }
+    #motion:not(:checked) ~ header .toggle-dot { background: var(--faint); }
+    main { padding: 34px 0 70px; }
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .status-item {
+      min-height: 84px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      padding: 14px 18px;
+      background: var(--surface);
+    }
+    .status-item span {
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .56rem;
+      font-weight: 760;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .status-item strong { font-size: .84rem; }
+    .diagram-frame {
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .diagram-header {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .diagram-header > div {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--storage);
+    }
+    .diagram-header strong {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .68rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .diagram-header small { color: var(--faint); }
+    .canvas {
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+    }
+    svg {
+      width: 100%;
+      min-width: 1260px;
+      height: auto;
+      display: block;
+    }
+    svg text {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .grid-line { fill: none; stroke: #0d211c; stroke-width: 1; }
+    .zone {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 1.1;
+      stroke-dasharray: 7 9;
+    }
+    .zone-label {
+      fill: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      font-weight: 780;
+      letter-spacing: .12em;
+    }
+    .edge {
+      fill: none;
+      stroke: #315149;
+      stroke-width: 2;
+      marker-end: url(#arrow);
+    }
+    .edge-control {
+      fill: none;
+      stroke: var(--control);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 8;
+      marker-end: url(#arrow-control);
+    }
+    .edge-model {
+      fill: none;
+      stroke: var(--model);
+      stroke-width: 1.8;
+      stroke-dasharray: 5 8;
+      marker-end: url(#arrow-model);
+    }
+    .edge-risk {
+      fill: none;
+      stroke: var(--risk);
+      stroke-width: 1.8;
+      stroke-dasharray: 4 8;
+      marker-end: url(#arrow-risk);
+    }
+    .edge-eval {
+      fill: none;
+      stroke: #8a6a37;
+      stroke-width: 1.6;
+      stroke-dasharray: 5 9;
+      marker-end: url(#arrow-model);
+    }
+    .flowing {
+      stroke-dasharray: 8 13;
+      animation: line-flow 1.35s linear infinite;
+    }
+    .node {
+      fill: var(--surface-2);
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .node-input { fill: var(--input-soft); stroke: var(--input); }
+    .node-process { fill: var(--process-soft); stroke: var(--process); }
+    .node-storage { fill: var(--storage-soft); stroke: var(--storage); }
+    .node-model { fill: var(--model-soft); stroke: var(--model); }
+    .node-risk { fill: var(--risk-soft); stroke: var(--risk); }
+    .node-control { fill: var(--control-soft); stroke: var(--control); }
+    .node-label {
+      fill: var(--ink);
+      font-size: 14px;
+      font-weight: 760;
+    }
+    .node-small {
+      fill: var(--muted);
+      font-size: 11px;
+      font-weight: 560;
+    }
+    .node-micro {
+      fill: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 9px;
+      font-weight: 780;
+      letter-spacing: .08em;
+    }
+    .center-label { text-anchor: middle; }
+    .source-spoke {
+      fill: none;
+      stroke: #24443c;
+      stroke-width: 1.4;
+    }
+    .source-node {
+      fill: var(--surface);
+      stroke: var(--input);
+      stroke-width: 1.3;
+    }
+    .source-text {
+      fill: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .core-ring {
+      fill: none;
+      stroke: var(--process);
+      stroke-width: 1.6;
+      stroke-dasharray: 6 7;
+      animation: core-rotate 18s linear infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .core-axis { stroke: #25445f; stroke-width: 1; }
+    .agent-zone {
+      fill: #0d1816;
+      stroke: #5d4b29;
+      stroke-width: 1.1;
+      stroke-dasharray: 6 7;
+    }
+    .agent-pill {
+      fill: var(--surface-2);
+      stroke: var(--model);
+      stroke-width: 1.3;
+    }
+    .agent-role {
+      fill: var(--ink);
+      font-size: 11px;
+      font-weight: 720;
+    }
+    .gate {
+      fill: var(--process-soft);
+      stroke: var(--input);
+      stroke-width: 2;
+    }
+    .gate-bar { stroke: var(--input); stroke-width: 2.2; }
+    .screen {
+      fill: var(--surface);
+      stroke: var(--storage);
+      stroke-width: 1.7;
+    }
+    .screen-line { stroke: #2f6754; stroke-width: 1; }
+    .screen-sweep {
+      stroke: var(--input);
+      stroke-width: 1.5;
+      animation: sweep 4s linear infinite;
+      transform-box: fill-box;
+      transform-origin: left center;
+    }
+    .packet {
+      stroke: var(--bg);
+      stroke-width: 2;
+    }
+    .packet-input { fill: var(--input); }
+    .packet-model { fill: var(--model); }
+    .packet-risk { fill: var(--risk); }
+    .packet-storage { fill: var(--storage); }
+    .stage-source { animation: pulse-source 12s ease-in-out infinite; }
+    .stage-security { animation: pulse-security 12s ease-in-out infinite; }
+    .stage-core { animation: pulse-core 12s ease-in-out infinite; }
+    .stage-agents { animation: pulse-agents 12s ease-in-out infinite; }
+    .stage-gate { animation: pulse-gate 12s ease-in-out infinite; }
+    .stage-output { animation: pulse-output 12s ease-in-out infinite; }
+    .stage-eval { animation: pulse-eval 12s ease-in-out infinite; }
+    .stop-mark { stroke: var(--risk); stroke-width: 2; }
+    .story {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .phase {
+      min-height: 150px;
+      padding: 18px;
+      background: var(--surface);
+    }
+    .phase-index { display: block; margin-bottom: 20px; color: var(--input); }
+    .phase h2 {
+      margin: 0 0 8px;
+      font-size: .94rem;
+      letter-spacing: -.02em;
+    }
+    .phase p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.55; }
+    .note-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 30px;
+      align-items: center;
+      margin-top: 16px;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .note-row p { margin: 0; color: var(--muted); font-size: .8rem; }
+    .note-row strong { color: var(--ink); }
+    .note-row a { color: var(--input); font-size: .75rem; font-weight: 760; white-space: nowrap; }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 24px 0 35px;
+      color: var(--faint);
+      font-size: .7rem;
+    }
+    #motion:not(:checked) ~ main .motion {
+      animation-play-state: paused !important;
+    }
+    #motion:not(:checked) ~ main .packet { display: none; }
+    @keyframes line-flow { to { stroke-dashoffset: -42; } }
+    @keyframes core-rotate { to { transform: rotate(360deg); } }
+    @keyframes sweep { to { transform: rotate(360deg); } }
+    @keyframes pulse-source {
+      0%, 12% { fill: var(--input-soft); stroke: var(--input); stroke-width: 3; }
+      18%, 100% { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+    }
+    @keyframes pulse-security {
+      0%, 10%, 34%, 100% { fill: var(--surface-2); stroke-width: 1.5; }
+      15%, 28% { fill: var(--risk-soft); stroke: var(--risk); stroke-width: 3; }
+    }
+    @keyframes pulse-core {
+      0%, 27%, 49%, 100% { fill: var(--process-soft); stroke-width: 1.5; }
+      33%, 43% { fill: #1a3857; stroke: var(--process); stroke-width: 3; }
+    }
+    @keyframes pulse-agents {
+      0%, 39%, 70%, 100% { fill: var(--surface-2); stroke-width: 1.3; }
+      44%, 64% { fill: var(--model-soft); stroke: var(--model); stroke-width: 2.6; }
+    }
+    @keyframes pulse-gate {
+      0%, 68%, 87%, 100% { fill: var(--process-soft); stroke-width: 2; }
+      74%, 82% { fill: var(--input-soft); stroke: var(--input); stroke-width: 4; }
+    }
+    @keyframes pulse-output {
+      0%, 81%, 100% { fill: var(--surface); stroke-width: 1.7; }
+      87%, 96% { fill: var(--storage-soft); stroke: var(--storage); stroke-width: 3; }
+    }
+    @keyframes pulse-eval {
+      0%, 85%, 100% { fill: var(--surface-2); stroke-width: 1.5; }
+      90%, 98% { fill: var(--model-soft); stroke: var(--model); stroke-width: 2.6; }
+    }
+    @media (max-width: 1100px) {
+      .hero { grid-template-columns: 1fr; gap: 28px; }
+      .hero-side { grid-template-columns: 1fr 1fr; }
+      .status-strip { grid-template-columns: 1fr 1fr; }
+      .story { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .shell { width: min(100% - 24px, 1720px); }
+      .hero { padding-top: 28px; }
+      .brand-line { margin-bottom: 27px; }
+      h1 { font-size: 3.35rem; }
+      .hero-side { grid-template-columns: 1fr; }
+      .status-strip,
+      .story { grid-template-columns: 1fr; }
+      .diagram-header { align-items: start; flex-direction: column; padding-block: 14px; }
+      .note-row { grid-template-columns: 1fr; gap: 12px; }
+      footer { align-items: start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .motion { animation: none !important; }
+      .packet { display: none; }
+    }
+    @media print {
+      :root {
+        --bg: #fff;
+        --surface: #fff;
+        --surface-2: #f7faf9;
+        --ink: #13201c;
+        --muted: #4c5c57;
+        --faint: #66736f;
+        --line: #b9c5c1;
+        --line-soft: #d6dfdc;
+      }
+      header { background: #fff; }
+      .hero-actions, .packet { display: none; }
+      .shell { width: 100%; }
+      svg { min-width: 0; }
+      .diagram-frame, .status-strip, .story, .note-row { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#architecture">Skip to architecture</a>
+  <input class="motion-input" type="checkbox" id="motion" checked />
+  <header>
+    <div class="shell hero">
+      <div>
+        <div class="brand-line">
+          <span class="radar-mark motion" aria-hidden="true"><i></i></span>
+          <span class="brand-copy"><strong>Threat Radar</strong><small>Living system architecture</small></span>
+        </div>
+        <p class="eyebrow">One signal · every boundary · zero implied trust</p>
+        <h1>See the system <em>think.</em></h1>
+        <p class="hero-copy">
+          Watch a raw signal cross the security airlock, become evidence, fan through bounded
+          reviewers, and reach a code-owned publication gate. The motion follows the real runtime.
+        </p>
+      </div>
+      <aside class="hero-side" aria-label="Diagram controls and posture">
+        <div class="posture-card">
+          <span>Authority model</span>
+          <strong>Agents challenge. Code decides.</strong>
+          <small>Models have no tools, secrets, durable state, or publication authority. Every factual claim must resolve to stored evidence.</small>
+        </div>
+        <div class="hero-actions">
+          <label class="motion-toggle" for="motion">
+            <i class="toggle-dot" aria-hidden="true"></i>
+            <span class="motion-on">Motion on</span>
+            <span class="motion-off">Motion off</span>
+          </label>
+          <a href="architecture-visual.html">Open the 10-diagram blueprint ↗</a>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <main class="shell" id="architecture">
+    <section class="status-strip" aria-label="Runtime status">
+      <div class="status-item"><span>Signal surfaces</span><strong>X · Reddit · TikTok · GitHub · web · authority</strong></div>
+      <div class="status-item"><span>Runtime</span><strong>OpenClaw · Codex · Claude · Perplexity · shell/CI</strong></div>
+      <div class="status-item"><span>Agent topology</span><strong>3 parallel challenges → verifier → coordinator</strong></div>
+      <div class="status-item"><span>Publication boundary</span><strong>Deterministic, cited, immutable, read-only</strong></div>
+    </section>
+
+    <section class="diagram-frame" aria-labelledby="diagram-heading">
+      <div class="diagram-header">
+        <div><i class="live-dot motion" aria-hidden="true"></i><strong id="diagram-heading">Guided runtime loop</strong></div>
+        <small>12 seconds · hover-free · reduced-motion aware</small>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1680 980" role="img" aria-labelledby="motion-title motion-desc">
+          <title id="motion-title">Animated architecture of the Emerging Threat Radar</title>
+          <desc id="motion-desc">A left-to-right flow begins with six external intelligence surfaces.
+            Signals cross safe acquisition, content security, immutable evidence, deterministic
+            correlation, a five-role bounded agent review, and a code-owned publication gate.
+            Hostile content is diverted to quarantine. Verified reports reach immutable storage and
+            a private read-only portal. A separate evaluation loop stops at human approval.</desc>
+          <defs>
+            <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
+              <path class="grid-line" d="M80 0H0V80"></path>
+            </pattern>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0 10 5 0 10z" fill="#315149"></path>
+            </marker>
+            <marker id="arrow-control" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0 10 5 0 10z" fill="#b1a0ff"></path>
+            </marker>
+            <marker id="arrow-model" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0 10 5 0 10z" fill="#f2ba68"></path>
+            </marker>
+            <marker id="arrow-risk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0 10 5 0 10z" fill="#ff756d"></path>
+            </marker>
+          </defs>
+
+          <rect width="1680" height="980" fill="url(#grid)"></rect>
+          <rect class="zone" x="24" y="180" width="300" height="540" rx="22"></rect>
+          <rect class="zone" x="342" y="180" width="1100" height="540" rx="22"></rect>
+          <rect class="zone" x="1460" y="180" width="196" height="540" rx="22"></rect>
+          <text class="zone-label" x="46" y="208">HOSTILE / EXTERNAL</text>
+          <text class="zone-label" x="364" y="208">LOCAL TRUSTED HOST</text>
+          <text class="zone-label" x="1482" y="208">PRIVATE READ ZONE</text>
+
+          <!-- Connectors are drawn before nodes. -->
+          <path class="edge-control" d="M605 86H720V250H420V365"></path>
+          <path class="edge-control" d="M605 86H1030V400"></path>
+          <path class="edge flowing motion" d="M240 430H360"></path>
+          <path class="edge flowing motion" d="M480 430H508"></path>
+          <path class="edge flowing motion" d="M612 430H635"></path>
+          <path class="edge flowing motion" d="M735 430H768"></path>
+          <path class="edge flowing motion" d="M948 430H994"></path>
+          <path class="source-spoke" d="M120 350 170 430M85 430H170M120 510 170 430M220 520 170 430M270 472 170 430M252 354 170 430"></path>
+          <path class="edge-risk" d="M560 480V615H470"></path>
+          <path class="edge-model" d="M1018 430H1045V318H1080"></path>
+          <path class="edge-model" d="M1018 430H1080"></path>
+          <path class="edge-model" d="M1018 430H1045V542H1080"></path>
+          <path class="edge-model" d="M1205 318H1235V410"></path>
+          <path class="edge-model" d="M1205 430H1235"></path>
+          <path class="edge-model" d="M1205 542H1235V450"></path>
+          <path class="edge-model" d="M1285 430H1310"></path>
+          <path class="edge" d="M1400 430H1418"></path>
+          <path class="edge" d="M1492 430H1515"></path>
+          <path class="edge-eval" d="M1580 620V798H1275"></path>
+          <path class="edge-eval" d="M1175 840H1025"></path>
+          <path class="edge-eval" d="M935 840H790"></path>
+          <path class="edge-control" d="M700 840H520V140H575V116"></path>
+
+          <g aria-label="Platform-neutral runtime rail">
+            <text class="zone-label" x="48" y="45">RUN THE SAME TYPED CONTRACT FROM</text>
+            <rect class="node node-control" x="48" y="65" width="92" height="42" rx="21"></rect>
+            <rect class="node node-control" x="150" y="65" width="82" height="42" rx="21"></rect>
+            <rect class="node node-control" x="242" y="65" width="82" height="42" rx="21"></rect>
+            <rect class="node node-control" x="334" y="65" width="106" height="42" rx="21"></rect>
+            <rect class="node node-control" x="450" y="65" width="92" height="42" rx="21"></rect>
+            <text class="node-small center-label" x="94" y="91">OpenClaw</text>
+            <text class="node-small center-label" x="191" y="91">Codex</text>
+            <text class="node-small center-label" x="283" y="91">Claude</text>
+            <text class="node-small center-label" x="387" y="91">Perplexity</text>
+            <text class="node-small center-label" x="496" y="91">Shell / CI</text>
+            <path class="edge-control" d="M140 86H150M232 86H242M324 86H334M440 86H450"></path>
+            <circle class="node node-control" cx="575" cy="86" r="30"></circle>
+            <text class="node-micro center-label" x="575" y="83">RUN</text>
+            <text class="node-micro center-label" x="575" y="96">CONTRACT</text>
+            <path class="edge-control" d="M542 86H545"></path>
+          </g>
+
+          <g aria-label="Six intelligence surfaces">
+            <circle class="source-node" cx="120" cy="350" r="31"></circle>
+            <circle class="source-node" cx="85" cy="430" r="31"></circle>
+            <circle class="source-node" cx="120" cy="510" r="31"></circle>
+            <circle class="source-node" cx="220" cy="520" r="31"></circle>
+            <circle class="source-node" cx="270" cy="472" r="31"></circle>
+            <circle class="source-node" cx="252" cy="354" r="31"></circle>
+            <text class="source-text" x="120" y="354">X</text>
+            <text class="source-text" x="85" y="434">Reddit</text>
+            <text class="source-text" x="120" y="514">TikTok</text>
+            <text class="source-text" x="220" y="524">GitHub</text>
+            <text class="source-text" x="270" y="476">Web</text>
+            <text class="source-text" x="252" y="358">Authority</text>
+            <circle class="node node-input stage-source motion" cx="170" cy="430" r="70"></circle>
+            <circle cx="170" cy="430" r="48" fill="none" stroke="#2a6357" stroke-width="1"></circle>
+            <text class="node-micro center-label" x="170" y="413">SURFACE</text>
+            <text class="node-label center-label" x="170" y="436">Signal mesh</text>
+            <text class="node-small center-label" x="170" y="456">independent source IDs</text>
+          </g>
+
+          <g aria-label="Security airlock">
+            <circle class="node stage-security motion" cx="420" cy="430" r="60"></circle>
+            <path d="M420 387 451 401V426c0 24-14 42-31 52-17-10-31-28-31-52v-25z" fill="none" stroke="#ff756d" stroke-width="2"></path>
+            <path d="M407 430 417 440 438 417" fill="none" stroke="#5de5cd" stroke-width="2.5"></path>
+            <text class="node-label center-label" x="420" y="522">Safe acquisition</text>
+            <text class="node-small center-label" x="420" y="541">SSRF · DNS · redirects · bytes</text>
+
+            <path class="node stage-security motion" d="M560 368 612 398V462L560 492 508 462V398z"></path>
+            <path d="M536 410H584M536 430H584M536 450H570" stroke="#ff756d" stroke-width="2"></path>
+            <text class="node-label center-label" x="560" y="570">Content gateway</text>
+            <text class="node-small center-label" x="560" y="589">sanitize · scan · schema</text>
+
+            <path class="node node-storage stage-security motion" d="M635 397c0-17 22-30 50-30s50 13 50 30v67c0 17-22 30-50 30s-50-13-50-30z"></path>
+            <ellipse cx="685" cy="397" rx="50" ry="30" fill="none" stroke="#71e39c" stroke-width="1.5"></ellipse>
+            <path d="M635 430c0 17 22 30 50 30s50-13 50-30" fill="none" stroke="#35694a"></path>
+            <text class="node-micro center-label" x="685" y="416">SHA-256</text>
+            <text class="node-label center-label" x="685" y="522">Evidence boundary</text>
+            <text class="node-small center-label" x="685" y="541">immutable bytes · typed excerpts</text>
+          </g>
+
+          <g aria-label="Quarantined hostile content">
+            <rect class="node node-risk" x="350" y="590" width="120" height="62" rx="8"></rect>
+            <text class="node-micro center-label" x="410" y="616">QUARANTINE</text>
+            <text class="node-small center-label" x="410" y="637">drop / hold / audit</text>
+            <circle class="packet packet-risk" r="6">
+              <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.11;.13;.29;.31;1" dur="12s" repeatCount="indefinite"></animate>
+              <animateMotion path="M560 480V615H470" keyPoints="0;0;1;1" keyTimes="0;.12;.29;1" dur="12s" repeatCount="indefinite"></animateMotion>
+            </circle>
+          </g>
+
+          <g aria-label="Deterministic intelligence core">
+            <circle class="node node-process stage-core motion" cx="858" cy="430" r="90"></circle>
+            <circle class="core-ring motion" cx="858" cy="430" r="72"></circle>
+            <line class="core-axis" x1="786" y1="430" x2="930" y2="430"></line>
+            <line class="core-axis" x1="858" y1="358" x2="858" y2="502"></line>
+            <circle cx="858" cy="430" r="8" fill="#83b8ff"></circle>
+            <text class="node-micro center-label" x="858" y="400">DETERMINISTIC</text>
+            <text class="node-label center-label" x="858" y="454">Intelligence core</text>
+            <text class="node-small center-label" x="858" y="475">lineage · cluster · score</text>
+            <text class="node-micro center-label" x="858" y="560">NOMIC SHADOW OBSERVES HERE · ZERO AUTHORITY</text>
+          </g>
+
+          <g aria-label="Sanitized agent packet">
+            <circle class="node node-model" cx="1018" cy="430" r="24"></circle>
+            <path d="M1006 424h24M1006 432h24M1006 440h16" stroke="#f2ba68" stroke-width="1.5"></path>
+            <text class="node-micro center-label" x="1018" y="474">SANITIZED PACKET</text>
+          </g>
+
+          <g aria-label="Bounded five-role agent graph">
+            <rect class="agent-zone" x="1048" y="242" width="355" height="376" rx="22"></rect>
+            <text class="zone-label" x="1070" y="268">BOUNDED REVIEW MESH</text>
+            <text class="node-micro" x="1380" y="286" text-anchor="end">NO TOOLS · NO MEMORY · NO PUBLISH</text>
+            <rect class="agent-pill stage-agents motion" x="1080" y="288" width="125" height="60" rx="30"></rect>
+            <rect class="agent-pill stage-agents motion" x="1080" y="400" width="125" height="60" rx="30"></rect>
+            <rect class="agent-pill stage-agents motion" x="1080" y="512" width="125" height="60" rx="30"></rect>
+            <text class="agent-role center-label" x="1142" y="322">Specialist</text>
+            <text class="agent-role center-label" x="1142" y="434">Impact</text>
+            <text class="agent-role center-label" x="1142" y="546">Skeptic</text>
+            <path class="agent-pill stage-agents motion" d="M1260 390 1292 430 1260 470 1228 430z"></path>
+            <text class="node-micro center-label" x="1260" y="427">CITATION</text>
+            <text class="node-micro center-label" x="1260" y="440">VERIFIER</text>
+            <rect class="agent-pill stage-agents motion" x="1310" y="395" width="90" height="70" rx="10"></rect>
+            <text class="node-micro center-label" x="1355" y="426">CHIEF</text>
+            <text class="node-micro center-label" x="1355" y="439">COORD.</text>
+            <text class="node-small center-label" x="1225" y="594">Parallel challenge → evidence check → bounded synthesis</text>
+          </g>
+
+          <g aria-label="Deterministic publication gate">
+            <path class="gate stage-gate motion" d="M1455 383 1492 430 1455 477 1418 430z"></path>
+            <line class="gate-bar" x1="1441" y1="420" x2="1469" y2="420"></line>
+            <line class="gate-bar" x1="1441" y1="430" x2="1469" y2="430"></line>
+            <line class="gate-bar" x1="1441" y1="440" x2="1469" y2="440"></line>
+            <text class="node-micro center-label" x="1455" y="510">CODE DECIDES</text>
+            <text class="node-small center-label" x="1455" y="529">claim · citation · class</text>
+          </g>
+
+          <g aria-label="Verified report and private portal">
+            <rect class="screen stage-output motion" x="1515" y="330" width="130" height="250" rx="12"></rect>
+            <rect x="1531" y="350" width="98" height="70" rx="5" fill="#10231e" stroke="#2f6754"></rect>
+            <circle cx="1580" cy="385" r="25" fill="none" stroke="#2f6754"></circle>
+            <circle cx="1580" cy="385" r="13" fill="none" stroke="#214b40"></circle>
+            <line class="screen-line" x1="1580" y1="353" x2="1580" y2="417"></line>
+            <line class="screen-line" x1="1548" y1="385" x2="1612" y2="385"></line>
+            <line class="screen-sweep motion" x1="1580" y1="385" x2="1602" y2="370"></line>
+            <path d="M1542 448h76M1542 466h60M1542 484h70" stroke="#71e39c" stroke-width="2"></path>
+            <rect x="1542" y="510" width="76" height="26" rx="3" fill="#123a25" stroke="#71e39c"></rect>
+            <text class="node-micro center-label" x="1580" y="528">VERIFIED</text>
+            <text class="node-label center-label" x="1580" y="610">Report + portal</text>
+            <text class="node-small center-label" x="1580" y="629">immutable · private · read-only</text>
+          </g>
+
+          <g aria-label="Evaluation and human approval loop">
+            <text class="zone-label" x="350" y="760">MEASURED IMPROVEMENT LOOP · NEVER DIRECTLY MUTATES PRODUCTION</text>
+            <circle class="node node-storage" cx="1225" cy="840" r="50"></circle>
+            <text class="node-micro center-label" x="1225" y="836">REPORTS +</text>
+            <text class="node-micro center-label" x="1225" y="849">FEEDBACK</text>
+            <path class="node node-model stage-eval motion" d="M980 795 1025 840 980 885 935 840z"></path>
+            <text class="node-micro center-label" x="980" y="837">EVAL</text>
+            <text class="node-micro center-label" x="980" y="850">SUITE</text>
+            <path class="node node-control" d="M745 792 790 818V862L745 888 700 862V818z"></path>
+            <text class="node-micro center-label" x="745" y="837">HUMAN</text>
+            <text class="node-micro center-label" x="745" y="850">APPROVAL</text>
+            <path class="node node-control" d="M420 812c0-14 22-25 50-25s50 11 50 25v55c0 14-22 25-50 25s-50-11-50-25z"></path>
+            <ellipse cx="470" cy="812" rx="50" ry="25" fill="none" stroke="#b1a0ff"></ellipse>
+            <text class="node-micro center-label" x="470" y="842">SIGNED CONFIG</text>
+            <text class="node-micro center-label" x="470" y="855">+ ROLLBACK</text>
+            <text class="node-small center-label" x="980" y="920">Acceptance · agent · source coverage · replay</text>
+            <text class="node-small center-label" x="745" y="920">Proposal stops here until approved</text>
+            <line class="stop-mark" x1="675" y1="824" x2="691" y2="840"></line>
+            <line class="stop-mark" x1="691" y1="824" x2="675" y2="840"></line>
+          </g>
+
+          <!-- Motion packets: declarative SVG only; hidden when motion is disabled. -->
+          <circle class="packet packet-input" r="6">
+            <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.02;.38;.4;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M170 430H360C385 430 395 430 420 430H508C530 430 538 430 560 430H635C655 430 665 430 685 430H768C800 430 826 430 858 430H994" keyPoints="0;0;1;1" keyTimes="0;.02;.38;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.37;.39;.52;.54;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1018 430H1045V318H1080" keyPoints="0;0;1;1" keyTimes="0;.38;.52;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.37;.39;.52;.54;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1018 430H1080" keyPoints="0;0;1;1" keyTimes="0;.38;.52;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.37;.39;.52;.54;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1018 430H1045V542H1080" keyPoints="0;0;1;1" keyTimes="0;.38;.52;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.51;.53;.66;.68;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1205 318H1235V410" keyPoints="0;0;1;1" keyTimes="0;.52;.66;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.51;.53;.66;.68;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1205 430H1235" keyPoints="0;0;1;1" keyTimes="0;.52;.66;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.51;.53;.66;.68;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1205 542H1235V450" keyPoints="0;0;1;1" keyTimes="0;.52;.66;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="6">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.64;.66;.73;.75;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1285 430H1310" keyPoints="0;0;1;1" keyTimes="0;.65;.73;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-input" r="6">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.71;.73;.84;.86;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1400 430H1418C1433 430 1440 430 1455 430H1492" keyPoints="0;0;1;1" keyTimes="0;.72;.84;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-storage" r="7">
+            <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.82;.84;.95;.97;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1492 430H1515" keyPoints="0;0;1;1" keyTimes="0;.83;.95;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+          <circle class="packet packet-model" r="5">
+            <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.86;.88;.99;1" dur="12s" repeatCount="indefinite"></animate>
+            <animateMotion path="M1580 620V798H1275C1245 798 1225 810 1225 840H1025C1005 840 995 840 980 840H790" keyPoints="0;0;1;1" keyTimes="0;.87;.99;1" dur="12s" repeatCount="indefinite"></animateMotion>
+          </circle>
+        </svg>
+      </div>
+    </section>
+
+    <section class="story" aria-label="Architecture narrative">
+      <article class="phase"><span class="phase-index">01 · Observe</span><h2>Many surfaces, separate identities</h2><p>Social, web, GitHub, and authoritative records stay attributable. Reposts do not become fake corroboration.</p></article>
+      <article class="phase"><span class="phase-index">02 · Contain</span><h2>Assume the payload is hostile</h2><p>Destination, DNS, redirects, MIME, bytes, archives, malware, and prompt injection are checked before model access.</p></article>
+      <article class="phase"><span class="phase-index">03 · Prove</span><h2>Turn content into evidence</h2><p>Immutable hashes, sanitized excerpts, typed observations, source lineage, and deterministic scores form the case.</p></article>
+      <article class="phase"><span class="phase-index">04 · Challenge</span><h2>Fan out, then reconverge</h2><p>Specialist, impact, and skeptic review in parallel. Citation verification runs before bounded coordination.</p></article>
+      <article class="phase"><span class="phase-index">05 · Decide</span><h2>Keep authority in code</h2><p>Claims, citations, confidence, and publication class pass deterministic checks. Models cannot press publish.</p></article>
+      <article class="phase"><span class="phase-index">06 · Improve</span><h2>Measure without self-editing</h2><p>Acceptance, agent, source, and replay evals can emit a proposal. Human approval and rollback stay mandatory.</p></article>
+    </section>
+
+    <aside class="note-row">
+      <p><strong>This is the cinematic overview.</strong> Runtime status, deployment boundaries, storage, local inference, provider routing, agent internals, and activation stages remain documented in the complete ten-diagram architecture.</p>
+      <a href="architecture-visual.html">Inspect the full blueprint →</a>
+    </aside>
+  </main>
+
+  <footer class="shell">
+    <span>Threat Radar · living architecture · July 2026</span>
+    <span>External content is data, never instruction.</span>
+  </footer>
+</body>
+</html>

@@ -400,6 +400,48 @@ def check_universal_runtime_visual(failures: list[str]) -> None:
         )
 
 
+def check_motion_architecture(failures: list[str]) -> None:
+    path = ROOT / "docs/architecture-motion.html"
+    parser = ArchitectureVisualParser()
+    try:
+        text = path.read_text(encoding="utf-8")
+        parser.feed(text)
+        parser.close()
+    except (OSError, ValueError) as exc:
+        failures.append(f"Animated architecture could not be parsed: {exc}")
+        return
+    if parser.svg_count != 1:
+        failures.append("Animated architecture must contain exactly one SVG")
+    if parser.svg_title_count != 1 or parser.svg_desc_count != 1:
+        failures.append("Animated architecture SVG must contain one title and one description")
+    if parser.duplicate_ids:
+        failures.append(
+            "Animated architecture contains duplicate IDs: "
+            + ", ".join(sorted(parser.duplicate_ids))
+        )
+    if parser.forbidden_elements:
+        failures.append(
+            "Animated architecture contains forbidden elements: "
+            + ", ".join(sorted(parser.forbidden_elements))
+        )
+    if parser.remote_assets:
+        failures.append("Animated architecture must not load remote assets")
+    if text.count("<animateMotion") < 8:
+        failures.append("Animated architecture must animate the end-to-end runtime path")
+    if text.count('class="phase"') != 6:
+        failures.append("Animated architecture must explain exactly six runtime phases")
+    required_fragments = {
+        'id="motion"': "an accessible motion toggle",
+        "@media (prefers-reduced-motion: reduce)": "reduced-motion behavior",
+        "architecture-visual.html": "a link to the complete architecture",
+    }
+    for fragment, description in required_fragments.items():
+        if fragment not in text:
+            failures.append(f"Animated architecture must include {description}")
+    if re.search(r"<(?:linearGradient|radialGradient|filter)\b", text, re.IGNORECASE):
+        failures.append("Animated architecture must not use SVG gradients or filters")
+
+
 def main() -> None:
     failures: list[str] = []
 
@@ -436,6 +478,7 @@ def main() -> None:
         "EVALS.md",
         "docs/SETUP.md",
         "docs/EXTENDING.md",
+        "docs/architecture-motion.html",
         "docs/index.html",
         "docs/sample-daily-brief.html",
         "docs/universal-agent-runtime.html",
@@ -453,6 +496,7 @@ def main() -> None:
     check_migrations(failures)
     check_supply_chain(failures)
     check_architecture_visual(failures)
+    check_motion_architecture(failures)
     check_universal_runtime_visual(failures)
 
     if failures:

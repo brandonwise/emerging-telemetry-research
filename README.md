@@ -181,9 +181,10 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 
 ## Architecture
 
-[Open the complete visual architecture](docs/architecture-visual.html) for the as-built system map
-and [the universal runtime diagram](docs/universal-agent-runtime.html) for the provider-neutral
-agent and source boundaries.
+[Watch the animated architecture](docs/architecture-motion.html) for the guided end-to-end runtime,
+[open the complete visual architecture](docs/architecture-visual.html) for the ten-diagram as-built
+system map, and [inspect the universal runtime diagram](docs/universal-agent-runtime.html) for the
+provider-neutral agent and source boundaries.
 
 ```text
 X · Reddit · TikTok · GitHub · web · official sources
