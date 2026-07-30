@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from apps.portal.main import PortalSettings, create_app
+from apps.portal.main import PortalSettings, _unique_findings, create_app
 from packages.pipeline.frozen import run_frozen_fixture
 
 
@@ -24,6 +24,16 @@ def _settings(
         access_token=token,
         lan_mode=lan_mode,
     )
+
+
+def test_priority_queue_deduplicates_recurring_findings() -> None:
+    rows = [
+        {"finding_id": "finding-a", "priority_score": 90.0},
+        {"finding_id": "finding-a", "priority_score": 85.0},
+        {"finding_id": "finding-b", "priority_score": 80.0},
+    ]
+
+    assert _unique_findings(rows, limit=2) == [rows[0], rows[2]]
 
 
 def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
@@ -113,9 +123,14 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     json_export = client.get("/exports/reports.json")
     finding_csv_export = client.get("/exports/findings.csv")
     finding_json_export = client.get("/exports/findings.json")
+    favicon = client.get("/static/radar-mark.svg")
 
     assert dashboard.status_code == 200
-    assert "Emerging threat radar" in dashboard.text
+    assert "The threat picture," in dashboard.text
+    assert "right now." in dashboard.text
+    assert "Evidence diversity" in dashboard.text
+    assert "100.0% X" in dashboard.text
+    assert "The checks behind the checks" in dashboard.text
     assert "Usage estimate" not in dashboard.text
     assert settings.status_code == 200
     assert "Configuration and usage" in settings.text
@@ -130,6 +145,8 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert reports.status_code == 200
     assert result.report["report_id"] in reports.text
     assert detail.status_code == 200
+    assert "Deterministic score anatomy" in detail.text
+    assert "Claim ledger" in detail.text
     assert "Defensive checks" in detail.text
     assert "Where this was discovered" in detail.text
     assert "Researcher source post" in detail.text
@@ -138,6 +155,7 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "X Post" in findings.text
     assert trends.status_code == 200
     assert "Cross-cutting themes" in trends.text
+    assert "Where findings are coming from" in trends.text
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
     assert json_export.headers["content-disposition"].endswith('"threat-radar-reports.json"')
@@ -148,6 +166,8 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
         '"threat-radar-findings.json"'
     )
     assert dashboard.headers["x-frame-options"] == "DENY"
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"].startswith("image/svg+xml")
 
 
 def test_portal_token_authentication(tmp_path: Path) -> None:

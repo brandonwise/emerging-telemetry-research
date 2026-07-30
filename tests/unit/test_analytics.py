@@ -64,6 +64,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     indexed = store.index_path(result.report_json_path)
     replay = store.index_path(result.report_json_path)
     overview = store.overview(days=365)
+    intelligence = store.intelligence_summary(days=365)
     costs = store.cost_breakdown(days=365)
     reports = store.list_reports(query="CVE-2026")
     findings = store.list_findings(
@@ -84,6 +85,22 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     assert replay.inserted is False
     assert overview["reports"] == 1
     assert overview["findings"] == 1
+    assert intelligence["surface_count"] == 1
+    assert intelligence["high_priority"] == 1
+    assert intelligence["evidence_count"] == 1
+    assert intelligence["x_share"] == 100.0
+    assert intelligence["non_x_evidence"] == 0
+    assert intelligence["claim_count"] == 2
+    assert intelligence["verified_claim_count"] == 2
+    assert intelligence["claim_verification_rate"] == 100.0
+    assert intelligence["sources"] == [
+        {
+            "source_type": "x_post",
+            "evidence": 1,
+            "share": 100.0,
+            "width": 10,
+        }
+    ]
     assert costs["estimated_cost"] == 0.275
     assert costs["requests"] == 10
     assert costs["tokens"] == 1500

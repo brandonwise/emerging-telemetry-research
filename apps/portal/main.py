@@ -8,7 +8,7 @@ import io
 import ipaddress
 import json
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import parse_qs
@@ -210,6 +210,15 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
     @application.get("/", response_class=HTMLResponse)
     async def dashboard(request: Request, days: int = 30) -> HTMLResponse:
         bounded_days = max(7, min(days, 365))
+        trend = store.daily_trend(days=bounded_days)
+        priority_findings = _unique_findings(
+            store.list_findings(
+                limit=500,
+                days=bounded_days,
+                priority_first=True,
+            ),
+            limit=8,
+        )
         return _render(
             templates,
             "dashboard.html",
@@ -217,7 +226,12 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             settings=portal_settings,
             active="overview",
             overview=store.overview(days=bounded_days),
-            trend=store.daily_trend(days=bounded_days),
+            intelligence=store.intelligence_summary(days=bounded_days),
+            evaluation=_evaluation_snapshot(portal_settings.reports_root),
+            source_posture=_source_posture(store.source_health(limit=500)),
+            trend=trend,
+            max_findings=max((int(item["findings"]) for item in trend), default=1),
+            findings=priority_findings,
             reports=store.list_reports(limit=6),
             days=bounded_days,
         )
@@ -305,6 +319,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             settings=portal_settings,
             active="trends",
             overview=store.overview(days=bounded_days),
+            intelligence=store.intelligence_summary(days=bounded_days),
             trend=trend,
             max_findings=max((int(item["findings"]) for item in trend), default=1),
             source_health=store.source_health(),
@@ -412,6 +427,8 @@ def _templates() -> Environment:
     )
     environment.filters["compact_date"] = _compact_date
     environment.filters["money"] = lambda value: f"${float(value):,.4f}"
+    environment.filters["compact_number"] = _compact_number
+    environment.filters["duration"] = _duration
     return environment
 
 
@@ -479,9 +496,164 @@ def _safe_csv(value: object) -> object:
     return value
 
 
+def _unique_findings(
+    rows: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    unique: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        finding_id = str(row["finding_id"])
+        if finding_id in seen:
+            continue
+        seen.add(finding_id)
+        unique.append(row)
+        if len(unique) >= limit:
+            break
+    return unique
+
+
 def _compact_date(value: object) -> str:
     text = str(value)
     return text[:10] if len(text) >= 10 else text
+
+
+def _compact_number(value: object) -> str:
+    try:
+        number = float(str(value))
+    except ValueError:
+        number = 0.0
+    if abs(number) >= 1_000_000:
+        return f"{number / 1_000_000:.1f}M"
+    if abs(number) >= 1_000:
+        return f"{number / 1_000:.1f}K"
+    return f"{number:,.0f}"
+
+
+def _duration(value: object) -> str:
+    try:
+        milliseconds = max(0, int(float(str(value))))
+    except ValueError:
+        milliseconds = 0
+    if milliseconds >= 60_000:
+        return f"{milliseconds / 60_000:.1f} min"
+    if milliseconds >= 1_000:
+        return f"{milliseconds / 1_000:.1f} sec"
+    return f"{milliseconds} ms"
+
+
+def _source_posture(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    latest: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        source_id = str(row["source_id"])
+        if source_id in seen:
+            continue
+        seen.add(source_id)
+        latest.append(row)
+    healthy = sum(1 for row in latest if row["status"] == "healthy")
+    return {
+        "sources": latest,
+        "healthy": healthy,
+        "degraded": len(latest) - healthy,
+        "total": len(latest),
+        "health_rate": round(healthy / len(latest) * 100, 1) if latest else 0.0,
+    }
+
+
+def _evaluation_snapshot(reports_root: Path) -> dict[str, Any]:
+    agent = _latest_json(
+        reports_root.glob("agent-evaluation*/agent-eval-results.json"),
+        preferred=lambda value: value.get("adapter") != "fixture",
+    )
+    coverage = _latest_json(
+        reports_root.rglob("source-coverage-results.json"),
+        preferred=_is_live_coverage,
+    )
+    acceptance = _latest_json(reports_root.rglob("acceptance-results.json"))
+    agent_metrics = agent.get("metrics", {}) if agent else {}
+    coverage_metrics = coverage.get("metrics", {}) if coverage else {}
+    acceptance_gates = acceptance.get("gates", {}) if acceptance else {}
+    return {
+        "agent": {
+            "present": bool(agent),
+            "passed": agent.get("passed") is True if agent else False,
+            "adapter": str(agent.get("adapter", "—")) if agent else "—",
+            "role_completion": float(agent_metrics.get("role_completion_rate", 0)) * 100,
+            "citation_coverage": float(
+                agent_metrics.get(
+                    "factual_claim_citation_coverage",
+                    agent_metrics.get("assessment_claim_coverage", 0),
+                )
+            )
+            * 100,
+            "agreement": float(agent_metrics.get("coordinator_disposition_agreement", 0))
+            * 100,
+            "failed_roles": int(agent_metrics.get("failed_role_count", 0)),
+            "duration_ms": int(agent_metrics.get("mean_review_duration_ms", 0)),
+            "tokens": int(agent_metrics.get("mean_review_tokens", 0)),
+        },
+        "coverage": {
+            "present": bool(coverage),
+            "passed": coverage.get("passed") is True if coverage else False,
+            "surfaces": int(coverage_metrics.get("surface_count", 0)),
+            "signal_surfaces": int(coverage_metrics.get("signal_surface_count", 0)),
+            "x_share": float(coverage_metrics.get("x_share", 0)) * 100,
+            "largest_share": float(coverage_metrics.get("largest_surface_share", 0)) * 100,
+            "non_x_evidence": int(coverage_metrics.get("non_x_evidence_count", 0)),
+            "unattributed": int(coverage_metrics.get("unattributed_evidence_count", 0)),
+        },
+        "acceptance": {
+            "present": bool(acceptance),
+            "passed": acceptance.get("passed") is True if acceptance else False,
+            "privileged_effects": int(
+                acceptance_gates.get("hostile_content_privileged_effects", 0)
+            ),
+            "model_exposure": int(
+                acceptance_gates.get("hostile_variants_reaching_models", 0)
+            ),
+            "replay_match": all(
+                acceptance_gates.get(key) is True
+                for key in (
+                    "audit_replay_match",
+                    "html_replay_match",
+                    "report_json_replay_match",
+                )
+            ),
+        },
+    }
+
+
+def _latest_json(
+    paths: Iterable[Path],
+    *,
+    preferred: Callable[[dict[str, Any]], bool] | None = None,
+) -> dict[str, Any]:
+    candidates: list[tuple[float, dict[str, Any]]] = []
+    for path in paths:
+        if not path.is_file() or path.stat().st_size > 2_000_000:
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(value, dict):
+            candidates.append((path.stat().st_mtime, value))
+    if not candidates:
+        return {}
+    if preferred is not None:
+        preferred_candidates = [item for item in candidates if preferred(item[1])]
+        if preferred_candidates:
+            candidates = preferred_candidates
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _is_live_coverage(value: dict[str, Any]) -> bool:
+    reports = value.get("reports")
+    return isinstance(reports, list) and any(
+        isinstance(path, str) and not path.startswith("tests/fixtures") for path in reports
+    )
 
 
 app = create_app()

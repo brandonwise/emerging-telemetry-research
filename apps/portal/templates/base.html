@@ -5,32 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <title>{% block title %}{{ settings.title }}{% endblock %}</title>
+  <link rel="icon" href="/static/radar-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/portal.css">
 </head>
 <body>
   <a class="skip-link" href="#content">Skip to content</a>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="{{ settings.title }} home">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <span>{{ settings.title }}</span>
-    </a>
-    <nav aria-label="Primary navigation">
-      <a href="/" {% if active == "overview" %}aria-current="page"{% endif %}>Overview</a>
-      <a href="/findings" {% if active == "findings" %}aria-current="page"{% endif %}>Findings</a>
-      <a href="/reports" {% if active == "reports" %}aria-current="page"{% endif %}>Reports</a>
-      <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>Trends</a>
-      <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>Settings</a>
-    </nav>
-    {% if settings.authentication_enabled %}
-    <form method="post" action="/logout"><button class="quiet-button" type="submit">Sign out</button></form>
-    {% endif %}
-  </header>
-  <main id="content">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="site-footer">
-    <span>Evidence-backed. Read-only by design.</span>
-    <span>{{ "LAN access" if settings.lan_mode else "Local access" }}</span>
-  </footer>
+  <div class="app-shell">
+    <aside class="site-rail">
+      <a class="brand" href="/" aria-label="{{ settings.title }} intelligence home">
+        <span class="brand-mark" aria-hidden="true"><i></i></span>
+        <span class="brand-copy"><strong>{{ settings.title }}</strong><small>Intelligence operations</small></span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="/" {% if active == "overview" %}aria-current="page"{% endif %}>
+          <span class="nav-index">01</span><span>Command</span>
+        </a>
+        <a href="/findings" {% if active == "findings" %}aria-current="page"{% endif %}>
+          <span class="nav-index">02</span><span>Signals</span>
+        </a>
+        <a href="/reports" {% if active == "reports" %}aria-current="page"{% endif %}>
+          <span class="nav-index">03</span><span>Reports</span>
+        </a>
+        <a href="/trends" {% if active == "trends" %}aria-current="page"{% endif %}>
+          <span class="nav-index">04</span><span>Telemetry</span>
+        </a>
+        <a href="/setup" {% if active == "setup" %}aria-current="page"{% endif %}>
+          <span class="nav-index">05</span><span>System</span>
+        </a>
+      </nav>
+      <div class="rail-status">
+        <span class="live-dot" aria-hidden="true"></span>
+        <div><strong>Evidence locked</strong><small>Deterministic gate active</small></div>
+      </div>
+    </aside>
+    <div class="app-frame">
+      <header class="site-header">
+        <div class="header-context">
+          <span class="system-kicker">Threat intelligence console</span>
+          <span class="header-separator" aria-hidden="true"></span>
+          <span>{{ "Private LAN" if settings.lan_mode else "Loopback" }}</span>
+        </div>
+        <div class="header-actions">
+          <a href="/exports/findings.json">Export intelligence</a>
+          {% if settings.authentication_enabled %}
+          <form method="post" action="/logout"><button class="quiet-button" type="submit">Sign out</button></form>
+          {% endif %}
+        </div>
+      </header>
+      <main id="content">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="site-footer">
+        <span>Every claim carries evidence. Agents never publish.</span>
+        <span>{{ "Private network access" if settings.lan_mode else "Local access only" }}</span>
+      </footer>
+    </div>
+  </div>
 </body>
 </html>

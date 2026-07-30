@@ -38,8 +38,29 @@
 <section class="metric-grid compact">
   <article class="metric-card"><span>Reports</span><strong>{{ overview.reports }}</strong></article>
   <article class="metric-card"><span>Findings</span><strong>{{ overview.findings }}</strong></article>
-  <article class="metric-card"><span>Peak score</span><strong>{{ "%.1f"|format(overview.max_score) }}</strong></article>
-  <article class="metric-card"><span>Source gaps</span><strong>{{ overview.degraded }}</strong></article>
+  <article class="metric-card"><span>Evidence surfaces</span><strong>{{ intelligence.surface_count }}</strong></article>
+  <article class="metric-card"><span>X share</span><strong>{{ "%.1f%%"|format(intelligence.x_share) }}</strong></article>
+</section>
+<section class="panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">Evidence concentration</p><h2>Where findings are coming from</h2></div>
+    <span class="panel-meta">{{ intelligence.evidence_count }} cited artifacts</span>
+  </div>
+  {% if intelligence.sources %}
+  <div class="source-mix-list">
+    {% for source in intelligence.sources %}
+    <div class="source-mix-row">
+      <span>{{ source.source_type|replace("_", " ") }}</span>
+      <div class="track"><span class="w-{{ source.width }}"></span></div>
+      <strong>{{ source.evidence }}</strong>
+      <small>{{ "%.1f%%"|format(source.share) }}</small>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="panel-footnote">{{ intelligence.non_x_evidence }} pieces of evidence came from outside X in this window.</p>
+  {% else %}
+  <div class="empty-state"><strong>No cited source evidence in this window.</strong></div>
+  {% endif %}
 </section>
 <section class="panel">
   <div class="panel-heading"><div><p class="eyebrow">Operational telemetry</p><h2>Workflow events</h2></div></div>
@@ -76,7 +97,7 @@
   <div class="empty-state"><strong>No trend data in this window.</strong></div>
   {% endif %}
 </section>
-<section class="panel">
+<section class="panel" id="source-health">
   <div class="panel-heading"><div><p class="eyebrow">Collection integrity</p><h2>Recent source health</h2></div></div>
   {% if source_health %}
   <div class="data-table" role="table" aria-label="Source health">

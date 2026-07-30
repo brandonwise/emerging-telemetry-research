@@ -266,6 +266,173 @@ class AnalyticsStore:
             "latest": dict(latest) if latest is not None else None,
         }
 
+    def intelligence_summary(self, *, days: int = 30) -> dict[str, Any]:
+        """Build the read-only posture metrics used by the intelligence console."""
+        since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        with self._connect() as connection:
+            findings = connection.execute(
+                """
+                SELECT COUNT(*) AS findings,
+                       COALESCE(AVG(f.priority_score), 0) AS mean_score,
+                       COALESCE(AVG(f.confidence_probability), 0) AS mean_confidence,
+                       COALESCE(AVG(f.lead_time_hours), 0) AS mean_lead_hours,
+                       SUM(CASE WHEN f.lead_time_hours > 0 THEN 1 ELSE 0 END) AS early_findings,
+                       COUNT(DISTINCT CASE
+                         WHEN f.priority_score >= 75 THEN f.finding_id
+                       END) AS high_priority,
+                       SUM(CASE WHEN f.publication_class = 'flash' THEN 1 ELSE 0 END) AS flash,
+                       SUM(CASE WHEN f.publication_class = 'watch' THEN 1 ELSE 0 END) AS watch,
+                       SUM(CASE WHEN f.publication_class = 'daily' THEN 1 ELSE 0 END) AS daily,
+                       SUM(CASE WHEN f.publication_class = 'archive' THEN 1 ELSE 0 END) AS archive,
+                       SUM(CASE WHEN f.emergence_stage != 'confirmed' THEN 1 ELSE 0 END)
+                         AS emerging
+                FROM analytics_findings f
+                JOIN analytics_reports r ON r.report_id = f.report_id
+                WHERE r.generated_at >= ?
+                """,
+                (since,),
+            ).fetchone()
+            source_rows = connection.execute(
+                """
+                SELECT s.source_type, COUNT(*) AS evidence
+                FROM analytics_finding_sources s
+                JOIN analytics_reports r ON r.report_id = s.report_id
+                WHERE r.generated_at >= ?
+                GROUP BY s.source_type
+                ORDER BY evidence DESC, s.source_type
+                """,
+                (since,),
+            ).fetchall()
+            usage = connection.execute(
+                """
+                SELECT COALESCE(SUM(
+                         CASE
+                           WHEN u.stage LIKE '%review%' OR u.stage LIKE '%agent%'
+                           THEN u.requests ELSE 0
+                         END
+                       ), 0) AS agent_requests,
+                       COALESCE(SUM(
+                         CASE
+                           WHEN u.stage LIKE '%review%' OR u.stage LIKE '%agent%'
+                           THEN u.input_tokens + u.output_tokens ELSE 0
+                         END
+                       ), 0) AS agent_tokens,
+                       COUNT(DISTINCT CASE
+                         WHEN u.stage LIKE '%review%' OR u.stage LIKE '%agent%'
+                         THEN u.model
+                       END) AS agent_models
+                FROM analytics_usage u
+                JOIN analytics_reports r ON r.report_id = u.report_id
+                WHERE r.generated_at >= ?
+                """,
+                (since,),
+            ).fetchone()
+            report_rows = connection.execute(
+                """
+                SELECT report_json
+                FROM analytics_reports
+                WHERE generated_at >= ?
+                ORDER BY generated_at DESC
+                LIMIT 500
+                """,
+                (since,),
+            ).fetchall()
+        assert findings is not None
+        assert usage is not None
+        total_evidence = sum(int(row["evidence"]) for row in source_rows)
+        sources: list[dict[str, Any]] = [
+            {
+                "source_type": str(row["source_type"]),
+                "evidence": int(row["evidence"]),
+                "share": (
+                    round(int(row["evidence"]) / total_evidence * 100, 1)
+                    if total_evidence
+                    else 0.0
+                ),
+                "width": (
+                    max(1, min(10, round(int(row["evidence"]) / total_evidence * 10)))
+                    if total_evidence
+                    else 0
+                ),
+            }
+            for row in source_rows
+        ]
+        x_evidence = sum(
+            item["evidence"] for item in sources if item["source_type"] == "x_post"
+        )
+        claim_count = 0
+        verified_claim_count = 0
+        plan_count = 0
+        review_count = 0
+        assessment_count = 0
+        failed_role_count = 0
+        review_duration_ms = 0
+        for row in report_rows:
+            report = json.loads(str(row["report_json"]))
+            if not isinstance(report, dict):
+                continue
+            plans = report.get("agent_shadow_plans")
+            if isinstance(plans, list):
+                plan_count += len(plans)
+            reviews = report.get("agent_reviews")
+            if isinstance(reviews, list):
+                review_count += len(reviews)
+                for review in reviews:
+                    if not isinstance(review, dict):
+                        continue
+                    assessments = review.get("assessments")
+                    failures = review.get("failures")
+                    assessment_count += len(assessments) if isinstance(assessments, list) else 0
+                    failed_role_count += len(failures) if isinstance(failures, list) else 0
+                    review_duration_ms += int(review.get("duration_ms", 0))
+            for finding in report.get("findings", []):
+                if not isinstance(finding, dict):
+                    continue
+                for claim in finding.get("claims", []):
+                    if not isinstance(claim, dict):
+                        continue
+                    claim_count += 1
+                    if (
+                        claim.get("verification_status") == "verified"
+                        and isinstance(claim.get("evidence_ids"), list)
+                        and claim["evidence_ids"]
+                    ):
+                        verified_claim_count += 1
+        return {
+            "days": days,
+            "findings": int(findings["findings"]),
+            "mean_score": float(findings["mean_score"]),
+            "mean_confidence": float(findings["mean_confidence"]),
+            "mean_lead_hours": float(findings["mean_lead_hours"]),
+            "early_findings": int(findings["early_findings"] or 0),
+            "high_priority": int(findings["high_priority"] or 0),
+            "publication": {
+                "flash": int(findings["flash"] or 0),
+                "watch": int(findings["watch"] or 0),
+                "daily": int(findings["daily"] or 0),
+                "archive": int(findings["archive"] or 0),
+            },
+            "emerging": int(findings["emerging"] or 0),
+            "evidence_count": total_evidence,
+            "surface_count": len(sources),
+            "sources": sources,
+            "x_share": round(x_evidence / total_evidence * 100, 1) if total_evidence else 0.0,
+            "non_x_evidence": total_evidence - x_evidence,
+            "claim_count": claim_count,
+            "verified_claim_count": verified_claim_count,
+            "claim_verification_rate": (
+                round(verified_claim_count / claim_count * 100, 1) if claim_count else 0.0
+            ),
+            "agent_plan_count": plan_count,
+            "agent_review_count": review_count,
+            "agent_assessment_count": assessment_count,
+            "agent_failed_role_count": failed_role_count,
+            "agent_review_duration_ms": review_duration_ms,
+            "agent_requests": int(usage["agent_requests"]),
+            "agent_tokens": int(usage["agent_tokens"]),
+            "agent_models": int(usage["agent_models"]),
+        }
+
     def cost_breakdown(self, *, days: int = 30) -> dict[str, Any]:
         """Analyze API-equivalent usage estimates without claiming cash spend."""
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
@@ -414,6 +581,8 @@ class AnalyticsStore:
         category: str | None = None,
         tag: str | None = None,
         source_type: str | None = None,
+        days: int | None = None,
+        priority_first: bool = False,
     ) -> list[dict[str, Any]]:
         clauses: list[str] = []
         parameters: list[Any] = []
@@ -438,7 +607,17 @@ class AnalyticsStore:
                 "AND fs.source_type = ?)"
             )
             parameters.append(source_type)
+        if days is not None:
+            clauses.append("r.generated_at >= ?")
+            parameters.append(
+                (datetime.now(UTC) - timedelta(days=max(1, min(days, 3650)))).isoformat()
+            )
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        order = (
+            "f.priority_score DESC, r.generated_at DESC, f.finding_id"
+            if priority_first
+            else "r.generated_at DESC, f.priority_score DESC, f.finding_id"
+        )
         parameters.append(max(1, min(limit, 1000)))
         with self._connect() as connection:
             rows = connection.execute(
@@ -471,7 +650,7 @@ class AnalyticsStore:
                 FROM analytics_findings f
                 JOIN analytics_reports r ON r.report_id = f.report_id
                 {where}
-                ORDER BY r.generated_at DESC, f.priority_score DESC, f.finding_id
+                ORDER BY {order}
                 LIMIT ?
                 """,  # noqa: S608 -- clauses are fixed application strings
                 parameters,

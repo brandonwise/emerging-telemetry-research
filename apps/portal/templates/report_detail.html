@@ -16,6 +16,33 @@
 {% if report.degraded_sources %}
 <div class="notice warning"><strong>Coverage gap</strong> {{ report.degraded_sources|join(", ") }}</div>
 {% endif %}
+{% if report.get("agent_reviews", []) %}
+<section class="panel agent-review-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="eyebrow">Bounded agent review</p>
+      <h2>Independent challenges to the signal</h2>
+    </div>
+    <span class="status healthy">No publication authority</span>
+  </div>
+  <div class="review-grid">
+    {% for review in report.get("agent_reviews", []) %}
+    <article class="review-card">
+      <div class="review-card-head">
+        <strong>{{ review.status|replace("_", " ")|title }}</strong>
+        <span>{{ review.duration_ms|duration }}</span>
+      </div>
+      <p>{{ review.assessments|length }} role assessments · {{ review.failures|length }} failures</p>
+      <div class="role-chain" aria-label="Review roles">
+        {% for assessment in review.assessments %}
+        <span>{{ assessment.agent_role|replace("_", " ") }}</span>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 <section class="finding-stack">
   {% for finding in report.findings %}
   <article class="finding-card" id="{{ finding.finding_id }}">
@@ -36,6 +63,22 @@
       <div><dt>Category</dt><dd>{{ finding.category|replace("_", " ")|title }}</dd></div>
       <div><dt>Next check</dt><dd>{{ finding.next_check_at|compact_date }}</dd></div>
     </dl>
+    {% if finding.get("score_components", {}) %}
+    <section class="score-breakdown">
+      <div class="section-label">
+        <span>Deterministic score anatomy</span>
+        <small>Inputs are additive; penalties reduce the final score.</small>
+      </div>
+      <div class="score-component-grid">
+        {% for name, value in finding.get("score_components", {}).items() %}
+        <div class="score-component {% if name == 'penalties' %}penalty{% endif %}">
+          <span>{{ name|replace("_", " ") }}</span>
+          <strong>{% if name == "penalties" and value %}−{% endif %}{{ "%.1f"|format(value) }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
     <div class="two-column">
       <div><h3>Known</h3><ul>{% for item in finding.known %}<li>{{ item }}</li>{% endfor %}</ul></div>
       <div><h3>Unknown</h3><ul>{% for item in finding.unknown %}<li>{{ item }}</li>{% else %}<li>No material unknowns recorded.</li>{% endfor %}</ul></div>
@@ -43,6 +86,21 @@
     {% if finding.defensive_actions %}
     <h3>Defensive checks</h3>
     <ul>{% for action in finding.defensive_actions %}<li><strong>{{ action.priority|title }}:</strong> {{ action.action }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if finding.get("claims", []) %}
+    <h3>Claim ledger</h3>
+    <div class="claim-list">
+      {% for claim in finding.get("claims", []) %}
+      <article class="claim-row">
+        <div class="claim-status">
+          <span class="status {{ 'healthy' if claim.verification_status == 'verified' else 'degraded' }}">{{ claim.verification_status }}</span>
+          <small>{{ claim.certainty }}</small>
+        </div>
+        <p>{{ claim.text }}</p>
+        <span class="evidence-count">{{ claim.evidence_ids|length }} cited source{% if claim.evidence_ids|length != 1 %}s{% endif %}</span>
+      </article>
+      {% endfor %}
+    </div>
     {% endif %}
     {% if finding.get("source_evidence", []) %}
     <h3>Where this was discovered</h3>

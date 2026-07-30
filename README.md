@@ -112,9 +112,10 @@ access token by default. Trusted-network deployments can explicitly use
 `scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
 as Tailscale. The portal is read-only and includes a filterable findings archive, categories and
-tags, source-native web/social excerpts and links, taxonomy trends, report search/detail, source
-health, provider/model/workflow cost analysis, print styling, and finding/report CSV/JSON/HTML
-exports.
+tags, a score-sorted analyst queue, claim verification, early-warning and source-mix metrics,
+live evaluation posture, deterministic score breakdowns, source-native excerpts and links,
+taxonomy trends, report search/detail, source health, provider/model/workflow cost analysis,
+print styling, and finding/report CSV/JSON/HTML exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
 Keychain without writing it to the plist or logs.
 

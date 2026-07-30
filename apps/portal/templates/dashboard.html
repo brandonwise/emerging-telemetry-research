@@ -1,68 +1,261 @@
 {% extends "base.html" %}
-{% block title %}Overview · {{ settings.title }}{% endblock %}
+{% block title %}Command · {{ settings.title }}{% endblock %}
 {% block content %}
-<section class="page-heading split">
+<section class="command-heading">
   <div>
-    <p class="eyebrow">Operational picture</p>
-    <h1>Emerging threat radar</h1>
-    <p class="lede">Verified signals, coverage health, and publication history in one view.</p>
-  </div>
-  <form class="period-picker" method="get">
-    <label for="days">Window</label>
-    <select id="days" name="days">
-      {% for option in [7, 30, 90, 365] %}
-      <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} days</option>
-      {% endfor %}
-    </select>
-    <button type="submit">Apply</button>
-  </form>
-</section>
-
-<section class="metric-grid" aria-label="{{ days }} day summary">
-  <article class="metric-card priority">
-    <span>Highest score</span><strong>{{ "%.1f"|format(overview.max_score) }}</strong>
-    <small>across verified findings</small>
-  </article>
-  <article class="metric-card">
-    <span>Findings</span><strong>{{ overview.findings }}</strong>
-    <small>verified intelligence items</small>
-  </article>
-  <article class="metric-card">
-    <span>Source gaps</span><strong>{{ overview.degraded }}</strong>
-    <small>degraded source snapshots</small>
-  </article>
-  <article class="metric-card">
-    <span>Reports</span><strong>{{ overview.reports }}</strong>
-    <small>{{ "{:,}".format(overview.requests) }} requests · {{ overview.events }} events</small>
-  </article>
-</section>
-
-<section class="panel">
-  <div class="panel-heading">
-    <div><p class="eyebrow">Signal movement</p><h2>Findings by day</h2></div>
-    <a href="/trends?days={{ days }}">Open analysis</a>
-  </div>
-  {% if trend %}
-  <div class="bar-chart" role="img" aria-label="Daily verified finding counts">
-    {% set peak = trend|max(attribute="findings") %}
-    {% for point in trend %}
-    <div class="bar-column">
-      <span class="bar-value">{{ point.findings }}</span>
-      <span class="bar h-{{ ((point.findings / (peak.findings or 1)) * 10)|round(0, "ceil")|int }}"></span>
-      <span class="bar-label">{{ point.day[5:] }}</span>
+    <div class="status-line">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span>Collection online</span>
+      <span class="muted">·</span>
+      <span>{{ days }}-day intelligence window</span>
     </div>
-    {% endfor %}
+    <p class="eyebrow">Current threat posture</p>
+    <h1>The threat picture,<br><em>right now.</em></h1>
+    <p class="lede">What moved, why it matters, where the evidence came from, and whether the system can defend every conclusion.</p>
   </div>
-  {% else %}
-  <div class="empty-state"><strong>No trend history yet.</strong><span>Index a report to start the timeline.</span></div>
-  {% endif %}
+  <div class="command-controls">
+    {% if overview.latest %}
+    <div class="latest-run">
+      <span>Latest verified report</span>
+      <strong>{{ overview.latest.generated_at|compact_date }}</strong>
+      <small>{{ overview.latest.edition|replace("_", " ") }} · {{ overview.latest.finding_count }} findings · peak {{ "%.1f"|format(overview.latest.max_score) }}</small>
+      <a href="/reports/{{ overview.latest.report_id }}">Open report <span aria-hidden="true">↗</span></a>
+    </div>
+    {% endif %}
+    <form class="period-picker" method="get">
+      <label for="days">Analysis window</label>
+      <div>
+        <select id="days" name="days">
+          {% for option in [7, 30, 90, 365] %}
+          <option value="{{ option }}" {% if days == option %}selected{% endif %}>{{ option }} days</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Refresh</button>
+      </div>
+    </form>
+  </div>
 </section>
 
-<section class="panel">
-  <div class="panel-heading">
-    <div><p class="eyebrow">Recent intelligence</p><h2>Latest reports</h2></div>
-    <a href="/reports">View all reports</a>
-  </div>
-  {% include "report_rows.html" %}
+<section class="metric-grid command-metrics" aria-label="{{ days }} day threat summary">
+  <article class="metric-card priority">
+    <div class="metric-head"><span>Priority queue</span><i class="metric-signal critical"></i></div>
+    <strong>{{ intelligence.high_priority }}</strong>
+    <small>findings scoring 75 or higher</small>
+    <div class="metric-foot"><span>{{ intelligence.publication.flash }} flash</span><span>{{ intelligence.publication.watch }} watch</span></div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-head"><span>Mean confidence</span><i class="metric-signal good"></i></div>
+    <strong>{{ "%.0f"|format(intelligence.mean_confidence * 100) }}<b>%</b></strong>
+    <small>{{ intelligence.verified_claim_count }} of {{ intelligence.claim_count }} claims verified</small>
+    <div class="meter"><span class="w-{{ ((intelligence.mean_confidence * 10)|round(0, "ceil")|int) }}"></span></div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-head"><span>Early warning</span><i class="metric-signal cyan"></i></div>
+    <strong>{{ "%.1f"|format(intelligence.mean_lead_hours) }}<b>h</b></strong>
+    <small>mean lead before the baseline</small>
+    <div class="metric-foot"><span>{{ intelligence.early_findings }} early calls</span><span>{{ intelligence.emerging }} still emerging</span></div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-head"><span>Evidence surfaces</span><i class="metric-signal cyan"></i></div>
+    <strong>{{ intelligence.surface_count }}</strong>
+    <small>{{ intelligence.evidence_count }} attributed evidence objects</small>
+    <div class="metric-foot"><span>{{ intelligence.non_x_evidence }} non-X</span><span>{{ "%.1f"|format(intelligence.x_share) }}% X</span></div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-head"><span>Source health</span><i class="metric-signal {{ 'good' if source_posture.degraded == 0 else 'warning' }}"></i></div>
+    <strong>{{ "%.0f"|format(source_posture.health_rate) }}<b>%</b></strong>
+    <small>{{ source_posture.healthy }} healthy · {{ source_posture.degraded }} degraded</small>
+    <div class="meter"><span class="w-{{ ((source_posture.health_rate / 10)|round(0, "ceil")|int) }}"></span></div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-head"><span>Agent review</span><i class="metric-signal {{ 'good' if evaluation.agent.passed else 'warning' }}"></i></div>
+    <strong>{{ "%.0f"|format(evaluation.agent.role_completion) }}<b>%</b></strong>
+    <small>{{ evaluation.agent.adapter }} eval · {{ evaluation.agent.failed_roles }} failed roles</small>
+    <div class="metric-foot"><span>{{ evaluation.agent.tokens|compact_number }} tokens</span><span>{{ evaluation.agent.duration_ms|duration }}</span></div>
+  </article>
 </section>
+
+<div class="dashboard-grid lead-grid">
+  <section class="panel priority-panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Analyst queue</p><h2>What needs attention</h2></div>
+      <a href="/findings">Open all signals</a>
+    </div>
+    {% if findings %}
+    <div class="intel-list">
+      {% for finding in findings[:5] %}
+      <a class="intel-row" href="/reports/{{ finding.report_id }}#{{ finding.finding_id }}">
+        <div class="intel-score">
+          <span class="classification {{ finding.publication_class }}">{{ finding.publication_class }}</span>
+          <strong>{{ "%.1f"|format(finding.priority_score) }}</strong>
+        </div>
+        <div class="intel-main">
+          <div class="intel-meta">
+            <span>{{ finding.category|replace("_", " ") }}</span>
+            <span>{{ finding.generated_at|compact_date }}</span>
+            <span>{{ "%.0f"|format(finding.confidence_probability * 100) }}% confidence</span>
+          </div>
+          <h3>{{ finding.title }}</h3>
+          <div class="score-track" aria-label="Priority score {{ "%.1f"|format(finding.priority_score) }} out of 100">
+            <span class="w-{{ ((finding.priority_score / 10)|round(0, "ceil")|int) }}"></span>
+          </div>
+          <div class="tag-list compact">
+            {% for item in finding.source_types[:4] %}<span class="tag source-tag">{{ item|replace("_", " ") }}</span>{% endfor %}
+            {% if finding.lead_time_hours %}<span class="tag lead-tag">+{{ "%.1f"|format(finding.lead_time_hours) }}h lead</span>{% endif %}
+          </div>
+        </div>
+        <span class="row-arrow" aria-hidden="true">↗</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><strong>No verified findings in this window.</strong><span>The collection pipeline is still visible in telemetry.</span></div>
+    {% endif %}
+  </section>
+
+  <aside class="panel posture-panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Publication posture</p><h2>Decision mix</h2></div>
+    </div>
+    {% set publication_total = intelligence.publication.flash + intelligence.publication.watch + intelligence.publication.daily + intelligence.publication.archive %}
+    <div class="posture-ring" role="img" aria-label="{{ publication_total }} findings across flash, watch, daily, and archive decisions">
+      <div><strong>{{ publication_total }}</strong><span>decisions</span></div>
+    </div>
+    <div class="posture-legend">
+      <div><i class="legend-dot flash"></i><span>Flash</span><strong>{{ intelligence.publication.flash }}</strong></div>
+      <div><i class="legend-dot watch"></i><span>Watch</span><strong>{{ intelligence.publication.watch }}</strong></div>
+      <div><i class="legend-dot daily"></i><span>Daily</span><strong>{{ intelligence.publication.daily }}</strong></div>
+      <div><i class="legend-dot archive"></i><span>Archive</span><strong>{{ intelligence.publication.archive }}</strong></div>
+    </div>
+    <div class="posture-note">
+      <span class="lock-mark" aria-hidden="true">◆</span>
+      <p><strong>Code makes the final call.</strong> Agents can challenge the narrative, never the publication gate.</p>
+    </div>
+  </aside>
+</div>
+
+<div class="dashboard-grid telemetry-grid">
+  <section class="panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Signal velocity</p><h2>Intelligence movement</h2></div>
+      <a href="/trends?days={{ days }}">Full telemetry</a>
+    </div>
+    {% if trend %}
+    <div class="signal-chart" role="img" aria-label="Daily verified finding volume">
+      {% for point in trend %}
+      <div class="signal-column">
+        <span class="signal-value">{{ point.findings }}</span>
+        <span class="signal-bar h-{{ ((point.findings / max_findings) * 10)|round(0, "ceil")|int if max_findings else 0 }}"></span>
+        <span class="signal-date">{{ point.day[5:] }}</span>
+        <span class="signal-flags"><i class="{{ 'hot' if point.flash else '' }}"></i><i class="{{ 'warm' if point.watch else '' }}"></i></span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="chart-key"><span><i class="legend-dot flash"></i>Flash present</span><span><i class="legend-dot watch"></i>Watch present</span></div>
+    {% else %}
+    <div class="empty-state"><strong>No movement history yet.</strong><span>The first indexed report starts the timeline.</span></div>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Evidence diversity</p><h2>Where the case came from</h2></div>
+      <span class="panel-badge {{ 'good' if intelligence.x_share <= 50 else 'warning' }}">{{ "%.1f"|format(intelligence.x_share) }}% X share</span>
+    </div>
+    {% if intelligence.sources %}
+    <div class="source-mix">
+      {% for source in intelligence.sources[:8] %}
+      <div class="source-mix-row">
+        <div><strong>{{ source.source_type|replace("_", " ") }}</strong><span>{{ source.evidence }} evidence objects</span></div>
+        <div class="source-track"><span class="w-{{ source.width }}"></span></div>
+        <strong>{{ "%.1f"|format(source.share) }}%</strong>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="source-rule">
+      <span>Gate: 4+ surfaces</span><span>Largest source ≤60%</span><span>X ≤50%</span>
+    </div>
+    {% else %}
+    <div class="empty-state"><strong>No source evidence indexed yet.</strong><span>Origin-level metrics appear after the next verified report.</span></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel eval-panel">
+  <div class="panel-heading">
+    <div><p class="eyebrow">System confidence</p><h2>The checks behind the checks</h2></div>
+    <span class="panel-badge good">Immutable results</span>
+  </div>
+  <div class="eval-grid">
+    <article class="eval-card">
+      <div class="eval-card-head">
+        <span class="eval-icon">A</span>
+        <span class="status-chip {{ 'pass' if evaluation.agent.passed else 'fail' }}">{{ 'Pass' if evaluation.agent.passed else 'Needs review' }}</span>
+      </div>
+      <p class="eyebrow">Five-role agent DAG</p>
+      <h3>{{ "%.0f"|format(evaluation.agent.role_completion) }}% role completion</h3>
+      <dl>
+        <div><dt>Citation coverage</dt><dd>{{ "%.0f"|format(evaluation.agent.citation_coverage) }}%</dd></div>
+        <div><dt>Coordinator agreement</dt><dd>{{ "%.0f"|format(evaluation.agent.agreement) }}%</dd></div>
+        <div><dt>Failed roles</dt><dd>{{ evaluation.agent.failed_roles }}</dd></div>
+      </dl>
+    </article>
+    <article class="eval-card">
+      <div class="eval-card-head">
+        <span class="eval-icon">S</span>
+        <span class="status-chip {{ 'pass' if evaluation.coverage.passed else 'fail' }}">{{ 'Pass' if evaluation.coverage.passed else 'Needs review' }}</span>
+      </div>
+      <p class="eyebrow">Source concentration</p>
+      <h3>{{ evaluation.coverage.surfaces }} evidence surfaces</h3>
+      <dl>
+        <div><dt>X evidence share</dt><dd>{{ "%.1f"|format(evaluation.coverage.x_share) }}%</dd></div>
+        <div><dt>Largest source</dt><dd>{{ "%.1f"|format(evaluation.coverage.largest_share) }}%</dd></div>
+        <div><dt>Unattributed</dt><dd>{{ evaluation.coverage.unattributed }}</dd></div>
+      </dl>
+    </article>
+    <article class="eval-card">
+      <div class="eval-card-head">
+        <span class="eval-icon">X</span>
+        <span class="status-chip {{ 'pass' if evaluation.acceptance.passed else 'fail' }}">{{ 'Pass' if evaluation.acceptance.passed else 'Needs review' }}</span>
+      </div>
+      <p class="eyebrow">Hostile-content acceptance</p>
+      <h3>{{ evaluation.acceptance.privileged_effects }} privileged effects</h3>
+      <dl>
+        <div><dt>Payloads reaching models</dt><dd>{{ evaluation.acceptance.model_exposure }}</dd></div>
+        <div><dt>Replay match</dt><dd>{{ 'Exact' if evaluation.acceptance.replay_match else 'Check' }}</dd></div>
+        <div><dt>Publication authority</dt><dd>None</dd></div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<div class="dashboard-grid bottom-grid">
+  <section class="panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Collection plane</p><h2>Source heartbeat</h2></div>
+      <a href="/trends#source-health">Inspect sources</a>
+    </div>
+    {% if source_posture.sources %}
+    <div class="heartbeat-list">
+      {% for source in source_posture.sources[:8] %}
+      <div class="heartbeat-row">
+        <span class="metric-signal {{ 'good' if source.status == 'healthy' else 'warning' }}"></span>
+        <div><strong>{{ source.source_id }}</strong><small>{{ source.last_success_at|compact_date if source.last_success_at else "No successful collection yet" }}</small></div>
+        <span class="status-chip {{ 'pass' if source.status == 'healthy' else 'fail' }}">{{ source.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><strong>No source snapshots yet.</strong></div>
+    {% endif %}
+  </section>
+
+  <section class="panel recent-panel">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Immutable archive</p><h2>Recent reports</h2></div>
+      <a href="/reports">View all</a>
+    </div>
+    {% include "report_rows.html" %}
+  </section>
+</div>
 {% endblock %}

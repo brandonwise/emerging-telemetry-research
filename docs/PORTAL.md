@@ -74,7 +74,11 @@ CIDR allowlist.
 
 ## Capabilities
 
-- overview KPIs for reports, findings, severity, and source gaps
+- score-sorted analyst queue bounded to the selected time window
+- priority, confidence, early-warning lead time, source health, and publication-mix KPIs
+- attributed evidence mix with X share, non-X volume, and source concentration
+- latest agent-DAG, source-coverage, and hostile-content acceptance results
+- claim-verification counts derived from indexed immutable reports
 - Settings-page provider/model and workflow-stage cost attribution with subscription-plan context
 - latest local Nomic semantic-shadow health, recall candidates, deterministic overlap, and latency
 - finding-level search and filters for category, tag, and discovery source type
@@ -83,12 +87,17 @@ CIDR allowlist.
 - daily publication trends across configurable windows
 - workflow, feedback, and self-improvement event summaries
 - report search and edition filters
-- verified report detail and defensive checks
+- verified report detail, deterministic score anatomy, claim ledger, and defensive checks
+- bounded agent-review status and role chain when a report contains review artifacts
 - latest source-health snapshots
 - CSV and JSON archive exports
 - finding-level CSV and JSON exports with tags and discovery-source types
 - per-report JSON and deterministic HTML exports
 - responsive and print layouts
+
+Dashboard numbers are computed from the analytics index or read from persisted evaluation
+artifacts. The portal does not invent placeholder SOC metrics. Agent results are labeled as
+non-authoritative, and the deterministic publication gate remains the final decision boundary.
 
 CSV cells beginning with spreadsheet formula characters are escaped. Report HTML exports resolve
 only indexed immutable files whose filename matches the requested report ID.
