@@ -9,6 +9,9 @@ discord:
 
 email:
   enabled: false
+  transport: smtp
+  require_tls: true
+  fixed_recipient: true
   attach_html_report: true
   inline_summary: true
 

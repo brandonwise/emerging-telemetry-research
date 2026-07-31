@@ -30,6 +30,9 @@ def test_only_approved_sources_and_schedules_are_enabled() -> None:
     assert schedules["enabled"] is True
     assert schedules["jobs"]["morning_brief"]["enabled"] is True
     assert report["discord"]["enabled"] is False
+    assert report["email"]["enabled"] is False
+    assert report["email"]["require_tls"] is True
+    assert report["email"]["fixed_recipient"] is True
     assert report["publication"]["external_delivery_enabled"] is False
     assert report["publication"]["shadow_mode"] is False
     assert embeddings["semantic_clustering"]["enabled"] is True

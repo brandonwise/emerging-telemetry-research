@@ -21,6 +21,11 @@ from packages.analytics.store import AnalyticsStore
 from packages.common.canonical import canonical_json_bytes
 from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.delivery.email import (
+    SmtpDeliverySettings,
+    build_email_delivery_plan,
+    send_email_delivery_plan,
+)
 from packages.discovery.clients import (
     BraveSearchClient,
     RedditSearchClient,
@@ -54,6 +59,7 @@ from packages.storage.sqlite import SQLiteRepository
 
 DEFAULT_ANALYTICS_DB = Path(os.environ.get("RADAR_ANALYTICS_DB", "state/radar.db"))
 DEFAULT_OBJECT_ROOT = Path(os.environ.get("RADAR_OBJECT_ROOT", "state/objects"))
+DEFAULT_REPORT_ROOT = Path(os.environ.get("RADAR_REPORT_ROOT", "reports/generated"))
 DEFAULT_EMBEDDINGS_CONFIG = Path(
     os.environ.get("RADAR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
 )
@@ -149,6 +155,9 @@ def live_run(
     output: Annotated[Path, typer.Option("--output")] = Path("reports/generated"),
     edition: Annotated[str, typer.Option("--edition")] = "morning",
     analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
+    email_recipient: Annotated[str | None, typer.Option("--email-recipient")] = (
+        os.environ.get("RADAR_EMAIL_RECIPIENT") or None
+    ),
     agent_mode: Annotated[str, typer.Option("--agent-mode")] = os.environ.get(
         "RADAR_AGENT_MODE", "plan"
     ),
@@ -178,6 +187,7 @@ def live_run(
             LiveRunSettings(
                 output_root=output,
                 discord_channel_id=None,
+                email_recipient=email_recipient,
                 edition=edition,
                 agent_mode=agent_mode,
                 agent_max_concurrency=agent_concurrency,
@@ -444,6 +454,68 @@ def delivery_plan(
             with output.open("xb") as handle:
                 handle.write(encoded)
     emit(plan, pretty=True)
+
+
+@report_app.command("email-plan")
+def email_delivery_plan(
+    report_json: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    html_path: Annotated[
+        Path,
+        typer.Option("--html", exists=True, dir_okay=False, readable=True),
+    ],
+    recipient: Annotated[str | None, typer.Option("--recipient")] = (
+        os.environ.get("RADAR_EMAIL_RECIPIENT") or None
+    ),
+    output: Annotated[Path | None, typer.Option("--output")] = None,
+) -> None:
+    if recipient is None:
+        raise typer.BadParameter("email recipient is required")
+    value = json.loads(report_json.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise typer.BadParameter("report JSON must be an object")
+    try:
+        plan = build_email_delivery_plan(
+            value,
+            html_path=html_path,
+            recipient=recipient,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    encoded = canonical_json_bytes(plan) + b"\n"
+    if output:
+        if output.exists() and output.read_bytes() != encoded:
+            raise typer.BadParameter("refusing to overwrite a different delivery plan")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if not output.exists():
+            with output.open("xb") as handle:
+                handle.write(encoded)
+    emit(plan, pretty=True)
+
+
+@report_app.command("email-send")
+def email_send(
+    plan_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    report_root: Annotated[Path, typer.Option("--report-root")] = DEFAULT_REPORT_ROOT,
+) -> None:
+    if os.environ.get("EXTERNAL_DELIVERY_ENABLED", "").lower() != "true":
+        raise typer.BadParameter("external delivery is disabled")
+    if os.environ.get("RADAR_EMAIL_DELIVERY_ENABLED", "").lower() != "true":
+        raise typer.BadParameter("email delivery is disabled")
+    try:
+        receipt = send_email_delivery_plan(
+            plan_path,
+            report_root=report_root,
+            settings=SmtpDeliverySettings.from_env(),
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(receipt, pretty=True)
 
 
 @report_app.command("deliver")

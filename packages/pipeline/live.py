@@ -29,6 +29,7 @@ from packages.connectors.live import (
     cisa_kev_spec,
 )
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.delivery.email import build_email_delivery_plan, email_delivery_destination
 from packages.delivery.local import build_local_delivery_plan
 from packages.discovery.clients import (
     BRAVE_COST_PER_REQUEST,
@@ -104,6 +105,7 @@ CRITICAL_SIGNAL_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
 class LiveRunSettings:
     output_root: Path
     discord_channel_id: str | None = None
+    email_recipient: str | None = None
     edition: str = "morning"
     timezone: str = "America/New_York"
     discovery_config: Path = Path("config/discovery.yaml")
@@ -144,6 +146,8 @@ async def run_live_radar(
     agent_provider: AgentProvider | None = None,
     now: datetime | None = None,
 ) -> LiveRunResult:
+    if settings.discord_channel_id is not None and settings.email_recipient is not None:
+        raise ValueError("Discord and email delivery plans are mutually exclusive")
     generated_at = (now or datetime.now(UTC)).astimezone(UTC)
     existing = _existing_morning_result(settings, generated_at)
     if existing is not None:
@@ -543,14 +547,10 @@ async def run_live_radar(
     report_json_path = run_root / f"{report['report_id']}.json"
     _write_immutable(report_json_path, canonical_json_bytes(report) + b"\n")
     rendered = render_report(report, run_root / f"{report['report_id']}.html")
-    delivery_plan = (
-        build_discord_delivery_plan(
-            report,
-            html_path=rendered.path,
-            channel_id=settings.discord_channel_id,
-        )
-        if settings.discord_channel_id is not None
-        else build_local_delivery_plan(report, html_path=rendered.path)
+    delivery_plan = _build_delivery_plan(
+        settings,
+        report,
+        html_path=rendered.path,
     )
     delivery_plan_path = run_root / f"{report['report_id']}.delivery.json"
     _write_immutable(delivery_plan_path, canonical_json_bytes(delivery_plan) + b"\n")
@@ -636,11 +636,7 @@ def _existing_morning_result(
         return None
     local_date = generated_at.astimezone(ZoneInfo(settings.timezone)).date()
     candidates: list[tuple[datetime, LiveRunResult]] = []
-    destination = (
-        f"discord:channel:{settings.discord_channel_id}"
-        if settings.discord_channel_id is not None
-        else "file:local"
-    )
+    destination = _configured_delivery_destination(settings)
     for delivery_plan_path in settings.output_root.glob("run_*/rp_*.delivery.json"):
         stem = delivery_plan_path.name.removesuffix(".delivery.json")
         report_json_path = delivery_plan_path.with_name(f"{stem}.json")
@@ -653,16 +649,7 @@ def _existing_morning_result(
                 report.get("edition") != settings.edition
                 or report_generated_at.astimezone(ZoneInfo(settings.timezone)).date() != local_date
                 or delivery_plan.get("destination") != destination
-                or delivery_plan
-                != (
-                    build_discord_delivery_plan(
-                        report,
-                        html_path=html_path,
-                        channel_id=settings.discord_channel_id,
-                    )
-                    if settings.discord_channel_id is not None
-                    else build_local_delivery_plan(report, html_path=html_path)
-                )
+                or delivery_plan != _build_delivery_plan(settings, report, html_path=html_path)
             ):
                 continue
             rendered = RenderedReport(
@@ -740,6 +727,35 @@ def _existing_morning_result(
     if not candidates:
         return None
     return max(candidates, key=lambda item: item[0])[1]
+
+
+def _build_delivery_plan(
+    settings: LiveRunSettings,
+    report: dict[str, Any],
+    *,
+    html_path: Path,
+) -> dict[str, Any]:
+    if settings.discord_channel_id is not None:
+        return build_discord_delivery_plan(
+            report,
+            html_path=html_path,
+            channel_id=settings.discord_channel_id,
+        )
+    if settings.email_recipient is not None:
+        return build_email_delivery_plan(
+            report,
+            html_path=html_path,
+            recipient=settings.email_recipient,
+        )
+    return build_local_delivery_plan(report, html_path=html_path)
+
+
+def _configured_delivery_destination(settings: LiveRunSettings) -> str:
+    if settings.discord_channel_id is not None:
+        return f"discord:channel:{settings.discord_channel_id}"
+    if settings.email_recipient is not None:
+        return email_delivery_destination(settings.email_recipient)
+    return "file:local"
 
 
 async def _run_candidate(

@@ -19,10 +19,22 @@
     "report_id": {"type": "string", "pattern": "^rp_[A-Za-z0-9_-]+$"},
     "destination": {
       "type": "string",
-      "pattern": "^(discord:channel:[0-9]+|file:local)$"
+      "pattern": "^(discord:channel:[0-9]+|email:recipient:[a-f0-9]{64}|file:local)$"
     },
     "idempotency_key": {"type": "string", "minLength": 32, "maxLength": 128},
+    "subject": {"type": "string", "minLength": 1, "maxLength": 200},
     "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
     "html_path": {"type": "string", "minLength": 1, "maxLength": 1000}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "destination": {"pattern": "^email:recipient:"}
+        },
+        "required": ["destination"]
+      },
+      "then": {"required": ["subject"]}
+    }
+  ]
 }

@@ -86,6 +86,41 @@ make live
 
 The default output root is `reports/generated`. External delivery stays disabled.
 
+### Email delivery
+
+Email uses a fixed-recipient SMTP adapter. The report plan stores a SHA-256 recipient identifier,
+not the mailbox address. The sender recomputes that identifier from its secret-backed environment
+and refuses a mismatch. SMTP must use implicit TLS or STARTTLS.
+
+Set the non-secret connection values and load the password from your platform secret store:
+
+```dotenv
+RADAR_EMAIL_RECIPIENT=security@example.com
+RADAR_EMAIL_SENDER=threat-radar@example.com
+RADAR_SMTP_HOST=smtp.example.com
+RADAR_SMTP_PORT=587
+RADAR_SMTP_SECURITY=starttls
+RADAR_SMTP_USERNAME=threat-radar@example.com
+RADAR_SMTP_PASSWORD=
+```
+
+`RADAR_EMAIL_RECIPIENT` makes `threat-radar live run` emit an email delivery plan instead of a
+file-only plan. It does not send anything. After an operator reviews the report and plan, enable
+both gates for the delivery process and send that exact plan:
+
+```bash
+export EXTERNAL_DELIVERY_ENABLED=true
+export RADAR_EMAIL_DELIVERY_ENABLED=true
+uv run threat-radar report email-send \
+  reports/generated/<run-id>/<report-id>.delivery.json \
+  --report-root reports/generated
+```
+
+The sender verifies every claim, constrains the HTML attachment to the report root, checks the
+fixed recipient, and writes an idempotency receipt before connecting. A retry after a confirmed
+delivery returns the existing receipt. A retry after an unknown outcome stops rather than risking
+a duplicate email.
+
 ## 5. Evaluate before activation
 
 ```bash

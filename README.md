@@ -61,6 +61,12 @@ FileVault, starts the loopback-only data services when needed, applies immutable
 bucket retention, writes one verified report to PostgreSQL and the analytics index, and emits a
 file-only audit plan. Scheduled runs do not send Discord messages.
 
+Set `RADAR_EMAIL_RECIPIENT` on the production run to emit a fixed-recipient email plan. Sending is
+a separate operator-approved step: `threat-radar report email-send` requires both external-delivery
+gates, TLS-protected SMTP, a plan that matches the configured recipient, verified report artifacts,
+and an idempotency receipt. SMTP credentials come from the process secret store and never enter a
+report or delivery plan. See `docs/SETUP.md` for the variables and command.
+
 Live output reports `source_native_signal_count`, `qualified_emerging_count`, and
 `emerging_signal_count`. Every Brave query also keeps its surface ID, so GitHub, Reddit, TikTok,
 general web research, and X no longer collapse into one vague bucket. `make eval-coverage` measures

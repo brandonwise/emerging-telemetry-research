@@ -7,6 +7,7 @@ import pytest
 from packages.agents.runtime import FixtureAgentProvider
 from packages.common.canonical import canonical_json_bytes
 from packages.delivery.discord import build_discord_delivery_plan
+from packages.delivery.email import build_email_delivery_plan
 from packages.delivery.local import build_local_delivery_plan
 from packages.discovery.clients import (
     DiscoverySignal,
@@ -226,6 +227,33 @@ def test_existing_portable_morning_run_is_reused_without_discord(tmp_path: Path)
 
     assert existing is not None
     assert existing.delivery_plan["destination"] == "file:local"
+
+
+def test_existing_email_morning_run_is_reused_for_fixed_recipient(tmp_path: Path) -> None:
+    run_root = tmp_path / "run_existing"
+    frozen = run_frozen_fixture(
+        Path("tests/fixtures/vertical_slice/early-manifest.json"),
+        run_root,
+    )
+    plan = build_email_delivery_plan(
+        frozen.report,
+        html_path=frozen.rendered.path,
+        recipient="alerts@example.com",
+    )
+    (run_root / f"{frozen.report['report_id']}.delivery.json").write_bytes(
+        canonical_json_bytes(plan) + b"\n"
+    )
+
+    existing = _existing_morning_result(
+        LiveRunSettings(
+            output_root=tmp_path,
+            email_recipient="alerts@example.com",
+        ),
+        datetime(2026, 7, 22, 18, tzinfo=UTC),
+    )
+
+    assert existing is not None
+    assert existing.delivery_plan["destination"].startswith("email:recipient:")
 
 
 @pytest.mark.asyncio
