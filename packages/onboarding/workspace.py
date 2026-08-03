@@ -14,7 +14,7 @@ import yaml
 from packages.security_gateway.permissions import harden_private_path
 from packages.security_gateway.secrets import (
     inspect_secret,
-    keyring_secret_reference,
+    keyring_reference,
     store_keyring_secret,
 )
 
@@ -141,17 +141,16 @@ def initialize_workspace(
     }
 
 
-def configure_keyring_secret(
+def configure_keyring_credential(
     name: str,
     value: str,
     *,
     config_path: Path,
     service: str = "outcome-radar",
-) -> str:
-    reference = keyring_secret_reference(name, service=service)
+) -> None:
+    reference = keyring_reference(name, service=service)
     store_keyring_secret(name, value, service=service)
     _set_config_value(config_path, f"{name}_REF", reference)
-    return reference
 
 
 def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dict[str, object]:

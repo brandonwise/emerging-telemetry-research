@@ -66,7 +66,7 @@ from packages.onboarding.generator import (
     generate_setup,
 )
 from packages.onboarding.workspace import (
-    configure_keyring_secret,
+    configure_keyring_credential,
     initialize_workspace,
     run_doctor,
 )
@@ -81,7 +81,11 @@ from packages.security_gateway.deployment import (
     write_private_json,
     write_private_yaml,
 )
-from packages.security_gateway.secrets import SecretResolutionError, resolve_secret
+from packages.security_gateway.secrets import (
+    SecretResolutionError,
+    keyring_reference,
+    resolve_secret,
+)
 from packages.storage.object_store import LocalImmutableObjectStore
 from packages.storage.runtime import (
     ProductionStoreSettings,
@@ -535,7 +539,7 @@ def setup_secret_set(
         f"Value for {name}", hide_input=True, confirmation_prompt=True
     )
     try:
-        reference = configure_keyring_secret(
+        configure_keyring_credential(
             name,
             value,
             config_path=config,
@@ -544,7 +548,11 @@ def setup_secret_set(
     except (SecretResolutionError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     emit(
-        {"name": name, "reference": reference, "value_exposed": False},
+        {
+            "name": name,
+            "reference": keyring_reference(name, service=service),
+            "value_exposed": False,
+        },
         pretty=not json_output,
     )
 

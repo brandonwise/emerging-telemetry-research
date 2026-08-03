@@ -11,7 +11,7 @@ from packages.onboarding.workspace import initialize_workspace, run_doctor
 from packages.security_gateway.secrets import (
     SecretResolutionError,
     inspect_secret,
-    keyring_secret_reference,
+    keyring_reference,
     resolve_secret,
     store_keyring_secret,
 )
@@ -95,7 +95,7 @@ def test_keyring_storage_is_separate_from_non_secret_reference() -> None:
         "never-print-this",
         keyring_backend=keyring,
     )
-    reference = keyring_secret_reference("XAI_API_KEY")
+    reference = keyring_reference("XAI_API_KEY")
 
     assert result is None
     assert reference == "keyring://outcome-radar/XAI_API_KEY"
@@ -155,14 +155,14 @@ def test_configure_keyring_secret_writes_only_reference(
         lambda name, value, service: f"keyring://{service}/{name}",
     )
 
-    reference = onboarding_workspace.configure_keyring_secret(
+    onboarding_workspace.configure_keyring_credential(
         "BRAVE_API_KEY",
         "never-write-this",
         config_path=config,
     )
 
     content = config.read_text(encoding="utf-8")
-    assert reference in content
+    assert keyring_reference("BRAVE_API_KEY") in content
     assert "never-write-this" not in content
 
 

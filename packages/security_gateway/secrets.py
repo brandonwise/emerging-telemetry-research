@@ -107,8 +107,8 @@ def store_keyring_secret(
         ) from exc
 
 
-def keyring_secret_reference(name: str, *, service: str = "outcome-radar") -> str:
-    """Build a secret reference exclusively from validated non-secret metadata."""
+def keyring_reference(name: str, *, service: str = "outcome-radar") -> str:
+    """Build a credential locator exclusively from validated non-sensitive metadata."""
     _validate_name(name)
     if not KEYRING_SERVICE.fullmatch(service):
         raise SecretResolutionError("keyring service name is invalid")
