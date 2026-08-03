@@ -77,6 +77,11 @@ make package-smoke
 See [setup and operation](docs/SETUP.md) and the
 [production readiness runbook](docs/PRODUCTION.md) before enabling live collection.
 
+The [production architecture](docs/production-architecture.html) shows the as-built onboarding,
+approval, harness, scheduling, evidence, review, publication, and portal boundaries. The
+[mission engine](docs/mission-engine.html) shows how a plain-language objective becomes a bounded,
+replayable workflow.
+
 Describe a new research objective:
 
 ```bash

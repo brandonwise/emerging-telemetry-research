@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Emerging Telemetry Research production architecture</title>
+  <style>
+    :root {
+      --bg:#07110f; --panel:#0d1b18; --panel-2:#10231f; --ink:#eef8f5; --muted:#91aaa3;
+      --line:#315b52; --cyan:#7cf1d7; --amber:#efb15c; --blue:#8fb8ff; --violet:#d7a6ee;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5
+      Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(1580px,calc(100% - 32px)); margin:auto; padding:38px 0 60px; }
+    header { display:grid; grid-template-columns:1.3fr .7fr; gap:30px; align-items:end; margin-bottom:24px; }
+    h1 { margin:8px 0 10px; font-size:clamp(2.8rem,6vw,6.4rem); line-height:.88;
+      letter-spacing:-.065em; font-weight:650; }
+    header p { margin:0; color:#bed0cb; max-width:820px; }
+    .eyebrow,.lane { fill:var(--cyan); color:var(--cyan); font-size:11px; font-weight:800;
+      letter-spacing:1.7px; text-transform:uppercase; }
+    .status { border:1px solid var(--line); background:var(--panel); padding:18px; }
+    .status strong { display:block; margin-bottom:6px; }
+    .status span { color:var(--muted); font-size:13px; }
+    .canvas { overflow-x:auto; border:1px solid var(--line); background:var(--panel); }
+    svg { display:block; width:100%; min-width:1240px; height:auto; }
+    .zone { fill:#091613; stroke:#25483f; stroke-width:1.5; }
+    .node { fill:var(--panel-2); stroke:#3a6d62; stroke-width:1.6; }
+    .control { stroke:var(--amber); }
+    .agent { stroke:var(--violet); }
+    .state { stroke:var(--blue); }
+    .output { stroke:var(--cyan); }
+    .edge { fill:none; stroke:#567a72; stroke-width:2; }
+    .edge-control { fill:none; stroke:var(--amber); stroke-width:2; stroke-dasharray:8 7; }
+    .edge-agent { fill:none; stroke:var(--violet); stroke-width:2; }
+    .title { fill:var(--ink); font-size:17px; font-weight:760; }
+    .copy { fill:var(--muted); font-size:12px; }
+    .tag { fill:var(--cyan); font-size:10px; font-weight:850; letter-spacing:1.35px; }
+    .warn { fill:var(--amber); }
+    .chip { fill:#122b25; stroke:#35665b; }
+    .chip-text { fill:#cfe2dd; font-size:11px; font-weight:700; }
+    .notes { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-top:16px;
+      border:1px solid var(--line); background:var(--line); }
+    .notes article { background:var(--panel); padding:18px; }
+    .notes strong { display:block; margin-bottom:5px; }
+    .notes span { color:var(--muted); font-size:13px; }
+    footer { margin-top:13px; color:var(--muted); font-size:12px; }
+    @media(max-width:820px) { header,.notes { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <span class="eyebrow">As-built production boundary</span>
+      <h1>One governed workflow.<br>Any approved harness.</h1>
+      <p>Non-technical operators configure a mission in a loopback-only setup experience. Code owns
+        source boundaries, evidence, scoring, publication, replay, and rollback; AI harnesses only
+        perform typed, tool-free reviews.</p>
+    </div>
+    <aside class="status"><strong>GA candidate · private by default</strong><span>Python 3.12–3.14 ·
+      macOS / Linux / Windows · SQLite or PostgreSQL/S3 · OpenClaw, Codex, Claude, Perplexity,
+      OpenAI-compatible, or fixture execution</span></aside>
+  </header>
+
+  <div class="canvas">
+    <svg viewBox="0 0 1600 1010" role="img" aria-labelledby="arch-title arch-desc">
+      <title id="arch-title">Emerging Telemetry Research production architecture</title>
+      <desc id="arch-desc">A local setup control plane creates a mission, binds approval, certifies
+        a chosen harness, and schedules durable runs. The data plane safely collects approved
+        sources, creates immutable evidence, executes a five-role review graph, applies a
+        deterministic publication gate, and writes reports to a private portal.</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#567a72"></path>
+        </marker>
+        <marker id="control-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#efb15c"></path>
+        </marker>
+        <marker id="agent-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#d7a6ee"></path>
+        </marker>
+      </defs>
+
+      <rect class="zone" x="25" y="42" width="1550" height="280" rx="16"></rect>
+      <rect class="zone" x="25" y="350" width="1550" height="610" rx="16"></rect>
+
+      <!-- Connectors are intentionally painted before nodes. -->
+      <path class="edge-control" d="M265 178 H320" marker-end="url(#control-arrow)"></path>
+      <path class="edge-control" d="M540 178 H595" marker-end="url(#control-arrow)"></path>
+      <path class="edge-control" d="M815 178 H870" marker-end="url(#control-arrow)"></path>
+      <path class="edge-control" d="M1090 178 H1145" marker-end="url(#control-arrow)"></path>
+      <path class="edge-control" d="M1365 215 V365 H190 V440" marker-end="url(#control-arrow)"></path>
+
+      <path class="edge" d="M255 585 H310" marker-end="url(#arrow)"></path>
+      <path class="edge" d="M535 585 H590" marker-end="url(#arrow)"></path>
+      <path class="edge" d="M815 585 H870" marker-end="url(#arrow)"></path>
+      <path class="edge" d="M1160 585 H1215" marker-end="url(#arrow)"></path>
+      <path class="edge" d="M1405 585 H1460" marker-end="url(#arrow)"></path>
+      <path class="edge-control" d="M705 730 V805 H375" marker-end="url(#control-arrow)"></path>
+      <path class="edge-agent" d="M1015 730 V805 H815" marker-end="url(#agent-arrow)"></path>
+      <path class="edge" d="M1320 730 V805 H1255" marker-end="url(#arrow)"></path>
+
+      <text class="lane" x="52" y="74">CONTROL PLANE · LOCAL OPERATOR AUTHORITY</text>
+      <text class="lane" x="52" y="382">DATA PLANE · REPLAYABLE RESEARCH RUN</text>
+
+      <g id="operator">
+        <rect class="node control" x="55" y="108" width="210" height="140" rx="13"></rect>
+        <text class="tag warn" x="78" y="135">01 · ONBOARD</text>
+        <text class="title" x="78" y="168">Local setup page</text>
+        <text class="copy" x="78" y="196">plain-language objective</text>
+        <text class="copy" x="78" y="218">sites, feeds, cadence</text>
+      </g>
+      <g id="mission">
+        <rect class="node control" x="320" y="108" width="220" height="140" rx="13"></rect>
+        <text class="tag warn" x="343" y="135">02 · COMPILE</text>
+        <text class="title" x="343" y="168">Mission contract</text>
+        <text class="copy" x="343" y="196">typed sources + roles</text>
+        <text class="copy" x="343" y="218">budgets + stop criteria</text>
+      </g>
+      <g id="approval">
+        <rect class="node control" x="595" y="108" width="220" height="140" rx="13"></rect>
+        <text class="tag warn" x="618" y="135">03 · APPROVE</text>
+        <text class="title" x="618" y="168">Hash-bound policy</text>
+        <text class="copy" x="618" y="196">code + terms + sources</text>
+        <text class="copy" x="618" y="218">expiry + rollback receipt</text>
+      </g>
+      <g id="harness">
+        <rect class="node control" x="870" y="108" width="220" height="140" rx="13"></rect>
+        <text class="tag warn" x="893" y="135">04 · CERTIFY</text>
+        <text class="title" x="893" y="168">Harness contract</text>
+        <text class="copy" x="893" y="196">structured role graph</text>
+        <text class="copy" x="893" y="218">latency · cost · citations</text>
+      </g>
+      <g id="scheduler">
+        <rect class="node control" x="1145" y="108" width="220" height="140" rx="13"></rect>
+        <text class="tag warn" x="1168" y="135">05 · SCHEDULE</text>
+        <text class="title" x="1168" y="168">Durable scheduler</text>
+        <text class="copy" x="1168" y="196">atomic lease + retry</text>
+        <text class="copy" x="1168" y="218">pause · resume · history</text>
+      </g>
+
+      <g id="sources">
+        <rect class="node" x="55" y="440" width="200" height="290" rx="13"></rect>
+        <text class="tag" x="78" y="469">APPROVED INPUT</text>
+        <text class="title" x="78" y="502">Source plugins</text>
+        <rect class="chip" x="78" y="528" width="154" height="34" rx="8"></rect>
+        <text class="chip-text" x="94" y="550">surface search</text>
+        <rect class="chip" x="78" y="572" width="154" height="34" rx="8"></rect>
+        <text class="chip-text" x="94" y="594">HTTPS page</text>
+        <rect class="chip" x="78" y="616" width="154" height="34" rx="8"></rect>
+        <text class="chip-text" x="94" y="638">RSS / Atom</text>
+        <rect class="chip" x="78" y="660" width="154" height="34" rx="8"></rect>
+        <text class="chip-text" x="94" y="682">native APIs</text>
+      </g>
+      <g id="acquisition">
+        <rect class="node" x="310" y="440" width="225" height="290" rx="13"></rect>
+        <text class="tag" x="333" y="469">SECURITY GATEWAY</text>
+        <text class="title" x="333" y="502">Safe acquisition</text>
+        <text class="copy" x="333" y="535">pinned-IP SSRF defense</text>
+        <text class="copy" x="333" y="562">redirect / MIME / size limits</text>
+        <text class="copy" x="333" y="589">isolated parser process</text>
+        <text class="copy" x="333" y="616">hostile-content sanitizer</text>
+        <text class="copy" x="333" y="643">rate + cost budgets</text>
+        <text class="copy" x="333" y="670">immutable raw hash</text>
+      </g>
+      <g id="evidence">
+        <rect class="node state" x="590" y="440" width="225" height="290" rx="13"></rect>
+        <text class="tag" x="613" y="469">SYSTEM OF RECORD</text>
+        <text class="title" x="613" y="502">Evidence core</text>
+        <text class="copy" x="613" y="535">typed observations</text>
+        <text class="copy" x="613" y="562">source lineage</text>
+        <text class="copy" x="613" y="589">independence groups</text>
+        <text class="copy" x="613" y="616">deterministic features</text>
+        <text class="copy" x="613" y="643">checkpoint + replay</text>
+        <text class="copy" x="613" y="670">SQLite or PostgreSQL/S3</text>
+      </g>
+      <g id="graph">
+        <rect class="node agent" x="870" y="420" width="290" height="330" rx="13"></rect>
+        <text class="tag" x="893" y="449">UNTRUSTED REVIEW</text>
+        <text class="title" x="893" y="482">Five-role DAG</text>
+        <rect class="chip" x="893" y="510" width="110" height="42" rx="8"></rect>
+        <text class="chip-text" x="910" y="535">specialist</text>
+        <rect class="chip" x="1020" y="510" width="110" height="42" rx="8"></rect>
+        <text class="chip-text" x="1048" y="535">impact</text>
+        <rect class="chip" x="893" y="570" width="110" height="42" rx="8"></rect>
+        <text class="chip-text" x="924" y="595">skeptic</text>
+        <rect class="chip" x="1020" y="570" width="110" height="42" rx="8"></rect>
+        <text class="chip-text" x="1039" y="595">citation check</text>
+        <rect class="chip" x="956" y="630" width="110" height="42" rx="8"></rect>
+        <text class="chip-text" x="973" y="655">coordinator</text>
+        <text class="copy" x="893" y="708">bounded loops · timeout · budget</text>
+      </g>
+      <g id="gate">
+        <rect class="node control" x="1215" y="440" width="190" height="290" rx="13"></rect>
+        <text class="tag warn" x="1238" y="469">CODE AUTHORITY</text>
+        <text class="title" x="1238" y="502">Hard gate</text>
+        <text class="copy" x="1238" y="535">schema valid</text>
+        <text class="copy" x="1238" y="562">claims cited</text>
+        <text class="copy" x="1238" y="589">independence holds</text>
+        <text class="copy" x="1238" y="616">score policy holds</text>
+        <text class="copy" x="1238" y="643">budgets respected</text>
+        <text class="copy" x="1238" y="670">publish / hold / reject</text>
+      </g>
+      <g id="outputs">
+        <rect class="node output" x="1460" y="440" width="100" height="290" rx="13"></rect>
+        <text class="tag" x="1477" y="469">OUTPUT</text>
+        <text class="copy" x="1477" y="510">JSON</text>
+        <text class="copy" x="1477" y="540">HTML</text>
+        <text class="copy" x="1477" y="570">portal</text>
+        <text class="copy" x="1477" y="600">audit</text>
+        <text class="copy" x="1477" y="630">usage</text>
+        <text class="copy" x="1477" y="660">health</text>
+      </g>
+
+      <g id="storage-boundary">
+        <rect class="node state" x="55" y="805" width="640" height="110" rx="13"></rect>
+        <text class="tag" x="78" y="834">PORTABLE STATE</text>
+        <text class="title" x="78" y="867">Immutable objects · run checkpoints · schedule history · rollback receipts</text>
+        <text class="copy" x="78" y="893">Local profile needs no containers; production profile swaps storage without changing contracts.</text>
+      </g>
+      <g id="providers">
+        <rect class="node agent" x="735" y="805" width="500" height="110" rx="13"></rect>
+        <text class="tag" x="758" y="834">REPLACEABLE HARNESS EDGE</text>
+        <text class="title" x="758" y="863">OpenClaw · Codex · Claude · Perplexity</text>
+        <text class="copy" x="758" y="887">OpenAI-compatible · fixture · same assessment schema</text>
+        <text class="copy" x="758" y="906">No source, secret, score, state, or publication authority.</text>
+      </g>
+      <g id="experience">
+        <rect class="node output" x="1275" y="805" width="285" height="110" rx="13"></rect>
+        <text class="tag" x="1298" y="834">PRIVATE EXPERIENCE</text>
+        <text class="title" x="1298" y="867">Read-only portal</text>
+        <text class="copy" x="1298" y="893">loopback default · optional private LAN</text>
+      </g>
+    </svg>
+  </div>
+
+  <section class="notes" aria-label="Production architecture guarantees">
+    <article><strong>Non-technical first</strong><span>The local setup flow writes private configuration,
+      discovers installed harnesses, tests readiness, and prints the next exact action.</span></article>
+    <article><strong>Fail closed</strong><span>Network collection, active agents, schedules, delivery,
+      and self-improvement remain separate approved capabilities.</span></article>
+    <article><strong>Harness neutral</strong><span>Users keep their preferred AI surface. The platform
+      certifies the contract and records cost, latency, citations, and failures.</span></article>
+    <article><strong>Recoverable</strong><span>Every run is checkpointed, replayable, idempotent, and
+      backed by immutable evidence and explicit rollback receipts.</span></article>
+  </section>
+  <footer>Standalone HTML · inline SVG · no remote assets or scripts · connectors rendered behind nodes</footer>
+</main>
+</body>
+</html>
