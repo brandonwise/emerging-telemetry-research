@@ -348,7 +348,7 @@
   <header>
     <div class="hero">
       <div>
-        <p class="eyebrow">As-built system architecture · expanded July 2026</p>
+        <p class="eyebrow">Reference system architecture · updated August 2026</p>
         <h1>Emerging Telemetry Research, end to end</h1>
         <p class="hero-copy">
           A security-first map of the multi-surface pipeline, its trust boundaries, durable state,
@@ -358,12 +358,12 @@
         </p>
       </div>
       <aside class="status-card" aria-label="Architecture status">
-        <strong>Current production posture</strong>
-        <span>Daily deterministic run on the Mac mini</span>
-        <span>PostgreSQL + MinIO + private read-only portal</span>
-        <span>Multi-surface collection + bounded agents in shadow</span>
-        <span>Portable CLI supports alternate schedulers and providers</span>
-        <div class="status-row"><span class="dot"></span><span>Routine Discord delivery remains disabled</span></div>
+        <strong>Portable production posture</strong>
+        <span>macOS · Linux · Windows · containers</span>
+        <span>SQLite/local objects or PostgreSQL/S3-compatible storage</span>
+        <span>Harness-neutral collection + bounded model review</span>
+        <span>Durable state stays outside conversations and providers</span>
+        <div class="status-row"><span class="dot"></span><span>External delivery remains opt-in and approval-gated</span></div>
       </aside>
     </div>
     <nav aria-label="Diagram index">
@@ -455,8 +455,8 @@
             <g id="landscape-cron" class="node-group">
               <rect class="node node-control" x="300" y="110" width="190" height="90" rx="10"></rect>
               <text class="svg-label" x="324" y="143">Current scheduler</text>
-              <text class="svg-small" x="324" y="168">OpenClaw · 07:30 ET</text>
-              <text class="svg-small" x="324" y="189">isolated · delivery none</text>
+              <text class="svg-small" x="324" y="168">durable leases + retries</text>
+              <text class="svg-small" x="324" y="189">hourly · daily · weekly</text>
             </g>
             <g id="landscape-workflow" class="node-group">
               <rect class="node node-control" x="560" y="110" width="180" height="90" rx="10"></rect>
@@ -1019,9 +1019,10 @@
         </div>
         <div class="svg-wrap">
           <svg viewBox="0 0 1400 700" role="img" aria-labelledby="deployment-title deployment-desc">
-            <title id="deployment-title">Mac mini deployment topology</title>
-            <desc id="deployment-desc">Four horizontal deployment layers show control processes,
-              application processes, data services, and the private user experience.</desc>
+            <title id="deployment-title">Portable reference deployment topology</title>
+            <desc id="deployment-desc">Four horizontal deployment layers show replaceable
+              orchestration, portable application processes, storage profiles, and the private
+              user experience.</desc>
             <defs>
               <marker id="deployment-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path d="M0 0 L10 5 L0 10 z" fill="#74817d"></path>
@@ -1029,7 +1030,7 @@
             </defs>
 
             <rect class="boundary" x="25" y="35" width="1350" height="625" rx="16"></rect>
-            <text class="svg-micro" x="50" y="65">FILEVAULT-PROTECTED MAC MINI</text>
+            <text class="svg-micro" x="50" y="65">PRIVATE HOST · CONTAINER · MANAGED RUNTIME</text>
             <path class="edge" data-from="deployment-openclaw" data-to="deployment-cron" d="M400 145 H575" marker-end="url(#deployment-arrow)"></path>
             <path class="edge" data-from="deployment-cron" data-to="deployment-lobster" d="M825 145 H1000" marker-end="url(#deployment-arrow)"></path>
             <path class="edge" data-from="deployment-lobster" data-to="deployment-python" d="M1125 180 V215 H265 V245" marker-end="url(#deployment-arrow)"></path>
@@ -1043,24 +1044,24 @@
             <text class="svg-micro" x="50" y="94">CONTROL</text>
             <g id="deployment-openclaw" class="node-group">
               <rect class="node node-control" x="150" y="110" width="250" height="70" rx="10"></rect>
-              <text class="svg-label" x="174" y="141">OpenClaw Gateway</text>
-              <text class="svg-small" x="174" y="164">scheduler + policy boundary</text>
+              <text class="svg-label" x="174" y="141">Preferred harness</text>
+              <text class="svg-small" x="174" y="164">OpenClaw · Codex · Claude · CI</text>
             </g>
             <g id="deployment-cron" class="node-group">
               <rect class="node node-control" x="575" y="110" width="250" height="70" rx="10"></rect>
-              <text class="svg-label" x="599" y="141">Isolated cron session</text>
-              <text class="svg-small" x="599" y="164">no message delivery tools</text>
+              <text class="svg-label" x="599" y="141">Durable scheduler</text>
+              <text class="svg-small" x="599" y="164">leases · retries · checkpoints</text>
             </g>
             <g id="deployment-lobster" class="node-group">
               <rect class="node node-control" x="1000" y="110" width="250" height="70" rx="10"></rect>
-              <text class="svg-label" x="1024" y="141">Reviewed Lobster</text>
-              <text class="svg-small" x="1024" y="164">fixed workflow definitions</text>
+              <text class="svg-label" x="1024" y="141">Typed run contract</text>
+              <text class="svg-small" x="1024" y="164">fixed policy + portable CLI</text>
             </g>
 
             <text class="svg-micro" x="50" y="228">APPLICATION</text>
             <g id="deployment-python" class="node-group">
               <rect class="node node-process" x="150" y="245" width="230" height="110" rx="10"></rect>
-              <text class="svg-label" x="174" y="279">Python 3.12 worker</text>
+              <text class="svg-label" x="174" y="279">Python 3.12–3.14 worker</text>
               <text class="svg-small" x="174" y="307">portable CLI · connectors</text>
               <text class="svg-small" x="174" y="329">scoring · agents · verification</text>
             </g>
@@ -1073,21 +1074,21 @@
             <g id="deployment-portal-service" class="node-group">
               <rect class="node node-experience" x="1010" y="245" width="230" height="110" rx="10"></rect>
               <text class="svg-label" x="1034" y="279">FastAPI portal</text>
-              <text class="svg-small" x="1034" y="307">authenticated read only</text>
-              <text class="svg-small" x="1034" y="329">private-LAN bind</text>
+              <text class="svg-small" x="1034" y="307">read only · auth optional</text>
+              <text class="svg-small" x="1034" y="329">loopback or private-LAN bind</text>
             </g>
 
             <text class="svg-micro" x="50" y="403">DATA + LOCAL AI</text>
             <g id="deployment-postgres" class="node-group">
               <rect class="node node-storage" x="150" y="420" width="250" height="110" rx="10"></rect>
-              <text class="svg-label" x="174" y="454">PostgreSQL</text>
-              <text class="svg-small" x="174" y="482">127.0.0.1:55432</text>
+              <text class="svg-label" x="174" y="454">SQLite / PostgreSQL</text>
+              <text class="svg-small" x="174" y="482">portable / production profile</text>
               <text class="svg-small" x="174" y="506">authoritative metadata</text>
             </g>
             <g id="deployment-minio" class="node-group">
               <rect class="node node-storage" x="575" y="420" width="250" height="110" rx="10"></rect>
-              <text class="svg-label" x="599" y="454">MinIO</text>
-              <text class="svg-small" x="599" y="482">127.0.0.1:19000</text>
+              <text class="svg-label" x="599" y="454">Local / S3 objects</text>
+              <text class="svg-small" x="599" y="482">content-addressed storage</text>
               <text class="svg-small" x="599" y="506">immutable raw objects</text>
             </g>
             <g id="deployment-ollama" class="node-group">
@@ -1100,7 +1101,7 @@
             <text class="svg-micro" x="50" y="573">EXPERIENCE</text>
             <g id="deployment-portal" class="node-group">
               <rect class="node node-experience" x="150" y="585" width="450" height="55" rx="10"></rect>
-              <text class="svg-label" x="174" y="619">Authenticated private portal · LAN clients</text>
+              <text class="svg-label" x="174" y="619">Private portal · loopback or trusted LAN clients</text>
             </g>
             <g id="deployment-metrics" class="node-group">
               <rect class="node node-shadow" x="910" y="585" width="340" height="55" rx="10"></rect>
@@ -1109,8 +1110,8 @@
           </svg>
         </div>
         <div class="callouts">
-          <div class="callout"><strong>Current profile</strong><span>OpenClaw, Lobster,
-            PostgreSQL, MinIO, Ollama, and the private portal share one encrypted Mac mini.</span></div>
+          <div class="callout"><strong>Reference profile</strong><span>Pick a harness, scheduler,
+            database, object store, and private portal boundary without changing the intelligence core.</span></div>
           <div class="callout"><strong>Portable profile</strong><span>Any scheduler can call the
             same CLI with SQLite, local content-addressed objects, and file-only delivery.</span></div>
           <div class="callout"><strong>Replaceable edge</strong><span>Codex, Claude,
