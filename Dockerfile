@@ -1,4 +1,4 @@
-FROM python:3.12.13-slim-bookworm
+FROM python:3.14.6-slim-bookworm
 
 ARG UV_VERSION=0.12.1
 
