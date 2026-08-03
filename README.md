@@ -1,9 +1,16 @@
-# Emerging Threat Radar
+# Outcome Radar
 
-A security-first, evidence-backed cyber-threat early-warning system that runs with OpenClaw,
-Claude Code, Codex, Perplexity, any OpenAI-compatible API, or a plain scheduler.
+A mission-driven, evidence-backed research system that turns a clearly described outcome into a
+bounded collection plan, deterministic scorecard, adversarial review workflow, and verified
+report. It runs with OpenClaw, Claude Code, Codex, Perplexity, any OpenAI-compatible API, or a
+plain scheduler.
 
-The approved local production path uses surface-tagged Brave searches across the open web, security
+Cyber-threat early warning is the original mission pack, not a hardcoded product boundary. The
+same engine can research developer-product opportunities, customer pain, market changes,
+operational risks, leads, or another outcome while preserving the same source approval, hostile
+content, evidence, citation, ranking, and publication controls.
+
+An approved deployment can use surface-tagged Brave searches across the open web, security
 research sites, GitHub, Reddit, and TikTok, plus xAI server-side X Search. It looks for pre-CVE
 supply-chain, malicious-package, campaign, identity, cloud, vendor, and AI/LLM activity. When
 identifiers exist, it corroborates CVEs with CISA KEV, CVE List V5, NVD, FIRST EPSS, OSV, and
@@ -13,26 +20,87 @@ object-locked, versioned S3-compatible store; sanitizes hostile content; normali
 source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
 and publishes the results to its durable database and private read-only website.
 
-The daily OpenClaw job runs at 7:30 AM America/New_York. Browser automation is not part of source
-collection; it is used only for report-rendering QA.
+Scheduling is deployment-owned and disabled in the distributable defaults. Browser automation is
+not part of source collection; it is used only for report-rendering QA.
 
 The engine itself is vendor-neutral. It can run with portable SQLite/local object storage or the
 production PostgreSQL/S3 profile. Agent platforms remain thin orchestration surfaces; they do not
 own evidence, workflow state, analytics, or report history.
 
-## Run it
+## Five-minute local start
 
-Requires Python 3.12 and `uv`.
+Requires Python 3.12–3.14 and `uv`. The setup command creates a private, ignored local workspace;
+tracked source collection, schedules, delivery, and self-mutation all remain disabled.
 
 ```bash
-make setup
-make check
+git clone <private-repository-url> outcome-radar
+cd outcome-radar
+uv sync --frozen --extra dev
+uv run outcome-radar setup init --profile portable --json
+uv run outcome-radar setup secret-set BRAVE_API_KEY
+uv run outcome-radar setup secret-set XAI_API_KEY
 ```
+
+Review `.outcome-radar/config/`, then bind an approval to the exact code, policies, source terms,
+and enabled local sources:
+
+```bash
+uv run outcome-radar setup approval-request --environment-id workstation --json
+uv run outcome-radar setup approval-apply \
+  .outcome-radar/deployment-approval-request.json \
+  --approved-by "Your name" \
+  --approval-id "change-or-ticket-id" \
+  --json
+uv run outcome-radar --env-file .outcome-radar/config.env \
+  setup doctor --profile portable --json
+```
+
+Run fixture mode before any network collection:
+
+```bash
+uv run outcome-radar mission run \
+  missions/developer-product-opportunities/mission.yaml \
+  --signals missions/developer-product-opportunities/fixture-signals.json \
+  --output reports/missions \
+  --json
+make check
+make package-smoke
+```
+
+See [setup and operation](docs/SETUP.md) and the
+[production readiness runbook](docs/PRODUCTION.md) before enabling live collection.
+
+Describe a new research outcome:
+
+```bash
+uv run outcome-radar mission create \
+  --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
+  --outcome opportunity \
+  --json
+```
+
+Preview the generated source and review plan, then prove it without network access:
+
+```bash
+uv run outcome-radar mission plan \
+  missions/developer-product-opportunities/mission.yaml \
+  --json
+
+uv run outcome-radar mission run \
+  missions/developer-product-opportunities/mission.yaml \
+  --signals missions/developer-product-opportunities/fixture-signals.json \
+  --output reports/missions \
+  --json
+```
+
+Open `/missions/new` in the portal for the guided builder and downloadable mission draft. Live
+collection stays off until an operator reviews and activates the compiled source plan. See
+[Outcome missions](docs/MISSIONS.md) for validation, activation, evaluation, and rollback.
 
 Generate one complete fixture report:
 
 ```bash
-uv run threat-radar fixture run \
+uv run outcome-radar fixture run \
   tests/fixtures/vertical_slice/flash-manifest.json \
   --output /tmp/radar-flash \
   --json
@@ -41,9 +109,8 @@ uv run threat-radar fixture run \
 Run the zero-infrastructure portable profile:
 
 ```bash
-export BRAVE_API_KEY="from-your-secret-store"
-export XAI_API_KEY="from-your-secret-store"
-make agent-shadow AGENT_ADAPTER=openai-compatible
+uv run outcome-radar --env-file .outcome-radar/config.env \
+  portable run --output reports/generated --json
 ```
 
 This writes immutable evidence objects to `state/objects`, verified reports to
@@ -62,7 +129,7 @@ bucket retention, writes one verified report to PostgreSQL and the analytics ind
 file-only audit plan. Scheduled runs do not send Discord messages.
 
 Set `RADAR_EMAIL_RECIPIENT` on the production run to emit a fixed-recipient email plan. Sending is
-a separate operator-approved step: `threat-radar report email-send` requires both external-delivery
+a separate operator-approved step: `outcome-radar report email-send` requires both external-delivery
 gates, TLS-protected SMTP, a plan that matches the configured recipient, verified report artifacts,
 and an idempotency receipt. SMTP credentials come from the process secret store and never enter a
 report or delivery plan. See `docs/SETUP.md` for the variables and command.
@@ -75,7 +142,7 @@ non-X evidence. The five-item brief reserves two slots for qualifying source-nat
 Generic explainers and evergreen guidance are filtered before source-native promotion so a freshly
 indexed tutorial cannot masquerade as an emerging event.
 
-The approved local profile also sends bounded sanitized signal text to the installed
+An explicitly configured local profile can send bounded sanitized signal text to an installed
 `nomic-embed-text:latest` model through loopback-only Ollama. It runs as a shadow observer: semantic
 candidate pairs, deterministic overlap, latency, and token volume are recorded in the immutable
 report and analytics index, but embeddings cannot change clusters, scores, verification, or
@@ -91,9 +158,9 @@ or committed plans can make incremental cost lower or effectively zero.
 Re-index existing immutable reports at any time:
 
 ```bash
-uv run threat-radar analytics sync --json
-uv run threat-radar analytics overview --days 90 --json
-uv run threat-radar analytics events --days 90 --json
+uv run outcome-radar analytics sync --json
+uv run outcome-radar analytics overview --days 90 --json
+uv run outcome-radar analytics events --days 90 --json
 ```
 
 The index is derived and rebuildable; immutable evidence and report JSON remain the source of truth.
@@ -117,9 +184,10 @@ LAN mode binds `0.0.0.0` but accepts only configured private networks and requir
 access token by default. Trusted-network deployments can explicitly use
 `scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
-as Tailscale. The portal is read-only and includes a filterable findings archive, categories and
-tags, a score-sorted analyst queue, claim verification, early-warning and source-mix metrics,
-live evaluation posture, deterministic score breakdowns, source-native excerpts and links,
+as Tailscale. The portal is read-only and includes a guided outcome-mission builder, mission and
+report views, a filterable security findings archive, categories and tags, a score-sorted analyst
+queue, claim verification, deduplicated new-finding and source metrics,
+live review posture, deterministic score breakdowns, source-native excerpts and links,
 taxonomy trends, report search/detail, source health, provider/model/workflow cost analysis,
 print styling, and finding/report CSV/JSON/HTML exports.
 The LaunchAgent starts at login, restarts after failure, and retrieves its token from macOS
@@ -130,7 +198,7 @@ Keychain without writing it to the plist or logs.
 Choose one first-class adapter and generate it into a project checkout:
 
 ```bash
-uv run threat-radar setup generate --platform codex --json
+uv run outcome-radar setup generate --platform codex --json
 ```
 
 Replace `codex` with `openclaw`, `claude-code`, `perplexity`, or `generic` for another adapter.
@@ -179,6 +247,11 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
   bounded narrative analysis while deterministic publication gates stay final.
 - Specialist, impact, and skeptic roles run in parallel, then fan into citation verification and a
   coordinator. A failed layer stops downstream dispatch.
+- Every workflow node has bounded retries, durable hash-bound checkpoints, and explicit terminal
+  states; repeated-state and iteration limits stop runaway loops.
+- Collector and agent-provider extensions load only from explicit entry-point allowlists.
+- Self-improvement is measurement- and proposal-first; applying any change is a separately
+  approved capability and protected security boundaries are never eligible for automatic change.
 - Agent evals persist every returned assessment plus role completion, claim-level citation
   coverage, per-role disposition agreement, latency, tokens, cost, and fixture stability.
 - CI actions and service images are version pinned; CI runs schema, lint, type, test, PostgreSQL,
@@ -189,7 +262,8 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 
 [Watch the animated architecture](docs/architecture-motion.html) for the guided end-to-end runtime,
 [open the complete visual architecture](docs/architecture-visual.html) for the ten-diagram as-built
-system map, and [inspect the universal runtime diagram](docs/universal-agent-runtime.html) for the
+system map, [inspect the mission engine](docs/mission-engine.html) for the outcome-to-workflow
+lifecycle, and [inspect the universal runtime diagram](docs/universal-agent-runtime.html) for the
 provider-neutral agent and source boundaries.
 
 ```text
@@ -218,10 +292,10 @@ Conversation history owns neither.
 
 ## Grounded self-improvement
 
-The daily production graph is wrapped by a separate weekly champion/challenger loop. It reads
-immutable reports and append-only analyst feedback, evaluates the current daily publication
-threshold and bounded challengers in parallel, runs the frozen acceptance anchors, and either stops
-or emits a proposal requiring a resumable Lobster approval.
+The runtime can measure immutable reports and append-only analyst feedback across source coverage,
+calibration, source reliability, provider routing, prompt quality, cost, and security telemetry.
+It emits immutable proposal-only advice. A separate champion/challenger graph can evaluate bounded
+threshold changes against frozen acceptance anchors.
 
 It cannot change Flash or Watch thresholds, confirmation rules, source terms, content security,
 egress, or the fixed Discord destination. It never publishes a report. Approved changes are
@@ -231,7 +305,7 @@ snapshot and receipt.
 Record one analyst label:
 
 ```bash
-uv run threat-radar feedback record \
+uv run outcome-radar feedback record \
   reports/generated/<run-id>/<report-id>.json \
   <finding-id> \
   actionable_and_early \
@@ -242,7 +316,8 @@ uv run threat-radar feedback record \
 Run one proposal-only cycle:
 
 ```bash
-uv run threat-radar improve analyze \
+uv run outcome-radar improve advise --json
+uv run outcome-radar improve analyze \
   --reports reports/generated \
   --feedback reports/feedback \
   --output reports/generated/improvement \
@@ -255,7 +330,7 @@ Run the reviewed workflow through the OpenClaw Lobster tool with this payload:
 {
   "action": "run",
   "pipeline": "openclaw/workflows/self-improvement.lobster",
-  "cwd": "workspace/openclaw-emerging-threat-radar"
+  "cwd": "workspace/outcome-radar"
 }
 ```
 
@@ -265,10 +340,12 @@ until that feedback corpus is real.
 
 ## Production boundary
 
-Read [BLOCKERS.md](BLOCKERS.md) and [THREAT_MODEL_APPROVAL.md](THREAT_MODEL_APPROVAL.md). Approval is
-limited to this local OpenClaw instance, the explicitly enabled sources, and the private fixed
-Discord destination. Browser collection, arbitrary web execution, authenticated vendor portals,
-malware detonation, organization inventory, and autonomous defensive action remain out of scope.
+Read [BLOCKERS.md](BLOCKERS.md), [the production runbook](docs/PRODUCTION.md), and the
+[approval template](THREAT_MODEL_APPROVAL.md). The repository grants no operational authority.
+Every deployment creates a local, expiring approval bound to its exact protected content, source
+set, environment, and capability bits. Browser collection, arbitrary web execution, authenticated
+vendor portals, malware detonation, organization inventory, and autonomous defensive action remain
+out of scope.
 
 Direct Reddit OAuth and TikTok Research API adapters are included but stay fail-closed until their
 platform approval, source-policy record, and credentials exist. Their default surface coverage
@@ -289,6 +366,7 @@ comes through Brave search and is tagged separately in telemetry.
 - `docs/SETUP.md` — install, configure, run, evaluate, and promote
 - `docs/EXTENDING.md` — add a source, provider, role, or platform safely
 - `docs/PORTAL.md` — local/private-LAN portal operations and security
+- `docs/PRODUCTION.md` — production promotion, secrets, operation, backup, restore, and releases
 - `docs/architecture-visual.html` — standalone end-to-end visual architecture
 - `docs/universal-agent-runtime.html` — standalone source and provider-neutral runtime diagram
 - `docs/adr/0009-portable-analytics-and-portal.md` — storage and portal decision record

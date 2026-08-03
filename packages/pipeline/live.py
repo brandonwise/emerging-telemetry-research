@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -22,6 +23,7 @@ from packages.common.canonical import (
     sha256_hex,
     stable_id,
 )
+from packages.common.resources import bundled_path
 from packages.connectors.live import (
     LiveSourceArtifact,
     OfficialSourceClient,
@@ -51,6 +53,7 @@ from packages.discovery.emerging import (
     related_cves,
 )
 from packages.inference.semantic import SemanticShadowEvaluator
+from packages.model_router.budget import AgentBudget
 from packages.model_router.router import ModelRouter
 from packages.pipeline.frozen import FrozenRunResult, run_frozen_fixture
 from packages.scoring.engine import PublicationThresholds, load_thresholds
@@ -99,6 +102,9 @@ CRITICAL_SIGNAL_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
         2,
     ),
 )
+DEFAULT_DISCOVERY_CONFIG = bundled_path("config/discovery.yaml")
+DEFAULT_SCORING_CONFIG = bundled_path("config/scoring.yaml")
+DEFAULT_MODELS_CONFIG = bundled_path("config/models.yaml")
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,11 +114,12 @@ class LiveRunSettings:
     email_recipient: str | None = None
     edition: str = "morning"
     timezone: str = "America/New_York"
-    discovery_config: Path = Path("config/discovery.yaml")
-    scoring_config: Path = Path("config/scoring.yaml")
-    models_config: Path = Path("config/models.yaml")
+    discovery_config: Path = DEFAULT_DISCOVERY_CONFIG
+    scoring_config: Path = DEFAULT_SCORING_CONFIG
+    models_config: Path = DEFAULT_MODELS_CONFIG
     agent_mode: str = "plan"
     agent_max_concurrency: int = 3
+    daily_model_spend: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -379,7 +386,6 @@ async def run_live_radar(
         window_start.date(),
         maximum_candidates,
     )
-    discovery_baselines = _discovery_baselines(signals, generated_at)
     candidate_results: list[FrozenRunResult] = []
     for index, cve in enumerate(candidates):
         result, candidate_degraded, candidate_health = await _run_candidate(
@@ -393,7 +399,6 @@ async def run_live_radar(
             cisa_artifact=cisa_artifact,
             official_client=official_client,
             object_store=object_store,
-            discovery_baseline_at=discovery_baselines.get(cve),
             thresholds=thresholds,
         )
         degraded.update(candidate_degraded)
@@ -499,6 +504,10 @@ async def run_live_radar(
             provider=agent_provider,
             mode=settings.agent_mode,
             max_concurrency=settings.agent_max_concurrency,
+            budget=AgentBudget.from_path(
+                settings.models_config,
+                daily_spend=settings.daily_model_spend,
+            ),
         )
         agent_reviews.extend(execution.reviews)
         agent_assessments.extend(execution.assessments)
@@ -770,7 +779,6 @@ async def _run_candidate(
     cisa_artifact: LiveSourceArtifact | None,
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
-    discovery_baseline_at: datetime | None,
     thresholds: PublicationThresholds,
 ) -> tuple[FrozenRunResult | None, set[str], dict[str, dict[str, Any]]]:
     candidate_root = run_root / "candidates" / cve
@@ -826,9 +834,8 @@ async def _run_candidate(
         },
         "sources": sources,
         "inventory": [],
+        "media_baseline_checked": False,
     }
-    if discovery_baseline_at is not None:
-        manifest["media_baseline_at"] = format_timestamp(discovery_baseline_at)
     manifest_path = candidate_root / "manifest.json"
     _write_immutable(manifest_path, canonical_json_bytes(manifest) + b"\n")
     try:
@@ -840,6 +847,7 @@ async def _run_candidate(
             identifier_filter=frozenset({cve}),
             shadow_mode=False,
             thresholds=thresholds,
+            isolate_parsers=True,
         )
     except ValueError as exc:
         if "requires at least one CVE" in str(exc):
@@ -891,20 +899,6 @@ def _critical_signal_bonus(signal: DiscoverySignal) -> int:
         12,
         sum(weight for pattern, weight in CRITICAL_SIGNAL_PATTERNS if pattern.search(text)),
     )
-
-
-def _discovery_baselines(
-    signals: list[DiscoverySignal],
-    generated_at: datetime,
-) -> dict[str, datetime]:
-    baselines: dict[str, datetime] = {}
-    for signal in signals:
-        published_at = signal.published_at or generated_at
-        for cve in candidate_cves((signal,)):
-            current = baselines.get(cve)
-            if current is None or published_at < current:
-                baselines[cve] = published_at
-    return baselines
 
 
 def _finding_cve(finding: dict[str, Any]) -> str | None:

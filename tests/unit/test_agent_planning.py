@@ -53,3 +53,8 @@ def test_daily_shadow_plan_keeps_coordinator_on_balanced_route() -> None:
         route for route in plans[0]["routes"] if route["role"] == "coordinator"
     )
     assert coordinator["route_name"] == "balanced_analyst"
+    assert [item["harness"] for item in coordinator["provider_preferences"]] == [
+        "codex",
+        "openclaw",
+    ]
+    assert coordinator["retries"] == 1

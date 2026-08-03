@@ -2,7 +2,7 @@
 
 ## The durable boundary
 
-`threat-radar` owns collection, evidence, scoring, verification, reports, and state. Agent
+`outcome-radar` owns collection, evidence, scoring, verification, reports, and state. Agent
 platforms are replaceable adapters around its CLI and versioned JSON contracts.
 
 ```text
@@ -21,17 +21,21 @@ PostgreSQL and object-locked S3-compatible storage without changing the workflow
 
 Requirements:
 
-- Python 3.12
+- Python 3.12–3.14
 - `uv`
-- Brave Search API key
-- xAI API key with X Search access
+- Brave Search API key for the default web surfaces
+- xAI API key with X Search access when the X surface is enabled
 - one optional agent provider
 
 ```bash
-make setup
-export BRAVE_API_KEY="..."
-export XAI_API_KEY="..."
-make portable
+uv sync --frozen --extra dev
+uv run outcome-radar setup init --profile portable --json
+uv run outcome-radar setup secret-set BRAVE_API_KEY
+uv run outcome-radar setup secret-set XAI_API_KEY
+uv run outcome-radar setup approval-request --environment-id workstation --json
+# Review the request, then apply it with a named operator and change/ticket ID.
+uv run outcome-radar --env-file .outcome-radar/config.env \
+  setup doctor --profile portable --json
 ```
 
 Portable output:
@@ -96,8 +100,17 @@ RADAR_AGENT_ADAPTER=openai-compatible
 RADAR_AGENT_PROVIDER_NAME=perplexity
 RADAR_AGENT_BASE_URL=https://api.perplexity.ai
 RADAR_AGENT_MODEL=your-approved-model
-RADAR_AGENT_API_KEY=your-secret
+RADAR_AGENT_API_KEY_REF=keyring://outcome-radar/RADAR_AGENT_API_KEY
+RADAR_AGENT_INPUT_PRICE_PER_MILLION=your-current-input-price
+RADAR_AGENT_OUTPUT_PRICE_PER_MILLION=your-current-output-price
 ```
+
+Prices are explicit deployment configuration because provider/model pricing changes. They are
+used for attribution and the persisted daily-spend baseline. Hard runtime reservations use the
+reviewed `maximum_currency_per_call` values in the local model routing config. Before dispatch,
+the ledger reserves the full worst-case envelope across every configured fallback and retry, so a
+missing price
+estimate cannot disable the run and cluster caps.
 
 The HTTP adapter first requests strict JSON Schema output. If an otherwise compatible endpoint
 rejects that option with HTTP 400 or 422, it retries without the option and still validates the
@@ -111,7 +124,7 @@ workflow replay—not for production analysis.
 ## Generate platform setup
 
 ```bash
-uv run threat-radar setup generate --platform codex --json
+uv run outcome-radar setup generate --platform codex --json
 ```
 
 Supported values:
@@ -160,6 +173,10 @@ Any scheduler that can run a command can operate the portable profile:
 
 OpenClaw, cron, systemd, launchd, CI, Codex, and Claude all call the same CLI. Conversation history
 is never workflow state.
+
+The generated package includes both POSIX shell and PowerShell runners. Env files are parsed as
+data and are never sourced as shell code. Durable SQLite workflow checkpoints make restarts resume
+completed nodes only when their input and node-revision hashes still match.
 
 ## Delivery
 

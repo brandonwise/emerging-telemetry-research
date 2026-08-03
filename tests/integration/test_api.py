@@ -28,6 +28,40 @@ def client_for(role: str, tmp_path: Path, repo: MemoryRepository | None = None) 
     )
 
 
+def test_liveness_is_public_and_minimal(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(
+            settings=ApiSettings(mtls_identities_json="{}", report_root=tmp_path),
+            repository=MemoryRepository(),
+        ),
+        client=("127.0.0.1", 41000),
+    )
+
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert response.headers["cache-control"] == "no-store"
+
+    readiness = client.get("/readyz")
+    assert readiness.status_code == 200
+    assert readiness.json() == {"status": "ready"}
+
+
+def test_readiness_fails_closed_without_a_repository(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(
+            settings=ApiSettings(mtls_identities_json="{}", report_root=tmp_path),
+        ),
+        client=("127.0.0.1", 41000),
+    )
+
+    response = client.get("/readyz")
+
+    assert response.status_code == 503
+    assert response.json() == {"status": "unavailable"}
+
+
 def test_api_fails_closed_without_mtls_identity_map(tmp_path: Path) -> None:
     client = TestClient(
         create_app(

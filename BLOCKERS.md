@@ -1,6 +1,17 @@
-# Remaining scope gates
+# Remaining deployment gates
 
-The approved local daily brief is live. These items block expansion beyond that reviewed boundary:
+The repository is production-engineered but intentionally grants no live authority. A target
+environment must complete its own local approval and operational evidence before collection:
+
+- Create and review a hash-bound deployment approval for the exact enabled source set; tracked
+  files and another machine's approval are not sufficient.
+- Validate provider executables/endpoints and run real-provider shadow evals.
+- Configure a real malware-scanner hook; the development no-op hook is not a release posture.
+- Complete PostgreSQL point-in-time and object-lock restore drills plus alert-delivery testing.
+- Put the internal API behind a deployed mTLS-terminating proxy before any non-loopback exposure.
+- Enable schedules only in the deployment layer after `setup doctor` reports ready.
+
+These items require separate scope approvals:
 
 - Authenticated vendor portals, Reddit, OpenSSF malicious-package feeds, precursor collectors,
   certificate-transparency monitoring, and media-baseline retention remain disabled until their
@@ -12,7 +23,3 @@ The approved local daily brief is live. These items block expansion beyond that 
   `EVALS.md`.
 - Organization inventory, automated defensive action, browser-based collection, malware
   detonation, Tor, and arbitrary web execution require separate threat models.
-- Off-host disaster recovery and point-in-time restore remain operational follow-ups; local
-  PostgreSQL volumes and MinIO object locking protect the current deployment.
-
-These gates do not block the approved daily 7:30 AM ET Brave + X + authoritative-source brief.

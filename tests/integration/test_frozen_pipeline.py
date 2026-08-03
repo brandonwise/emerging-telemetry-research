@@ -57,7 +57,10 @@ def test_early_signal_is_watch_before_media_fixture_is_revealed(tmp_path: Path) 
     assert early_finding["publication_class"] == "watch"
     assert early_finding["lead_time_hours"] is None
     assert early_finding["novelty"] == "high"
-    assert later_finding["lead_time_hours"] == 19
+    assert later_finding["lead_time_hours"] is None
+    assert later_finding["media_baseline_at"] == "2026-07-22T19:00:00Z"
+    assert later_finding["media_baseline_checked"] is True
+    assert later_finding["score_components"]["novelty_lead_time"] == 0
     assert later_finding["priority_score"] < early_finding["priority_score"]
 
 

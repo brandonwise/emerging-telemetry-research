@@ -7,7 +7,7 @@ args:
 steps:
   - id: validate_mode
     command: >-
-      uv run threat-radar run create
+      uv run outcome-radar run create
       "$LOBSTER_ARG_MODE"
       --edition "$LOBSTER_ARG_EDITION"
       --json

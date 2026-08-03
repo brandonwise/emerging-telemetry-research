@@ -8,6 +8,5 @@ reports
 runtime
 artifacts
 tests
-docs
 *.log
 .env

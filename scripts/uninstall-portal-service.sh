@@ -27,7 +27,7 @@ if [[ "${radar_purge_token}" == "true" ]]; then
 fi
 
 cd "${radar_repo_root}"
-uv run threat-radar analytics event \
+uv run outcome-radar analytics event \
   portal.service.disabled 1 service \
   --dimensions-json '{"mode":"private_lan"}' \
   --database "${radar_repo_root}/state/radar.db" \

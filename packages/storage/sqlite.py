@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -33,7 +35,7 @@ class SQLiteRepository:
 
     async def available(self) -> bool:
         try:
-            with self._connect() as connection:
+            with self._connection() as connection:
                 connection.execute("SELECT 1").fetchone()
         except sqlite3.Error:
             return False
@@ -54,7 +56,7 @@ class SQLiteRepository:
         request_hash = sha256_hex(canonical_json_bytes(request_payload))
         record_hash = sha256_hex(canonical_json_bytes(record))
         payload_text = canonical_json_bytes(record).decode("utf-8")
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             existing_idempotency = connection.execute(
                 """
@@ -123,7 +125,7 @@ class SQLiteRepository:
 
     async def get(self, collection: str, key: str) -> dict[str, Any] | None:
         _validate_collection(collection)
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT payload
@@ -135,14 +137,14 @@ class SQLiteRepository:
         return _json_object(str(row["payload"])) if row is not None else None
 
     async def evidence_ids(self) -> set[str]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT record_key FROM radar_records WHERE collection = 'evidence'"
             ).fetchall()
         return {str(row["record_key"]) for row in rows}
 
     async def source_health_records(self) -> list[dict[str, Any]]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT payload
@@ -160,7 +162,7 @@ class SQLiteRepository:
         ]
 
     async def usage_records(self, run_id: str) -> list[dict[str, Any]]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT payload
@@ -176,7 +178,7 @@ class SQLiteRepository:
         return [dict(item) for item in usage if isinstance(item, dict)]
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS radar_meta (
@@ -219,6 +221,15 @@ class SQLiteRepository:
         connection.execute("PRAGMA journal_mode = WAL")
         connection.execute("PRAGMA busy_timeout = 5000")
         return connection
+
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
 
 def _validate_collection(value: str) -> None:

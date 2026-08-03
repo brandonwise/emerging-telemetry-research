@@ -111,7 +111,7 @@ if [[ "${radar_status}" != "200" ]]; then
 fi
 
 cd "${radar_repo_root}"
-uv run threat-radar analytics event \
+uv run outcome-radar analytics event \
   portal.service.enabled 1 service \
   --dimensions-json "{\"mode\":\"private_lan\",\"auth\":\"${radar_auth_mode}\",\"port\":\"${radar_port}\"}" \
   --database "${radar_repo_root}/state/radar.db" \

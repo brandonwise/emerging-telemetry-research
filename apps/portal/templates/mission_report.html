@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ report.mission_name }} report · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading compact-heading">
+  <p class="eyebrow">Verified mission report · {{ report.generated_at|compact_date }}</p>
+  <h1>{{ report.mission_name }}</h1><p class="lede">{{ report.executive_summary }}</p>
+</section>
+<section class="outcome-list">
+  {% for outcome in report.outcomes %}<article class="panel outcome-card">
+    <div class="outcome-card-heading"><div><span class="status-chip {{ outcome.priority_class }}">{{ outcome.priority_class }}</span>
+      <h2>{{ outcome.title }}</h2></div><strong>{{ "%.1f"|format(outcome.priority_score) }}</strong></div>
+    <p>{{ outcome.why_now }}</p>
+    <div class="outcome-columns"><div><h3>Recommended actions</h3><ul>
+      {% for action in outcome.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul></div>
+      <div><h3>Still unknown</h3><ul>{% for item in outcome.unknown %}<li>{{ item }}</li>{% endfor %}</ul></div></div>
+    <div class="evidence-list"><h3>Evidence</h3>{% for source in outcome.source_evidence %}
+      <a href="{{ source.url }}" rel="noreferrer"><strong>{{ source.title }}</strong><span>{{ source.source_type }} · {{ source.published_at|compact_date }}</span></a>{% endfor %}</div>
+    <div class="feedback-command"><span class="eyebrow">Calibrate this mission</span>
+      <code>threat-radar mission feedback &lt;mission.yaml&gt; --report &lt;report.json&gt;
+        --outcome-id {{ outcome.outcome_id }} --label useful --reason "..." --submitted-by NAME</code></div>
+  </article>{% else %}<div class="empty-state"><strong>No qualified outcomes.</strong>
+    <span>{{ report.vocabulary.empty_result }}</span></div>{% endfor %}
+</section>
+{% endblock %}

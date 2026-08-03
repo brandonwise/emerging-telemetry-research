@@ -13,8 +13,11 @@ from packages.common.canonical import (
     sha256_hex,
     stable_id,
 )
+from packages.common.resources import bundled_path
 from packages.model_router.router import ModelRouter
 from packages.pipeline.frozen import run_frozen_fixture
+
+DEFAULT_MODELS_CONFIG = bundled_path("config/models.yaml")
 
 
 async def run_agent_evaluation(
@@ -25,7 +28,7 @@ async def run_agent_evaluation(
     adapter_name: str,
     repeats: int = 1,
     case: str | None = None,
-    models_config: Path = Path("config/models.yaml"),
+    models_config: Path = DEFAULT_MODELS_CONFIG,
     maximum_mean_review_duration_ms: int = 300_000,
     maximum_mean_review_tokens: int = 100_000,
 ) -> dict[str, Any]:

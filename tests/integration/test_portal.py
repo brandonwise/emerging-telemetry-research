@@ -1,4 +1,6 @@
+import asyncio
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -6,7 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from apps.portal.main import PortalSettings, _unique_findings, create_app
+import apps.portal.main as portal_main
+from apps.portal.main import PortalSettings, _inline_style_hash, _unique_findings, create_app
+from packages.missions.compiler import load_mission
+from packages.missions.runtime import run_mission
 from packages.pipeline.frozen import run_frozen_fixture
 
 
@@ -26,6 +31,60 @@ def _settings(
     )
 
 
+def test_portal_mission_onboarding_and_report_navigation(tmp_path: Path) -> None:
+    mission = load_mission(Path("missions/developer-product-opportunities/mission.yaml"))
+    signals = json.loads(
+        Path("missions/developer-product-opportunities/fixture-signals.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    result = asyncio.run(
+        run_mission(
+            mission,
+            signals,
+            tmp_path / "mission-reports",
+            generated_at=datetime(2026, 7, 31, 12, tzinfo=UTC),
+        )
+    )
+    settings = _settings(tmp_path)
+    settings.missions_root = Path("missions")
+    settings.mission_reports_root = tmp_path / "mission-reports"
+    client = TestClient(
+        create_app(settings),
+        client=("127.0.0.1", 50000),
+    )
+
+    index = client.get("/missions")
+    builder = client.get(
+        "/missions/new",
+        params={
+            "objective": "Find recurring developer workflow pain worth solving with a product."
+        },
+    )
+    download = client.get(
+        "/missions/download",
+        params={
+            "objective": "Find recurring developer workflow pain worth solving with a product."
+        },
+    )
+    detail = client.get(f"/missions/{mission.mission_id}")
+    report = client.get(
+        f"/missions/{mission.mission_id}/reports/{result.report['report_id']}"
+    )
+
+    assert index.status_code == 200
+    assert "Developer Product Opportunity Radar" in index.text
+    assert builder.status_code == 200
+    assert "Build research plan" in builder.text
+    assert "Download mission" in builder.text
+    assert download.status_code == 200
+    assert "attachment;" in download.headers["content-disposition"]
+    assert detail.status_code == 200
+    assert "Five bounded roles" in detail.text
+    assert report.status_code == 200
+    assert "Automate disposable local test environments" in report.text
+
+
 def test_priority_queue_deduplicates_recurring_findings() -> None:
     rows = [
         {"finding_id": "finding-a", "priority_score": 90.0},
@@ -34,6 +93,35 @@ def test_priority_queue_deduplicates_recurring_findings() -> None:
     ]
 
     assert _unique_findings(rows, limit=2) == [rows[0], rows[2]]
+
+
+def test_architecture_csp_hash_tracks_document_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    architecture_path = tmp_path / "architecture-motion.html"
+    architecture_path.write_text(
+        portal_main.ARCHITECTURE_MOTION_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(portal_main, "ARCHITECTURE_MOTION_PATH", architecture_path)
+    client = TestClient(
+        create_app(_settings(tmp_path)),
+        client=("127.0.0.1", 50000),
+    )
+    architecture_path.write_text(
+        architecture_path.read_text(encoding="utf-8").replace(
+            "--bg: #06110f;",
+            "--bg: #07120f;",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    architecture = client.get("/architecture")
+
+    expected_hash = _inline_style_hash(architecture.text)
+    assert f"style-src 'sha256-{expected_hash}'" in architecture.headers["content-security-policy"]
 
 
 def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
@@ -70,6 +158,23 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
             "estimated_currency": 0.25,
         }
     )
+    report["discovery_telemetry"] = {
+        "discovered_signal_count": 1,
+        "prepared_signal_count": 1,
+        "cited_evidence_count": 1,
+        "surfaces": [
+            {
+                "source_id": "x-researchers",
+                "status": "healthy",
+                "requests": 1,
+                "discovered_signal_count": 1,
+                "prepared_signal_count": 1,
+                "selected_finding_count": 1,
+                "cited_evidence_count": 1,
+                "source_types": ["x_post"],
+            }
+        ],
+    }
     report["semantic_shadow"] = {
         "mode": "shadow",
         "status": "completed",
@@ -121,6 +226,7 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     trends = client.get("/trends")
     architecture = client.get("/architecture")
     architecture_blueprint = client.get("/architecture/blueprint")
+    architecture_gif = client.get("/exports/architecture.gif")
     csv_export = client.get("/exports/reports.csv")
     json_export = client.get("/exports/reports.json")
     finding_csv_export = client.get("/exports/findings.csv")
@@ -132,7 +238,11 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "right now." in dashboard.text
     assert "Evidence diversity" in dashboard.text
     assert "100.0% X" in dashboard.text
-    assert "The checks behind the checks" in dashboard.text
+    assert "What these numbers actually count" in dashboard.text
+    assert "Operational telemetry only" in dashboard.text
+    assert "Fixtures and evals" in dashboard.text
+    assert "Early warning" not in dashboard.text
+    assert "No live agent reviews in this window" in dashboard.text
     assert "Usage estimate" not in dashboard.text
     assert settings.status_code == 200
     assert "Configuration and usage" in settings.text
@@ -157,12 +267,15 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "X Post" in findings.text
     assert trends.status_code == 200
     assert "Cross-cutting themes" in trends.text
-    assert "Where findings are coming from" in trends.text
+    assert "Evidence by source type" in trends.text
+    assert "Fixture and evaluation reports are excluded" in trends.text
     assert 'href="/architecture"' in dashboard.text
     assert architecture.status_code == 200
     assert "See the system" in architecture.text
     assert "<animateMotion" in architecture.text
     assert 'href="/architecture/blueprint"' in architecture.text
+    assert 'href="/exports/architecture.gif"' in architecture.text
+    assert 'download="threat-radar-architecture-motion.gif"' in architecture.text
     assert 'href="/">Return to command center' in architecture.text
     assert "style-src 'sha256-" in architecture.headers["content-security-policy"]
     assert "'unsafe-inline'" not in architecture.headers["content-security-policy"]
@@ -171,6 +284,15 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "Emerging Threat Radar, end to end" in architecture_blueprint.text
     assert 'href="/architecture"' in architecture_blueprint.text
     assert 'href="/">← Command center' in architecture_blueprint.text
+    assert architecture_gif.status_code == 200
+    assert architecture_gif.headers["content-type"] == "image/gif"
+    assert architecture_gif.headers["content-disposition"].endswith(
+        'filename="threat-radar-architecture-motion.gif"'
+    )
+    assert architecture_gif.content.startswith(b"GIF89a")
+    assert int.from_bytes(architecture_gif.content[6:8], "little") == 3360
+    assert int.from_bytes(architecture_gif.content[8:10], "little") == 1960
+    assert architecture_gif.content.count(b"\x21\xf9\x04") >= 48
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
     assert json_export.headers["content-disposition"].endswith('"threat-radar-reports.json"')

@@ -22,26 +22,31 @@ The Makefile exposes the same gates with shorter commands:
 ```bash
 make help
 make check
+make package-smoke
 ```
 
-For the approved local daily brief, run:
+Initialize and validate a target deployment:
 
 ```bash
-scripts/run-live.sh
+uv run outcome-radar setup init --profile production --json
+uv run outcome-radar setup approval-request --environment-id production-host --json
+# Independently review and apply the request.
+uv run outcome-radar --env-file .outcome-radar/config.env \
+  setup doctor --profile production --json
 ```
 
-The runner loads secrets from macOS Keychain, verifies FileVault, starts the loopback-only
-PostgreSQL and MinIO services, writes the verified report to the durable database and analytics
-index, and emits file-only audit metadata as JSON. Routine runs have no external delivery step.
+On macOS, `scripts/run-live.sh` remains a hardened convenience wrapper around the same CLI and
+local approval. Linux and Windows deployments should call the CLI with an explicit env file or
+their orchestrator's protected environment.
 
 Before live collection, confirm all of the following:
 
-- `THREAT_MODEL_APPROVAL.md` contains an immutable approval reference, approver, timestamp, commit,
-  source IDs, environment, and residual-risk acceptance.
-- Every enabled source has `status: approved` in `config/source-terms.yaml`.
+- `.outcome-radar/deployment-approval.yaml` is unexpired, owner-only, and valid for the current
+  protected-content hash, capability, and source set.
+- Every enabled local source has approved terms in `.outcome-radar/config/source-terms.yaml`.
 - `scripts/validate_repo.py` passes after the source/config change.
 - Egress allowlists contain only source-specific hostnames.
-- The malware-scanner hook reports `clean`, not `not_configured`.
+- The live text-artifact scanner reports `clean`; binary/document collection is not enabled.
 - PostgreSQL restore, object-lock restore, OpenClaw deep audit, and alert delivery evidence are
   attached to the production-readiness review.
 
@@ -55,7 +60,7 @@ Before live collection, confirm all of the following:
 Start with one real-provider fixture:
 
 ```bash
-uv run threat-radar eval agents \
+uv run outcome-radar eval agents \
   --adapter openclaw \
   --case flash \
   --repeats 1 \
@@ -103,7 +108,8 @@ not part of the default profile.
 
 ## Local semantic shadow
 
-The approved local model is `nomic-embed-text:latest` through the fixed loopback Ollama endpoint.
+The optional local shadow model is `nomic-embed-text:latest` through the fixed loopback Ollama
+endpoint when that profile is explicitly enabled.
 It is an observer, not a fallback decision-maker. Check the Settings page or the
 `semantic_shadow` object in the newest report for status, latency, candidate pairs, and overlap
 with deterministic clustering.
@@ -226,8 +232,8 @@ It does not replace the production PostgreSQL/object-lock drill.
 
 ## Self-improvement cycle
 
-1. Record analyst feedback with `threat-radar feedback record`; never edit a prior feedback file.
-2. Run `threat-radar improve analyze` or the reviewed
+1. Record analyst feedback with `outcome-radar feedback record`; never edit a prior feedback file.
+2. Run `outcome-radar improve advise` and `outcome-radar improve analyze` or the reviewed
    `openclaw/workflows/self-improvement.lobster` workflow.
 3. If the result is `insufficient_evidence`, collect more labels. Do not lower the sample gates.
 4. If the result is `blocked`, resolve the acceptance, orphan-reference, or security-review reason
@@ -243,7 +249,7 @@ It does not replace the production PostgreSQL/object-lock drill.
 Rollback an applied proposal:
 
 ```bash
-uv run threat-radar improve rollback \
+uv run outcome-radar improve rollback \
   reports/generated/improvement/<cycle-id>/apply-receipt.json \
   --repo-root . \
   --approved-by <operator> \

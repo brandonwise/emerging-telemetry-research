@@ -23,6 +23,7 @@ routes:
       - render
 
   economical_extractor:
+    maximum_currency_per_call: 0.10
     provider_preferences:
       - provider: anthropic
         model: anthropic/claude-haiku-4-5
@@ -40,6 +41,7 @@ routes:
     retries: 1
 
   balanced_analyst:
+    maximum_currency_per_call: 0.12
     provider_preferences:
       - provider: openai
         model: openai/gpt-5.4
@@ -59,6 +61,7 @@ routes:
     retries: 1
 
   chief_coordinator:
+    maximum_currency_per_call: 0.24
     provider_preferences:
       - provider: openai
         model: openai/gpt-5.6-sol

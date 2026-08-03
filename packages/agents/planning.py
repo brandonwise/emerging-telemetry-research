@@ -79,4 +79,9 @@ def _route_contract(role: str, route: ModelRoute) -> dict[str, Any]:
         "max_input_tokens": route.max_input_tokens,
         "max_output_tokens": route.max_output_tokens,
         "tools": list(route.tools),
+        "provider_preferences": [
+            preference.to_contract() for preference in route.provider_preferences
+        ],
+        "retries": route.retries,
+        "maximum_currency_per_call": float(route.maximum_currency_per_call),
     }

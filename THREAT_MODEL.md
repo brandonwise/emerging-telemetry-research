@@ -131,6 +131,22 @@ taxonomy compatibility, no vector persistence, shadow-only telemetry, and no pat
 output to clustering, scoring, verification, or publication. Local-inference failures leave the
 deterministic pipeline unchanged.
 
+### TM-16: A copied or stale deployment approval grants unintended authority
+
+**Impact:** collection, delivery, or self-improvement runs outside the reviewed environment.
+
+**Controls:** local owner-only approvals, explicit capability bits, approved source IDs, expiration,
+and a content hash over protected code, schemas, policies, security documents, discovery, terms,
+and source configuration. Drift and source-set mismatch fail closed.
+
+### TM-17: A malicious extension package gains execution through plugin discovery
+
+**Impact:** secret theft, evidence tampering, or unauthorized egress.
+
+**Controls:** installed entry points are inert by default, exact local plugin allowlists, pinned
+dependencies, collector/provider contract validation, isolated secret scopes, deployment approval,
+and CI supply-chain scanning. Plugins never gain delivery or publication authority.
+
 ## Trust-boundary acceptance tests
 
 - A collector token cannot authenticate to delivery services.

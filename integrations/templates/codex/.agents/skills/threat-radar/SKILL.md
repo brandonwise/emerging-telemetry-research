@@ -11,5 +11,5 @@ description: Run and inspect the portable evidence-backed Emerging Threat Radar 
 4. Return the report ID, finding count, degraded sources, report paths, and local delivery status.
 5. Never send the report externally unless the user authorizes a configured destination.
 
-Use `uv run threat-radar analytics sync --json` to rebuild history. Start the read-only portal with
+Use `uv run outcome-radar analytics sync --json` to rebuild history. Start the read-only portal with
 `scripts/run-portal.sh`; `--lan` additionally requires a strong access token.

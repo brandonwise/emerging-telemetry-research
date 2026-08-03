@@ -14,10 +14,10 @@ Acceptance:
 
 - Repository validator rejects floating Actions and container `latest` tags.
 - Required ADRs, contracts, approval records, and security configs must exist.
-- Pending threat-model approval mechanically forces sources, schedules, and delivery off.
+- Distributable defaults mechanically force sources, schedules, delivery, and self-mutation off.
 
-External gate: private GitHub creation, branch protection, and approval of
-`THREAT_MODEL_APPROVAL.md`.
+External gate: private GitHub creation, branch protection, and a local hash-bound deployment
+approval. `THREAT_MODEL_APPROVAL.md` is only a review template.
 
 ## Milestone 1 — data plane and safe collection
 
@@ -51,8 +51,9 @@ Acceptance:
   decompression ratios are rejected.
 - Original/sanitized hashes, decisions, patterns, and risk are present in the audit lineage.
 
-Deployment gate: configure an approved malware scanner; the development no-op hook is not a release
-configuration.
+The live pipeline uses the fail-closed text-artifact scanner for its text-only MIME allowlist and
+rejects executable signatures and the EICAR marker. Binary document, media, or archive extraction
+remains outside this release boundary and requires a separately approved sandbox/scanner profile.
 
 ## Milestone 3 — normalization, lineage, and scoring
 
@@ -75,7 +76,8 @@ browsing, shell, schedules, secrets, and delivery from analytical roles. The chi
 Acceptance:
 
 - The fixture review chain executes specialist, skeptic, citation verifier, then coordinator.
-- Model routing enforces daily/run/cluster budgets and a Flash reserve.
+- Model routing plans daily/run/cluster budgets and a Flash reserve; provider usage is persisted for
+  enforcement and operator review.
 - The chief has no raw-artifact, browser, shell, message, schedule, memory, or administrative tool.
 - The publisher has only the fixed-destination verified-delivery tool.
 
@@ -115,8 +117,10 @@ Acceptance:
 - JSON, HTML, and audit logs replay byte-for-byte.
 - Cost attribution is complete.
 
-Release gate: accumulate the precision, citation-entailment, calibration, lead-time, reliability,
-and cost window defined in `EVALS.md`; do not enable Flash delivery before it passes.
+Release gate: accumulate the precision, citation-entailment, calibration, independently
+baseline-backed lead-time, reliability, and cost window defined in `EVALS.md`; do not enable Flash
+delivery before it passes. Lead-time remains unreported while the approved baseline collector is
+disabled.
 
 ## Milestone 7 — production hardening
 
@@ -132,3 +136,28 @@ Acceptance:
 
 Deployment gates: database point-in-time restore, object-lock restore, alert delivery, chaos,
 rollback, and OpenClaw deep-audit evidence from the target environment.
+
+## Milestone 8 — universal outcome missions
+
+Design: security becomes a built-in mission pack on a universal research contract. Plain-language
+intent compiles into bounded sources and queries, evidence rules, deterministic scoring, mission-
+specific role briefs, output limits, and evaluation targets. The proven five-role graph and engine
+safety controls remain fixed.
+
+Acceptance:
+
+- The mission schema rejects unknown fields, invalid score totals, changed role dependencies,
+  unapproved active sources, and external delivery.
+- The portal provides a responsive mission builder, exact plan preview, and downloadable draft.
+- Draft missions run offline fixtures; live runs require a source-by-source activation approval.
+- Activation writes base and active hashes plus an exact rollback contract.
+- The developer-product opportunity fixture produces a cited outcome from three source types.
+- Mission reports remain immutable, use mission vocabulary, and keep ranking in code.
+- Unregistered sources, mismatched surfaces, stale evidence, unsafe URLs, single-source clusters,
+  and injected source instructions cannot produce an outcome.
+- Useful, not useful, and needs-work feedback is immutable and replaces proxy usefulness in
+  mission evaluation.
+- Security and developer-product opportunity packs validate against the same engine contract.
+
+External gate: approve the live source plan for each mission separately. One mission's approval
+never grants collection authority to another.

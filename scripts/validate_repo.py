@@ -12,8 +12,33 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
+from packages.contracts.validation import validate_payload
+from packages.missions.compiler import compile_mission, load_mission
+
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED_PARTS = {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".venv", "reports"}
+SECRET_PATTERNS = {
+    "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    "AWS access key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+    "model provider token": re.compile(r"\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{24,}\b"),
+}
+TEXT_SUFFIXES = {
+    ".css",
+    ".env",
+    ".html",
+    ".js",
+    ".json",
+    ".json5",
+    ".lobster",
+    ".md",
+    ".py",
+    ".sh",
+    ".sql",
+    ".toml",
+    ".yaml",
+    ".yml",
+}
 
 
 class ArchitectureVisualParser(HTMLParser):
@@ -105,9 +130,6 @@ def check_release_gates(failures: list[str]) -> None:
     report = load_yaml("config/report.yaml")
     embeddings = load_yaml("config/embeddings.yaml")
     terms = load_yaml("config/source-terms.yaml")
-    approval_text = (ROOT / "THREAT_MODEL_APPROVAL.md").read_text(encoding="utf-8")
-    approval_pending = "Status: approved" not in approval_text
-
     source_items = sources.get("sources", [])
     if not isinstance(source_items, list):
         failures.append("config/sources.yaml sources must be a list")
@@ -119,27 +141,21 @@ def check_release_gates(failures: list[str]) -> None:
     ]
     if sources.get("defaults", {}).get("enabled") is not False:
         failures.append("Source defaults must fail closed")
-    if approval_pending and enabled_sources:
+    if enabled_sources:
         failures.append(
-            "Threat model is pending but sources are enabled: " + ", ".join(enabled_sources)
+            "Distributable source defaults must be disabled: " + ", ".join(enabled_sources)
         )
-    if approval_pending and schedules.get("enabled") is not False:
-        failures.append("Threat model is pending but scheduled workflows are enabled")
+    if schedules.get("enabled") is not False:
+        failures.append("Distributable scheduled workflows must be disabled")
 
     publication = report.get("publication", {})
     discord = report.get("discord", {})
-    if approval_pending and publication.get("external_delivery_enabled") is not False:
-        failures.append("Threat model is pending but external delivery is enabled")
-    if approval_pending and discord.get("enabled") is not False:
-        failures.append("Threat model is pending but Discord delivery is enabled")
-    if approval_pending and publication.get("shadow_mode") is not True:
-        failures.append("Unapproved deployments must remain in shadow mode")
-    if (
-        not approval_pending
-        and publication.get("external_delivery_enabled") is True
-        and publication.get("shadow_mode") is not False
-    ):
-        failures.append("Approved external delivery cannot be labeled shadow mode")
+    if publication.get("external_delivery_enabled") is not False:
+        failures.append("Distributable external delivery must be disabled")
+    if discord.get("enabled") is not False:
+        failures.append("Distributable Discord delivery must be disabled")
+    if publication.get("shadow_mode") is not True:
+        failures.append("Distributable deployments must remain in shadow mode")
 
     semantic = embeddings.get("semantic_clustering", {})
     if semantic.get("enabled") is True and semantic.get("mode") != "shadow":
@@ -263,6 +279,24 @@ def check_supply_chain(failures: list[str]) -> None:
         image = service.get("image") if isinstance(service, dict) else None
         if not image or image.endswith(":latest") or ":" not in image:
             failures.append(f"Container image for {name} is not version pinned")
+
+
+def check_secret_material(failures: list[str]) -> None:
+    for path in repository_files("*"):
+        if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for label, pattern in SECRET_PATTERNS.items():
+            match = pattern.search(text)
+            if match is None:
+                continue
+            line_number = text.count("\n", 0, match.start()) + 1
+            failures.append(
+                f"Potential {label} committed at {path.relative_to(ROOT)}:{line_number}"
+            )
 
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     for line in dockerfile.splitlines():
@@ -400,8 +434,94 @@ def check_universal_runtime_visual(failures: list[str]) -> None:
         )
 
 
+def check_mission_visual(failures: list[str]) -> None:
+    path = ROOT / "docs/mission-engine.html"
+    parser = ArchitectureVisualParser()
+    try:
+        text = path.read_text(encoding="utf-8")
+        parser.feed(text)
+        parser.close()
+    except (OSError, ValueError) as exc:
+        failures.append(f"Mission engine visual could not be parsed: {exc}")
+        return
+    if parser.svg_count != 1 or parser.svg_title_count != 1 or parser.svg_desc_count != 1:
+        failures.append("Mission engine visual must contain one titled and described SVG")
+    if parser.duplicate_ids:
+        failures.append(
+            "Mission engine visual contains duplicate IDs: "
+            + ", ".join(sorted(parser.duplicate_ids))
+        )
+    broken_edges = sorted(
+        f"{source or '<missing>'}->{target or '<missing>'}"
+        for source, target in parser.edge_targets
+        if source not in parser.node_ids or target not in parser.node_ids
+    )
+    if broken_edges:
+        failures.append(
+            "Mission engine visual contains connectors with missing endpoints: "
+            + ", ".join(broken_edges)
+        )
+    if parser.edge_without_marker:
+        failures.append("Every mission engine connector must have an arrow marker")
+    if parser.edge_after_node:
+        failures.append("Mission engine connectors must be drawn before nodes")
+    if parser.forbidden_elements or parser.remote_assets:
+        failures.append("Mission engine visual must be standalone and script free")
+    required_labels = {
+        "Mission compiler",
+        "Review + activate",
+        "Bounded collection",
+        "Evidence packet",
+        "Challenge graph",
+        "Outcome report",
+        "CODE OWNS POLICY",
+    }
+    missing = sorted(label for label in required_labels if label not in text)
+    if missing:
+        failures.append("Mission engine visual omits required labels: " + ", ".join(missing))
+
+
+def check_mission_packs(failures: list[str]) -> None:
+    paths = sorted((ROOT / "missions").glob("*/mission.yaml"))
+    expected = {
+        "ms_cyber-threat-early-warning",
+        "ms_developer-product-opportunity-radar",
+    }
+    found: set[str] = set()
+    for path in paths:
+        try:
+            mission = load_mission(path)
+            compiled = compile_mission(mission)
+        except Exception as exc:
+            failures.append(f"Mission pack {path.relative_to(ROOT)}: {exc}")
+            continue
+        if mission.mission_id in found:
+            failures.append(f"Duplicate mission ID: {mission.mission_id}")
+        found.add(mission.mission_id)
+        if mission.payload["governance"]["external_delivery_enabled"] is not False:
+            failures.append(f"Mission {mission.mission_id} enables external delivery")
+        mode = mission.payload["governance"]["collection_mode"]
+        if mode == "active" and not compiled.collection_authorized:
+            failures.append(f"Active mission {mission.mission_id} is not collection authorized")
+        fixture_path = path.with_name("fixture-signals.json")
+        if fixture_path.is_file():
+            try:
+                fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+                if not isinstance(fixture, dict):
+                    raise ValueError("fixture must contain one object")
+                validate_payload("mission-signals.schema.json", fixture)
+            except Exception as exc:
+                failures.append(
+                    f"Mission fixture {fixture_path.relative_to(ROOT)}: {exc}"
+                )
+    missing = sorted(expected - found)
+    if missing:
+        failures.append("Missing built-in mission packs: " + ", ".join(missing))
+
+
 def check_motion_architecture(failures: list[str]) -> None:
     path = ROOT / "docs/architecture-motion.html"
+    gif_path = ROOT / "docs/assets/threat-radar-architecture-motion.gif"
     parser = ArchitectureVisualParser()
     try:
         text = path.read_text(encoding="utf-8")
@@ -434,12 +554,27 @@ def check_motion_architecture(failures: list[str]) -> None:
         'id="motion"': "an accessible motion toggle",
         "@media (prefers-reduced-motion: reduce)": "reduced-motion behavior",
         "architecture-visual.html": "a link to the complete architecture",
+        'download="threat-radar-architecture-motion.gif"': "an animated GIF download",
     }
     for fragment, description in required_fragments.items():
         if fragment not in text:
             failures.append(f"Animated architecture must include {description}")
     if re.search(r"<(?:linearGradient|radialGradient|filter)\b", text, re.IGNORECASE):
         failures.append("Animated architecture must not use SVG gradients or filters")
+    try:
+        gif_data = gif_path.read_bytes()
+    except OSError as exc:
+        failures.append(f"Animated architecture GIF could not be read: {exc}")
+        return
+    if not gif_data.startswith(b"GIF89a"):
+        failures.append("Animated architecture download must be a GIF89a artifact")
+        return
+    gif_width = int.from_bytes(gif_data[6:8], "little")
+    gif_height = int.from_bytes(gif_data[8:10], "little")
+    if (gif_width, gif_height) != (3360, 1960):
+        failures.append("Animated architecture GIF must retain the 2x 3360x1960 canvas")
+    if gif_data.count(b"\x21\xf9\x04") < 48:
+        failures.append("Animated architecture GIF must contain at least 48 timed frames")
 
 
 def main() -> None:
@@ -478,10 +613,16 @@ def main() -> None:
         "EVALS.md",
         "docs/SETUP.md",
         "docs/EXTENDING.md",
+        "docs/MISSIONS.md",
         "docs/architecture-motion.html",
+        "docs/assets/threat-radar-architecture-motion.gif",
         "docs/index.html",
         "docs/sample-daily-brief.html",
         "docs/universal-agent-runtime.html",
+        "docs/mission-engine.html",
+        "missions/cyber-threat-early-warning/mission.yaml",
+        "missions/developer-product-opportunities/mission.yaml",
+        "missions/developer-product-opportunities/fixture-signals.json",
         "openapi/openapi.yaml",
         "scripts/setup_openclaw_agents.py",
         "openclaw/plugins/threat-radar-boundary/openclaw.plugin.json",
@@ -495,9 +636,12 @@ def main() -> None:
     check_contracts(failures)
     check_migrations(failures)
     check_supply_chain(failures)
+    check_secret_material(failures)
     check_architecture_visual(failures)
     check_motion_architecture(failures)
     check_universal_runtime_visual(failures)
+    check_mission_visual(failures)
+    check_mission_packs(failures)
 
     if failures:
         raise SystemExit("Validation failed:\n- " + "\n- ".join(failures))

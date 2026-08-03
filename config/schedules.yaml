@@ -1,6 +1,6 @@
 version: 1
 timezone: America/New_York
-enabled: true
+enabled: false
 enablement_requires:
   - approved_threat_model
   - approved_source_terms
@@ -30,7 +30,7 @@ jobs:
     args: ["--mode", "watch-refresh"]
 
   morning_brief:
-    enabled: true
+    enabled: false
     cron: "30 7 * * *"
     workflow: openclaw/workflows/threat-radar.lobster
     mode: isolated

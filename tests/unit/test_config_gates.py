@@ -9,32 +9,16 @@ def test_only_approved_sources_and_schedules_are_enabled() -> None:
     report = yaml.safe_load(Path("config/report.yaml").read_text(encoding="utf-8"))
     embeddings = yaml.safe_load(Path("config/embeddings.yaml").read_text(encoding="utf-8"))
     enabled = {source["id"] for source in sources["sources"] if source["enabled"] is True}
-    assert enabled == {
-        "cisa-kev",
-        "cve-list-v5",
-        "nvd-cve",
-        "first-epss",
-        "osv",
-        "github-advisories",
-        "x-researchers",
-        "reddit-security-web",
-        "tiktok-security",
-        "brave-web",
-    }
-    assert all(
-        source.get("collection_approval_id")
-        for source in sources["sources"]
-        if source["enabled"] is True
-    )
+    assert enabled == set()
     assert sources["defaults"]["collection_approval_required"] is True
-    assert schedules["enabled"] is True
-    assert schedules["jobs"]["morning_brief"]["enabled"] is True
+    assert schedules["enabled"] is False
+    assert schedules["jobs"]["morning_brief"]["enabled"] is False
     assert report["discord"]["enabled"] is False
     assert report["email"]["enabled"] is False
     assert report["email"]["require_tls"] is True
     assert report["email"]["fixed_recipient"] is True
     assert report["publication"]["external_delivery_enabled"] is False
-    assert report["publication"]["shadow_mode"] is False
+    assert report["publication"]["shadow_mode"] is True
     assert embeddings["semantic_clustering"]["enabled"] is True
     assert embeddings["semantic_clustering"]["mode"] == "shadow"
     assert embeddings["semantic_clustering"]["provider"] == "ollama"

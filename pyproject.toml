@@ -3,10 +3,25 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "openclaw-emerging-threat-radar"
-version = "0.1.0"
-description = "Proactive, evidence-backed emerging cyber-threat radar for OpenClaw"
-requires-python = ">=3.12"
+name = "outcome-radar"
+version = "1.0.0"
+description = "Mission-driven, evidence-backed outcome research for OpenClaw and portable runtimes"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Brandon Wise" }]
+keywords = ["agentic-ai", "evidence", "research", "threat-intelligence", "workflows"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Framework :: FastAPI",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Private :: Do Not Upload"
+]
+requires-python = ">=3.12,<3.15"
 dependencies = [
   "boto3>=1.35,<2",
   "bleach>=6.2,<7",
@@ -15,10 +30,12 @@ dependencies = [
   "httpx>=0.28,<1",
   "jinja2>=3.1,<4",
   "jsonschema[format]>=4.23,<5",
+  "keyring>=25,<27",
   "opentelemetry-api>=1.29,<2",
   "opentelemetry-exporter-otlp-proto-grpc>=1.29,<2",
   "opentelemetry-sdk>=1.29,<2",
   "psycopg[binary,pool]>=3.2,<4",
+  "psutil>=6,<8",
   "pydantic>=2.10,<3",
   "pydantic-settings>=2.7,<3",
   "python-dateutil>=2.9,<3",
@@ -32,25 +49,75 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "mypy>=1.14,<2",
-  "pytest>=8.3,<9",
-  "pytest-asyncio>=0.25,<1",
+  "pytest>=9.0.3,<10",
+  "pytest-asyncio>=1.0,<2",
   "pytest-cov>=6,<7",
+  "httpx2>=2,<3",
   "ruff>=0.9,<1",
   "types-bleach>=6.2",
   "types-defusedxml>=0.7",
   "types-jsonschema>=4.23",
+  "types-psutil>=7.0",
   "types-pyyaml>=6.0"
 ]
 
 [project.scripts]
-threat-radar = "apps.worker.cli:app"
+outcome-radar = "apps.worker.entrypoint:main"
+threat-radar = "apps.worker.entrypoint:main"
+
+[project.urls]
+Documentation = "https://github.com/brandonwise/outcome-radar/tree/main/docs"
+Repository = "https://github.com/brandonwise/outcome-radar"
 
 [tool.hatch.build.targets.wheel]
 packages = ["apps", "packages"]
 
 [tool.hatch.build.targets.wheel.force-include]
 schemas = "schemas"
+config = "config"
+policies = "policies"
+migrations = "migrations"
+openapi = "openapi"
+openclaw = "openclaw"
+docs = "docs"
+"SECURITY.md" = "SECURITY.md"
+"THREAT_MODEL.md" = "THREAT_MODEL.md"
+"THREAT_MODEL_APPROVAL.md" = "THREAT_MODEL_APPROVAL.md"
 "integrations/templates" = "integrations/templates"
+missions = "missions"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/apps",
+  "/config",
+  "/docs",
+  "/infra",
+  "/integrations",
+  "/migrations",
+  "/missions",
+  "/openapi",
+  "/openclaw",
+  "/packages",
+  "/policies",
+  "/schemas",
+  "/scripts",
+  "/tests",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/.dockerignore",
+  "/.env.example",
+  "/.github",
+  "/.gitignore",
+  "/Dockerfile",
+  "/LICENSE",
+  "/Makefile",
+  "/README.md",
+  "/SECURITY.md",
+  "/THREAT_MODEL.md",
+  "/THREAT_MODEL_APPROVAL.md",
+  "/pyproject.toml",
+  "/uv.lock"
+]
 
 [tool.ruff]
 target-version = "py312"

@@ -5,7 +5,7 @@
   <div>
     <p class="eyebrow">Longitudinal analysis</p>
     <h1>Trends</h1>
-    <p class="lede">Publication volume, severity, and source reliability over time.</p>
+    <p class="lede">Unique finding state, cited evidence, and the latest collection status from live runs.</p>
   </div>
   <form class="period-picker" method="get">
     <label for="days">Window</label>
@@ -37,20 +37,20 @@
 </section>
 <section class="metric-grid compact">
   <article class="metric-card"><span>Reports</span><strong>{{ overview.reports }}</strong></article>
-  <article class="metric-card"><span>Findings</span><strong>{{ overview.findings }}</strong></article>
-  <article class="metric-card"><span>Evidence surfaces</span><strong>{{ intelligence.surface_count }}</strong></article>
+  <article class="metric-card"><span>Unique findings</span><strong>{{ overview.findings }}</strong></article>
+  <article class="metric-card"><span>Evidence sources</span><strong>{{ intelligence.source_count }}</strong></article>
   <article class="metric-card"><span>X share</span><strong>{{ "%.1f%%"|format(intelligence.x_share) }}</strong></article>
 </section>
 <section class="panel">
   <div class="panel-heading">
-    <div><p class="eyebrow">Evidence concentration</p><h2>Where findings are coming from</h2></div>
+    <div><p class="eyebrow">Evidence concentration</p><h2>Evidence by source type</h2></div>
     <span class="panel-meta">{{ intelligence.evidence_count }} cited artifacts</span>
   </div>
   {% if intelligence.sources %}
   <div class="source-mix-list">
     {% for source in intelligence.sources %}
     <div class="source-mix-row">
-      <span>{{ source.source_type|replace("_", " ") }}</span>
+      <span>{{ source.source_type|replace("_", " ") }} · {{ source.source_count }} sources</span>
       <div class="track"><span class="w-{{ source.width }}"></span></div>
       <strong>{{ source.evidence }}</strong>
       <small>{{ "%.1f%%"|format(source.share) }}</small>
@@ -71,7 +71,7 @@
     <div class="data-row" role="row">
       <strong>{{ event.metric }}</strong>
       <span>{{ event.events }}</span>
-      <span>{{ "%.1f"|format(event.total_value) }}</span>
+      <span>{{ "%.1f"|format(event.total_value) }} {{ event.unit }}</span>
       <span>{{ event.latest_at|compact_date }}</span>
     </div>
     {% endfor %}
@@ -81,7 +81,7 @@
   {% endif %}
 </section>
 <section class="panel">
-  <div class="panel-heading"><div><p class="eyebrow">Daily movement</p><h2>Finding volume</h2></div></div>
+  <div class="panel-heading"><div><p class="eyebrow">Daily movement</p><h2>Active findings by day</h2></div></div>
   {% if trend %}
   <div class="trend-table">
     {% for point in trend|reverse %}
@@ -98,10 +98,10 @@
   {% endif %}
 </section>
 <section class="panel" id="source-health">
-  <div class="panel-heading"><div><p class="eyebrow">Collection integrity</p><h2>Recent source health</h2></div></div>
+  <div class="panel-heading"><div><p class="eyebrow">Collection integrity</p><h2>Latest source status</h2></div></div>
   {% if source_health %}
   <div class="data-table" role="table" aria-label="Source health">
-    <div class="data-row header" role="row"><span>Source</span><span>Status</span><span>Last success</span><span>Error rate</span></div>
+    <div class="data-row header" role="row"><span>Source</span><span>Status</span><span>Last success</span><span>Reported error rate</span></div>
     {% for source in source_health[:40] %}
     <div class="data-row" role="row">
       <strong>{{ source.source_id }}</strong>
@@ -115,4 +115,5 @@
   <div class="empty-state"><strong>No source health snapshots yet.</strong></div>
   {% endif %}
 </section>
+<p class="panel-footnote">All trend metrics use operational reports with discovery telemetry. Fixture and evaluation reports are excluded; recurring findings count once per day.</p>
 {% endblock %}

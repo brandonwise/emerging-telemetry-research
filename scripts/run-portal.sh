@@ -92,6 +92,8 @@ fi
 
 export RADAR_PORTAL_ANALYTICS_DB="${RADAR_PORTAL_ANALYTICS_DB:-${radar_repo_root}/state/radar.db}"
 export RADAR_PORTAL_REPORTS_ROOT="${RADAR_PORTAL_REPORTS_ROOT:-${radar_repo_root}/reports/generated}"
+export RADAR_PORTAL_MISSIONS_ROOT="${RADAR_PORTAL_MISSIONS_ROOT:-${radar_repo_root}/missions}"
+export RADAR_PORTAL_MISSION_REPORTS_ROOT="${RADAR_PORTAL_MISSION_REPORTS_ROOT:-${radar_repo_root}/reports/missions}"
 
 radar_protocol="http"
 radar_tls_args=()
@@ -111,9 +113,9 @@ if [[ "${radar_lan}" == "true" ]]; then
     radar_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
   fi
   radar_ip="${radar_ip:-<private-ip>}"
-  echo "Threat Radar portal: ${radar_protocol}://${radar_ip}:${radar_port}" >&2
+  echo "Outcome Radar portal: ${radar_protocol}://${radar_ip}:${radar_port}" >&2
 else
-  echo "Threat Radar portal: ${radar_protocol}://127.0.0.1:${radar_port}" >&2
+  echo "Outcome Radar portal: ${radar_protocol}://127.0.0.1:${radar_port}" >&2
 fi
 
 cd "${radar_repo_root}"

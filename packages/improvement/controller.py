@@ -16,12 +16,14 @@ import yaml
 from packages.common.canonical import (
     canonical_json_bytes,
     format_timestamp,
+    parse_timestamp,
     sha256_hex,
     stable_id,
 )
 from packages.contracts.validation import validate_payload
 from packages.evaluation.harness import run_acceptance_suite
 from packages.scoring.engine import PublicationThresholds, load_thresholds
+from packages.workflow.checkpoints import SQLiteCheckpointStore
 from packages.workflow.graph import GraphNode, execute_graph
 
 POSITIVE_TAXONOMIES = {
@@ -180,7 +182,7 @@ def run_improvement_cycle(
     improvement_config: Path,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    generated_at = (now or datetime.now(UTC)).astimezone(UTC)
+    requested_at = (now or datetime.now(UTC)).astimezone(UTC)
     settings = ImprovementSettings.load(improvement_config)
     thresholds = load_thresholds(scoring_config)
     if not settings.daily_minimum <= thresholds.daily <= settings.daily_maximum:
@@ -190,12 +192,33 @@ def run_improvement_cycle(
     reports_hash = _directory_hash(reports_root, pattern="rp_*.json")
     cycle_id = stable_id(
         "ic",
-        format_timestamp(generated_at),
         sha256_hex(scoring_bytes),
         feedback_hash,
         reports_hash,
     )
     cycle_root = output_root / cycle_id
+    cycle_metadata_path = cycle_root / "cycle-metadata.json"
+    if cycle_metadata_path.is_file():
+        cycle_metadata = _json_object(cycle_metadata_path)
+        generated_at = parse_timestamp(str(cycle_metadata["generated_at"]))
+    else:
+        generated_at = requested_at
+        _write_immutable(
+            cycle_metadata_path,
+            canonical_json_bytes(
+                {
+                    "schema_version": "1.0",
+                    "cycle_id": cycle_id,
+                    "generated_at": format_timestamp(generated_at),
+                    "input_hashes": {
+                        "scoring": sha256_hex(scoring_bytes),
+                        "feedback": feedback_hash,
+                        "reports": reports_hash,
+                    },
+                }
+            )
+            + b"\n",
+        )
     snapshot_path = cycle_root / "snapshots" / "scoring.yaml"
 
     def snapshot(_outputs: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -275,7 +298,12 @@ def run_improvement_cycle(
             select,
         ),
     )
-    execution = execute_graph(nodes, maximum_parallel_nodes=4)
+    execution = execute_graph(
+        nodes,
+        maximum_parallel_nodes=4,
+        workflow_id=cycle_id,
+        checkpoint_store=SQLiteCheckpointStore(cycle_root / "checkpoints.db"),
+    )
     selection = execution.outputs["select"]
     proposal_path: Path | None = None
     proposal: dict[str, Any] | None = None

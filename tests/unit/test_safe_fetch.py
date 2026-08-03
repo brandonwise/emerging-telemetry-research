@@ -1,8 +1,10 @@
 from collections.abc import Iterator
+from typing import Any
 
 import httpx
 import pytest
 
+from packages.safe_fetch import service as safe_fetch_service
 from packages.safe_fetch.service import SafeFetchError, SafeFetchRequest, SafeFetchService
 
 
@@ -50,6 +52,55 @@ async def test_safe_fetch_revalidates_dns_and_limits_headers() -> None:
     assert result.content == b'{"ok":true}'
     assert "set-cookie" not in result.response_headers
     assert len(result.resolved_addresses) == 2
+
+
+@pytest.mark.asyncio
+async def test_default_transport_connects_only_to_prevalidated_addresses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def pinned(
+        method: str,
+        url: str,
+        headers: list[tuple[str, str]],
+        body: bytes,
+        host: str,
+        addresses: tuple[str, ...],
+        timeout_seconds: float,
+        maximum_response_bytes: int,
+    ) -> tuple[int, list[tuple[str, str]], bytes]:
+        calls.append(
+            {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "body": body,
+                "host": host,
+                "addresses": addresses,
+                "timeout": timeout_seconds,
+                "maximum": maximum_response_bytes,
+            }
+        )
+        return 200, [("Content-Type", "application/json")], b'{"ok":true}'
+
+    monkeypatch.setattr(safe_fetch_service, "_pinned_https_request", pinned)
+    resolver = SequenceResolver(
+        {"feed.example": iter([("93.184.216.34",), ("93.184.216.35",)])}
+    )
+
+    result = await SafeFetchService(resolver=resolver).fetch(
+        SafeFetchRequest(
+            source_id="fixture",
+            url="https://feed.example/data",
+            allowed_hosts=("feed.example",),
+            allowed_content_types=("application/json",),
+        )
+    )
+
+    assert result.content == b'{"ok":true}'
+    assert calls[0]["host"] == "feed.example"
+    assert calls[0]["addresses"] == ("93.184.216.34",)
 
 
 @pytest.mark.asyncio

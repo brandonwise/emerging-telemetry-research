@@ -5,7 +5,7 @@ steps:
 
   - id: index_analytics
     command: >-
-      uv run threat-radar analytics sync
+      uv run outcome-radar analytics sync
       --reports reports/generated
       --database state/radar.db
       --json

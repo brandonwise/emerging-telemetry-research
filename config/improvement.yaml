@@ -1,4 +1,12 @@
 version: 1
+
+advisory:
+  minimum_feedback: 5
+  maximum_missing_source_rate: 0.10
+  maximum_negative_feedback_rate: 0.25
+  maximum_degraded_source_rate: 0.20
+  maximum_agent_failure_rate: 0.10
+  maximum_estimated_currency_per_report: 3.00
 enabled: true
 mode: proposal_only
 cadence: weekly

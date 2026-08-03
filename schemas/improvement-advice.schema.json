@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.outcome-radar.local/improvement-advice.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "cycle_id", "generated_at", "status", "metrics", "proposals", "automatic_apply", "protected_boundaries"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "cycle_id": {"type": "string", "pattern": "^ia_[A-Za-z0-9_-]+$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["no_change", "approval_required"]},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_count", "feedback_count", "missing_source_rate", "negative_feedback_rate", "degraded_source_rate", "agent_failure_rate", "agent_contradiction_count", "injection_event_count", "estimated_currency_per_report"],
+      "properties": {
+        "report_count": {"type": "integer", "minimum": 0},
+        "feedback_count": {"type": "integer", "minimum": 0},
+        "missing_source_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "negative_feedback_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "degraded_source_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "agent_failure_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "agent_contradiction_count": {"type": "integer", "minimum": 0},
+        "injection_event_count": {"type": "integer", "minimum": 0},
+        "estimated_currency_per_report": {"type": "number", "minimum": 0}
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["proposal_id", "domain", "status", "trigger_metric", "observed_value", "recommendation", "required_evaluations", "automatic_apply"],
+        "properties": {
+          "proposal_id": {"type": "string", "pattern": "^iap_[A-Za-z0-9_-]+$"},
+          "domain": {"enum": ["source_coverage", "calibration", "source_reliability", "routing", "prompt", "cost", "security"]},
+          "status": {"const": "approval_required"},
+          "trigger_metric": {"type": "string", "minLength": 3, "maxLength": 100},
+          "observed_value": {"type": "number", "minimum": 0},
+          "recommendation": {"type": "string", "minLength": 20, "maxLength": 500},
+          "required_evaluations": {"type": "array", "minItems": 1, "maxItems": 10, "items": {"type": "string", "minLength": 3, "maxLength": 100}},
+          "automatic_apply": {"const": false}
+        }
+      }
+    },
+    "automatic_apply": {"const": false},
+    "protected_boundaries": {"type": "array", "minItems": 5, "uniqueItems": true, "items": {"type": "string", "minLength": 3, "maxLength": 100}}
+  }
+}

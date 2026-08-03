@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Missions · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading mission-heading">
+  <div>
+    <p class="eyebrow">Outcome missions</p>
+    <h1>Tell the system what worth finding.</h1>
+    <p class="lede">Each mission turns a clear outcome into bounded research, evidence rules,
+      deterministic scoring, and a five-role challenge workflow.</p>
+  </div>
+  <a class="primary-button" href="/missions/new">Create a mission</a>
+</section>
+<section class="mission-grid">
+  {% for item in missions %}
+  {% set mission = item.definition %}
+  <article class="mission-card">
+    <div class="mission-card-top">
+      <span class="status-chip {{ mission.governance.collection_mode }}">
+        {{ mission.governance.collection_mode }}
+      </span>
+      <span>{{ item.reports|length }} reports</span>
+    </div>
+    <p class="eyebrow">{{ mission.vocabulary.collection }}</p>
+    <h2><a href="/missions/{{ mission.mission_id }}">{{ mission.name }}</a></h2>
+    <p>{{ mission.objective }}</p>
+    <dl class="mission-facts">
+      <div><dt>Sources</dt><dd>{{ mission.sources|length }}</dd></div>
+      <div><dt>Queries</dt><dd>{{ item.compiled.query_plan|length }}</dd></div>
+      <div><dt>Cadence</dt><dd>{{ mission.output.cadence }}</dd></div>
+    </dl>
+  </article>
+  {% else %}
+  <div class="empty-state"><strong>No missions yet.</strong>
+    <span>Describe one outcome and the system will draft the research workflow.</span></div>
+  {% endfor %}
+</section>
+{% endblock %}

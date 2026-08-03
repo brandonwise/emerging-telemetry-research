@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Any
 from uuid import uuid4
@@ -19,6 +20,7 @@ from packages.agents.runtime import (
 )
 from packages.analytics.store import AnalyticsStore
 from packages.common.canonical import canonical_json_bytes
+from packages.common.resources import configured_path
 from packages.connectors.live import OfficialSourceClient
 from packages.delivery.discord import build_discord_delivery_plan
 from packages.delivery.email import (
@@ -35,6 +37,7 @@ from packages.discovery.clients import (
 from packages.evaluation.agent_harness import run_agent_evaluation
 from packages.evaluation.coverage_harness import evaluate_source_coverage
 from packages.evaluation.harness import run_acceptance_suite
+from packages.improvement.advisor import run_advisory_cycle
 from packages.improvement.controller import (
     ALL_TAXONOMIES,
     apply_proposal,
@@ -43,13 +46,42 @@ from packages.improvement.controller import (
     run_improvement_cycle,
 )
 from packages.inference.semantic import build_semantic_shadow_evaluator
+from packages.missions.compiler import (
+    BUILTIN_MISSIONS_ROOT,
+    activate_mission,
+    compile_mission,
+    draft_mission,
+    load_mission,
+    rollback_mission,
+    write_activation_receipt,
+    write_mission,
+)
+from packages.missions.evaluation import evaluate_mission_report
+from packages.missions.feedback import load_mission_feedback, record_mission_feedback
+from packages.missions.runtime import collect_mission_signals, run_mission
+from packages.onboarding.environment import load_environment_file
 from packages.onboarding.generator import (
     DEFAULT_TEMPLATES_ROOT,
     SUPPORTED_PLATFORMS,
     generate_setup,
 )
+from packages.onboarding.workspace import (
+    configure_keyring_secret,
+    initialize_workspace,
+    run_doctor,
+)
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.pipeline.live import LiveRunSettings, run_live_radar
+from packages.security_gateway.deployment import (
+    DeploymentApprovalError,
+    DeploymentControlPaths,
+    apply_approval_request,
+    create_approval_request,
+    require_deployment_approval,
+    write_private_json,
+    write_private_yaml,
+)
+from packages.security_gateway.secrets import SecretResolutionError, resolve_secret
 from packages.storage.object_store import LocalImmutableObjectStore
 from packages.storage.runtime import (
     ProductionStoreSettings,
@@ -60,9 +92,21 @@ from packages.storage.sqlite import SQLiteRepository
 DEFAULT_ANALYTICS_DB = Path(os.environ.get("RADAR_ANALYTICS_DB", "state/radar.db"))
 DEFAULT_OBJECT_ROOT = Path(os.environ.get("RADAR_OBJECT_ROOT", "state/objects"))
 DEFAULT_REPORT_ROOT = Path(os.environ.get("RADAR_REPORT_ROOT", "reports/generated"))
-DEFAULT_EMBEDDINGS_CONFIG = Path(
-    os.environ.get("RADAR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
+DEFAULT_MISSION_FEEDBACK_ROOT = Path(
+    os.environ.get("RADAR_MISSION_FEEDBACK_ROOT", "reports/mission-feedback")
 )
+DEFAULT_EMBEDDINGS_CONFIG = Path(
+    configured_path("RADAR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
+)
+DEFAULT_DISCOVERY_CONFIG = configured_path("RADAR_DISCOVERY_CONFIG", "config/discovery.yaml")
+DEFAULT_SCORING_CONFIG = configured_path("RADAR_SCORING_CONFIG", "config/scoring.yaml")
+DEFAULT_MODELS_CONFIG = configured_path("RADAR_MODELS_CONFIG", "config/models.yaml")
+DEFAULT_SOURCES_CONFIG = configured_path("RADAR_SOURCES_CONFIG", "config/sources.yaml")
+DEFAULT_SOURCE_TERMS_CONFIG = configured_path(
+    "RADAR_SOURCE_TERMS_CONFIG", "config/source-terms.yaml"
+)
+DEFAULT_IMPROVEMENT_CONFIG = configured_path("RADAR_IMPROVEMENT_CONFIG", "config/improvement.yaml")
+DEFAULT_MIGRATIONS_ROOT = configured_path("RADAR_MIGRATIONS_ROOT", "migrations")
 
 app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
@@ -75,6 +119,7 @@ improve_app = typer.Typer(no_args_is_help=True)
 portable_app = typer.Typer(no_args_is_help=True)
 analytics_app = typer.Typer(no_args_is_help=True)
 setup_app = typer.Typer(no_args_is_help=True)
+mission_app = typer.Typer(no_args_is_help=True)
 app.add_typer(run_app, name="run")
 app.add_typer(fixture_app, name="fixture")
 app.add_typer(report_app, name="report")
@@ -85,6 +130,19 @@ app.add_typer(improve_app, name="improve")
 app.add_typer(portable_app, name="portable")
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(setup_app, name="setup")
+app.add_typer(mission_app, name="mission")
+
+
+@app.callback()
+def configure_cli(
+    env_file: Annotated[Path | None, typer.Option("--env-file")] = None,
+) -> None:
+    """Operate Outcome Radar with an optional non-executable environment file."""
+    if env_file is not None:
+        try:
+            load_environment_file(env_file)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
 
 
 def emit(payload: dict[str, Any], pretty: bool = False) -> None:
@@ -101,6 +159,13 @@ def read_stdin_json() -> dict[str, Any]:
     value = json.loads(raw)
     if not isinstance(value, dict):
         raise typer.BadParameter("stdin must contain one JSON object")
+    return value
+
+
+def _json_object(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} must contain one JSON object")
     return value
 
 
@@ -165,10 +230,19 @@ def live_run(
         "RADAR_AGENT_ADAPTER", "openclaw"
     ),
     agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
+    discovery_config: Annotated[Path, typer.Option("--discovery-config")] = (
+        DEFAULT_DISCOVERY_CONFIG
+    ),
+    scoring_config: Annotated[Path, typer.Option("--scoring-config")] = DEFAULT_SCORING_CONFIG,
+    models_config: Annotated[Path, typer.Option("--models-config")] = DEFAULT_MODELS_CONFIG,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
         raise typer.BadParameter("unsupported live edition")
+    _require_deployment_capability(
+        "collection",
+        discovery_config=discovery_config,
+    )
     stores = initialize_production_stores(
         ProductionStoreSettings(
             database_url=_required_env("RADAR_DATABASE_URL"),
@@ -179,9 +253,12 @@ def live_run(
             s3_region=os.environ.get("RADAR_S3_REGION", "us-east-1"),
             server_side_encryption=_s3_encryption_mode(),
         ),
-        migrations_root=Path("migrations"),
+        migrations_root=DEFAULT_MIGRATIONS_ROOT,
     )
     provider = _agent_runtime(agent_mode, agent_adapter)
+    daily_model_spend = Decimal(
+        str(AnalyticsStore(analytics_db).cost_breakdown(days=1)["estimated_cost"])
+    )
     result = asyncio.run(
         run_live_radar(
             LiveRunSettings(
@@ -191,6 +268,10 @@ def live_run(
                 edition=edition,
                 agent_mode=agent_mode,
                 agent_max_concurrency=agent_concurrency,
+                discovery_config=discovery_config,
+                scoring_config=scoring_config,
+                models_config=models_config,
+                daily_model_spend=daily_model_spend,
             ),
             brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
             x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
@@ -242,12 +323,24 @@ def portable_run(
         "RADAR_AGENT_ADAPTER", "codex"
     ),
     agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
+    discovery_config: Annotated[Path, typer.Option("--discovery-config")] = (
+        DEFAULT_DISCOVERY_CONFIG
+    ),
+    scoring_config: Annotated[Path, typer.Option("--scoring-config")] = DEFAULT_SCORING_CONFIG,
+    models_config: Annotated[Path, typer.Option("--models-config")] = DEFAULT_MODELS_CONFIG,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Run live discovery with SQLite, local immutable objects, and no external delivery."""
     if edition not in {"morning", "afternoon_delta", "weekly", "flash"}:
         raise typer.BadParameter("unsupported live edition")
+    _require_deployment_capability(
+        "collection",
+        discovery_config=discovery_config,
+    )
     provider = _agent_runtime(agent_mode, agent_adapter)
+    daily_model_spend = Decimal(
+        str(AnalyticsStore(database).cost_breakdown(days=1)["estimated_cost"])
+    )
     result = asyncio.run(
         run_live_radar(
             LiveRunSettings(
@@ -256,6 +349,10 @@ def portable_run(
                 edition=edition,
                 agent_mode=agent_mode,
                 agent_max_concurrency=agent_concurrency,
+                discovery_config=discovery_config,
+                scoring_config=scoring_config,
+                models_config=models_config,
+                daily_model_spend=daily_model_spend,
             ),
             brave_client=BraveSearchClient(_required_env("BRAVE_API_KEY")),
             x_search_client=XaiXSearchClient(_required_env("XAI_API_KEY")),
@@ -402,6 +499,443 @@ def setup_generate(
     )
 
 
+@setup_app.command("init")
+def setup_init(
+    output: Annotated[Path, typer.Option("--output")] = Path("."),
+    profile: Annotated[str, typer.Option("--profile")] = "portable",
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Create private, cross-platform local configuration and state directories."""
+    try:
+        result = initialize_workspace(output, profile=profile, force=force)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    result["next"] = [
+        "outcome-radar setup secret-set BRAVE_API_KEY",
+        "outcome-radar setup secret-set XAI_API_KEY",
+        "outcome-radar setup approval-request",
+        "review and apply the deployment approval request",
+        "outcome-radar setup doctor --profile portable",
+        "outcome-radar portable run --json",
+    ]
+    emit(result, pretty=not json_output)
+
+
+@setup_app.command("secret-set")
+def setup_secret_set(
+    name: Annotated[str, typer.Argument()],
+    config: Annotated[Path, typer.Option("--config")] = Path(".outcome-radar/config.env"),
+    service: Annotated[str, typer.Option("--service")] = "outcome-radar",
+    stdin: Annotated[bool, typer.Option("--stdin")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Store a secret in the OS credential store and write only its reference locally."""
+    value = sys.stdin.read().rstrip("\r\n") if stdin else typer.prompt(
+        f"Value for {name}", hide_input=True, confirmation_prompt=True
+    )
+    try:
+        reference = configure_keyring_secret(
+            name,
+            value,
+            config_path=config,
+            service=service,
+        )
+    except (SecretResolutionError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {"name": name, "reference": reference, "value_exposed": False},
+        pretty=not json_output,
+    )
+
+
+@setup_app.command("doctor")
+def setup_doctor(
+    profile: Annotated[str, typer.Option("--profile")] = "core",
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Check platform, package, provider, secret, and profile readiness without leaking values."""
+    try:
+        result = run_doctor(profile=profile, config_path=config)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(result, pretty=not json_output)
+    if not result["ready"]:
+        raise typer.Exit(code=2)
+
+
+@setup_app.command("approval-request")
+def setup_approval_request(
+    environment_id: Annotated[str, typer.Option("--environment-id")] = "local",
+    output: Annotated[Path, typer.Option("--output")] = Path(
+        ".outcome-radar/deployment-approval-request.json"
+    ),
+    allow_external_delivery: Annotated[
+        bool, typer.Option("--allow-external-delivery")
+    ] = False,
+    allow_self_improvement_apply: Annotated[
+        bool, typer.Option("--allow-self-improvement-apply")
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Create a reviewable request bound to current code, policies, terms, and sources."""
+    try:
+        request = create_approval_request(
+            environment_id=environment_id,
+            allow_external_delivery=allow_external_delivery,
+            allow_self_improvement_apply=allow_self_improvement_apply,
+        )
+        written = write_private_json(output, request)
+    except DeploymentApprovalError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            **request,
+            "request_path": str(written.resolve()),
+            "next": "review, then run `outcome-radar setup approval-apply REQUEST ...`",
+        },
+        pretty=not json_output,
+    )
+
+
+@setup_app.command("approval-apply")
+def setup_approval_apply(
+    request_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True),
+    ],
+    approved_by: Annotated[str, typer.Option("--approved-by")],
+    approval_id: Annotated[str, typer.Option("--approval-id")],
+    expires_days: Annotated[int, typer.Option("--expires-days", min=1, max=365)] = 30,
+    output: Annotated[Path, typer.Option("--output")] = Path(
+        ".outcome-radar/deployment-approval.yaml"
+    ),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Apply an explicit operator approval to an unchanged deployment request."""
+    try:
+        approval = apply_approval_request(
+            _json_object(request_path),
+            approved_by=approved_by,
+            approval_id=approval_id,
+            expires_days=expires_days,
+        )
+        written = write_private_yaml(output, approval)
+    except (DeploymentApprovalError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "status": "approved",
+            "approval_path": str(written.resolve()),
+            "expires_at": approval["expires_at"],
+            "capabilities": approval["capabilities"],
+            "source_ids": approval["source_ids"],
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("create")
+def mission_create(
+    objective: Annotated[str | None, typer.Option("--objective", "-o")] = None,
+    name: Annotated[str | None, typer.Option("--name")] = None,
+    outcome: Annotated[str | None, typer.Option("--outcome")] = None,
+    window_hours: Annotated[int, typer.Option("--window-hours", min=1, max=2160)] = 168,
+    cadence: Annotated[str, typer.Option("--cadence")] = "daily",
+    output: Annotated[Path | None, typer.Option("--output")] = None,
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Describe an outcome and create a safe, reviewable mission draft."""
+    stated_objective = objective or typer.prompt("What outcome should this mission find?")
+    try:
+        mission = draft_mission(
+            stated_objective,
+            name=name,
+            outcome_noun=outcome,
+            window_hours=window_hours,
+            cadence=cadence,
+        )
+        destination = output or (
+            Path("missions") / mission.mission_id.removeprefix("ms_") / "mission.yaml"
+        )
+        written = write_mission(mission, destination, force=force)
+        compiled = compile_mission(mission)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "mission_id": mission.mission_id,
+            "name": mission.name,
+            "status": "draft",
+            "mission_path": str(written),
+            "query_count": len(compiled.queries),
+            "collection_authorized": False,
+            "next": [
+                f"radar mission plan {written}",
+                f"radar mission activate {written} --approved-by NAME --approval-id ID",
+            ],
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("validate")
+def mission_validate(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Validate the mission contract and its proven five-role workflow."""
+    try:
+        mission = load_mission(mission_path)
+        compiled = compile_mission(mission)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "mission_id": mission.mission_id,
+            "valid": True,
+            "mission_sha256": compiled.mission_sha256,
+            "query_count": len(compiled.queries),
+            "collection_authorized": compiled.collection_authorized,
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("plan")
+def mission_plan(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Show exactly what the mission will query and which roles will review it."""
+    try:
+        compiled = compile_mission(load_mission(mission_path))
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(compiled.to_contract(), pretty=not json_output)
+
+
+@mission_app.command("activate")
+def mission_activate(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    approved_by: Annotated[str, typer.Option("--approved-by")],
+    approval_id: Annotated[str, typer.Option("--approval-id")],
+    output: Annotated[Path | None, typer.Option("--output")] = None,
+    receipt: Annotated[Path | None, typer.Option("--receipt")] = None,
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Approve a bounded source plan and write a reversible active mission."""
+    destination = output or mission_path.with_name("mission.active.yaml")
+    receipt_path = receipt or mission_path.with_name("activation-receipt.json")
+    try:
+        activation = activate_mission(
+            load_mission(mission_path),
+            approved_by=approved_by,
+            approval_id=approval_id,
+        )
+        mission_written = write_mission(activation.mission, destination, force=force)
+        receipt_written = write_activation_receipt(
+            activation.receipt,
+            receipt_path,
+            force=force,
+        )
+        compiled = compile_mission(activation.mission)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "mission_id": activation.mission.mission_id,
+            "status": "active",
+            "collection_authorized": compiled.collection_authorized,
+            "mission_path": str(mission_written),
+            "receipt_path": str(receipt_written),
+            "rollback": f"radar mission rollback {receipt_written}",
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("rollback")
+def mission_rollback(
+    receipt: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    output: Annotated[Path, typer.Option("--output")] = Path("mission.rolled-back.yaml"),
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Restore the exact plan-mode mission recorded before activation."""
+    try:
+        value = _json_object(receipt)
+        mission = rollback_mission(value)
+        written = write_mission(mission, output, force=force)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "mission_id": mission.mission_id,
+            "status": "plan",
+            "collection_authorized": False,
+            "mission_path": str(written),
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("run")
+def mission_run_command(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    signals: Annotated[
+        Path | None,
+        typer.Option("--signals", exists=True, dir_okay=False, readable=True),
+    ] = None,
+    live: Annotated[bool, typer.Option("--live")] = False,
+    output: Annotated[Path, typer.Option("--output")] = Path("reports/missions"),
+    agent_mode: Annotated[str, typer.Option("--agent-mode")] = "plan",
+    agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = "codex",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Run an approved live mission or a safe fixture mission."""
+    if live == (signals is not None):
+        raise typer.BadParameter("choose exactly one of --live or --signals")
+    try:
+        mission = load_mission(mission_path)
+        if live:
+            _require_deployment_capability("collection")
+            compiled = compile_mission(mission)
+            signal_payload = asyncio.run(
+                collect_mission_signals(
+                    compiled,
+                    BraveSearchClient(_required_env("BRAVE_API_KEY")),
+                )
+            )
+        else:
+            if signals is None:
+                raise ValueError("signals path is required")
+            signal_payload = _json_object(signals)
+        provider = _agent_runtime(agent_mode, agent_adapter)
+        result = asyncio.run(
+            run_mission(
+                mission,
+                signal_payload,
+                output,
+                agent_mode=agent_mode,
+                agent_provider=provider,
+            )
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "mission_id": mission.mission_id,
+            "run_id": result.report["run_id"],
+            "report_id": result.report["report_id"],
+            "outcome_count": len(result.report["outcomes"]),
+            "report_json": str(result.report_json_path),
+            "report_html": str(result.report_html_path),
+            "run_manifest": str(result.run_manifest_path),
+            "external_delivery": "disabled",
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("evaluate")
+def mission_evaluate(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    report: Annotated[
+        Path,
+        typer.Option("--report", exists=True, dir_okay=False, readable=True),
+    ],
+    feedback_root: Annotated[Path, typer.Option("--feedback-root")] = (
+        DEFAULT_MISSION_FEEDBACK_ROOT
+    ),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Check report quality against the mission's declared success gates."""
+    try:
+        mission = load_mission(mission_path)
+        feedback = load_mission_feedback(feedback_root, mission.mission_id)
+        result = evaluate_mission_report(
+            mission,
+            _json_object(report),
+            feedback=feedback,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(result, pretty=not json_output)
+    if not result["passed"]:
+        raise typer.Exit(code=2)
+
+
+@mission_app.command("feedback")
+def mission_feedback(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    report: Annotated[
+        Path,
+        typer.Option("--report", exists=True, dir_okay=False, readable=True),
+    ],
+    outcome_id: Annotated[str, typer.Option("--outcome-id")],
+    label: Annotated[str, typer.Option("--label")],
+    reason: Annotated[str, typer.Option("--reason")],
+    submitted_by: Annotated[str, typer.Option("--submitted-by")],
+    output: Annotated[Path, typer.Option("--output")] = DEFAULT_MISSION_FEEDBACK_ROOT,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record an immutable outcome usefulness decision for mission calibration."""
+    try:
+        payload, path = record_mission_feedback(
+            load_mission(mission_path),
+            _json_object(report),
+            outcome_id=outcome_id,
+            label=label,
+            reason=reason,
+            submitted_by=submitted_by,
+            output_root=output,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            **payload,
+            "feedback_path": str(path),
+            "next": (
+                f"radar mission evaluate {mission_path} --report {report} "
+                f"--feedback-root {output}"
+            ),
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("list")
+def mission_list(
+    root: Annotated[Path, typer.Option("--root", exists=True, file_okay=False)] = (
+        BUILTIN_MISSIONS_ROOT
+    ),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List mission packs and their activation state."""
+    missions: list[dict[str, Any]] = []
+    for path in sorted(root.glob("**/mission*.yaml")):
+        try:
+            mission = load_mission(path)
+            compiled = compile_mission(mission)
+        except ValueError:
+            continue
+        missions.append(
+            {
+                "mission_id": mission.mission_id,
+                "name": mission.name,
+                "mode": mission.payload["governance"]["collection_mode"],
+                "collection_authorized": compiled.collection_authorized,
+                "path": str(path),
+            }
+        )
+    emit({"missions": missions}, pretty=not json_output)
+
+
 def _s3_encryption_mode() -> str | None:
     value = os.environ.get("RADAR_S3_SERVER_SIDE_ENCRYPTION", "AES256")
     if value == "AES256":
@@ -416,12 +950,11 @@ def _agent_runtime(mode: str, adapter: str) -> AgentProvider | None:
         raise typer.BadParameter("agent mode must be one of: " + ", ".join(AGENT_MODES))
     if mode == "plan":
         return None
-    if adapter not in AGENT_ADAPTERS:
-        raise typer.BadParameter("agent adapter must be one of: " + ", ".join(AGENT_ADAPTERS))
     try:
         return build_agent_provider(adapter)
     except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
+        builtins = ", ".join(AGENT_ADAPTERS)
+        raise typer.BadParameter(f"{exc}; built-in adapters: {builtins}") from exc
 
 
 @report_app.command("delivery-plan")
@@ -507,6 +1040,7 @@ def email_send(
         raise typer.BadParameter("external delivery is disabled")
     if os.environ.get("RADAR_EMAIL_DELIVERY_ENABLED", "").lower() != "true":
         raise typer.BadParameter("email delivery is disabled")
+    _require_deployment_capability("external_delivery")
     try:
         receipt = send_email_delivery_plan(
             plan_path,
@@ -680,7 +1214,7 @@ def improve_analyze(
             dir_okay=False,
             readable=True,
         ),
-    ] = Path("config/scoring.yaml"),
+    ] = DEFAULT_SCORING_CONFIG,
     improvement_config: Annotated[
         Path,
         typer.Option(
@@ -689,7 +1223,7 @@ def improve_analyze(
             dir_okay=False,
             readable=True,
         ),
-    ] = Path("config/improvement.yaml"),
+    ] = DEFAULT_IMPROVEMENT_CONFIG,
     analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
@@ -716,6 +1250,38 @@ def improve_analyze(
     emit(result, pretty=not json_output)
 
 
+@improve_app.command("advise")
+def improve_advise(
+    reports: Annotated[Path, typer.Option("--reports")] = Path("reports/generated"),
+    feedback: Annotated[Path, typer.Option("--feedback")] = Path("reports/feedback"),
+    mission_feedback: Annotated[Path, typer.Option("--mission-feedback")] = Path(
+        "reports/mission-feedback"
+    ),
+    output: Annotated[Path, typer.Option("--output")] = Path(
+        "reports/generated/improvement-advice"
+    ),
+    improvement_config: Annotated[
+        Path,
+        typer.Option(
+            "--improvement-config",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = DEFAULT_IMPROVEMENT_CONFIG,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Measure all improvement domains and emit proposal-only recommendations."""
+    result = run_advisory_cycle(
+        reports_root=reports,
+        feedback_root=feedback,
+        mission_feedback_root=mission_feedback,
+        output_root=output,
+        improvement_config=improvement_config,
+    )
+    emit(result, pretty=not json_output)
+
+
 @improve_app.command("apply")
 def improve_apply(
     proposal: Annotated[
@@ -730,6 +1296,7 @@ def improve_apply(
     ] = Path("."),
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    _require_deployment_capability("self_improvement_apply")
     result = apply_proposal(
         proposal,
         repo_root=repo_root,
@@ -749,6 +1316,7 @@ def improve_apply_stdin(
     ] = Path("."),
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    _require_deployment_capability("self_improvement_apply")
     payload = read_stdin_json()
     proposal_path = payload.get("proposal_path")
     if payload.get("status") != "approval_required" or not isinstance(proposal_path, str):
@@ -799,14 +1367,35 @@ def blocked_live_collection() -> None:
 
 
 def _required_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
+    try:
+        value = resolve_secret(name)
+    except SecretResolutionError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if value is None:
         raise typer.BadParameter(f"{name} is required")
     return value
 
 
+def _require_deployment_capability(
+    capability: str,
+    *,
+    discovery_config: Path = DEFAULT_DISCOVERY_CONFIG,
+) -> None:
+    try:
+        require_deployment_approval(
+            capability,
+            paths=DeploymentControlPaths(
+                discovery=discovery_config,
+                sources=DEFAULT_SOURCES_CONFIG,
+                source_terms=DEFAULT_SOURCE_TERMS_CONFIG,
+            ),
+        )
+    except DeploymentApprovalError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+
 def _optional_reddit_client() -> RedditSearchClient | None:
-    access_token = os.environ.get("REDDIT_ACCESS_TOKEN")
+    access_token = resolve_secret("REDDIT_ACCESS_TOKEN", required=False)
     user_agent = os.environ.get("REDDIT_USER_AGENT")
     if not access_token or not user_agent:
         return None
@@ -814,7 +1403,7 @@ def _optional_reddit_client() -> RedditSearchClient | None:
 
 
 def _optional_tiktok_client() -> TikTokResearchClient | None:
-    access_token = os.environ.get("TIKTOK_RESEARCH_ACCESS_TOKEN")
+    access_token = resolve_secret("TIKTOK_RESEARCH_ACCESS_TOKEN", required=False)
     if not access_token:
         return None
     return TikTokResearchClient(access_token)

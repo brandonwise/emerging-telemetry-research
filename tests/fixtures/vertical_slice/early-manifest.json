@@ -1,6 +1,7 @@
 {
   "run_id": "run_fixture_early_watch",
   "generated_at": "2026-07-22T13:30:00Z",
+  "media_baseline_checked": true,
   "edition": "morning",
   "window": {
     "start": "2026-07-22T12:00:00Z",

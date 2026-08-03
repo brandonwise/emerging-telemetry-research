@@ -9,14 +9,14 @@ args:
 steps:
   - id: acceptance
     command: >-
-      uv run threat-radar eval acceptance
+      uv run outcome-radar eval acceptance
       --fixtures tests/fixtures/vertical_slice
       --output reports/generated/evaluation
       --json
 
   - id: bounded_agent_evaluation
     command: >-
-      uv run threat-radar eval agents
+      uv run outcome-radar eval agents
       --fixtures tests/fixtures/vertical_slice
       --adapter "$LOBSTER_ARG_AGENT_ADAPTER"
       --repeats "$LOBSTER_ARG_AGENT_REPEATS"
@@ -25,7 +25,7 @@ steps:
 
   - id: source_coverage_evaluation
     command: >-
-      uv run threat-radar eval coverage
+      uv run outcome-radar eval coverage
       --reports reports/generated
       --output reports/generated/source-evaluation
       --minimum-surfaces 4

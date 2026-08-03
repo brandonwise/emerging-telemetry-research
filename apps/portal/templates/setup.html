@@ -10,7 +10,7 @@
   <article class="setup-card">
     <span class="step-number">01</span><h2>Choose an adapter</h2>
     <p>Generate platform-specific instructions without copying secrets into an agent context.</p>
-    <code>uv run threat-radar setup generate --platform codex</code>
+    <code>uv run outcome-radar setup generate --platform codex</code>
   </article>
   <article class="setup-card">
     <span class="step-number">02</span><h2>Configure discovery</h2>
@@ -20,7 +20,7 @@
   <article class="setup-card">
     <span class="step-number">03</span><h2>Run locally</h2>
     <p>SQLite and local immutable objects are the default portable storage profile.</p>
-    <code>uv run threat-radar portable run --json</code>
+    <code>uv run outcome-radar portable run --json</code>
   </article>
   <article class="setup-card">
     <span class="step-number">04</span><h2>Open the portal</h2>
@@ -35,6 +35,8 @@
     <div><dt>Authentication</dt><dd>{{ "Token required" if settings.authentication_enabled else ("Trusted network only" if settings.lan_mode else "Local client only") }}</dd></div>
     <div><dt>Analytics store</dt><dd><code>{{ settings.analytics_db }}</code></dd></div>
     <div><dt>Report root</dt><dd><code>{{ settings.reports_root }}</code></dd></div>
+    <div><dt>Mission packs</dt><dd><code>{{ settings.missions_root }}</code></dd></div>
+    <div><dt>Mission reports</dt><dd><code>{{ settings.mission_reports_root }}</code></dd></div>
   </dl>
 </section>
 <section class="panel">
@@ -84,6 +86,7 @@
     <strong>Usage value, not necessarily cash spend.</strong>
     Subscription plans, credits, and committed spend can make the actual incremental cost lower —
     sometimes effectively $0. Brave Search is estimated at $5 per 1,000 requests ($0.005 each).
+    Only operational reports with discovery telemetry are included.
   </div>
   <div class="cost-summary" aria-label="Cost summary">
     <div><span>Total estimate</span><strong>{{ costs.estimated_cost|money }}</strong></div>

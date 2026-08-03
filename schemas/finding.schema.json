@@ -33,6 +33,8 @@
     "momentum": {"enum": ["falling", "flat", "rising", "accelerating"]},
     "novelty": {"enum": ["low", "medium", "high", "exceptional"]},
     "lead_time_hours": {"type": ["number", "null"]},
+    "media_baseline_at": {"type": ["string", "null"], "format": "date-time"},
+    "media_baseline_checked": {"type": "boolean"},
     "first_observed_at": {"type": "string", "format": "date-time"},
     "last_updated_at": {"type": "string", "format": "date-time"},
     "affected": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/affected"}},

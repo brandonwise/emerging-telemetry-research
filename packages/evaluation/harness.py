@@ -6,18 +6,21 @@ from pathlib import Path
 from typing import Any
 
 from packages.common.canonical import canonical_json_bytes, sha256_hex
+from packages.common.resources import bundled_path
 from packages.lineage.graph import LineageEdge, independent_source_count
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.scoring.engine import load_thresholds
 from packages.security_gateway.gateway import ContentSecurityGateway
 from packages.verification.claims import verify_report_claims
 
+DEFAULT_SCORING_CONFIG = bundled_path("config/scoring.yaml")
+
 
 def run_acceptance_suite(
     fixture_root: Path,
     output_root: Path,
     *,
-    scoring_config: Path = Path("config/scoring.yaml"),
+    scoring_config: Path = DEFAULT_SCORING_CONFIG,
 ) -> dict[str, Any]:
     thresholds = load_thresholds(scoring_config)
     flash = run_frozen_fixture(
@@ -68,8 +71,14 @@ def run_acceptance_suite(
             ),
             "early_watch_before_media": (
                 early.report["findings"][0]["publication_class"] == "watch"
-                and early.report["findings"][0]["lead_time_hours"] is None
-                and late.report["findings"][0]["lead_time_hours"] is not None
+                and early.report["findings"][0]["media_baseline_checked"] is True
+                and early.report["findings"][0]["media_baseline_at"] is None
+                and late.report["findings"][0]["media_baseline_at"]
+                == "2026-07-22T19:00:00Z"
+                and early.report["findings"][0]["score_components"][
+                    "novelty_lead_time"
+                ]
+                > late.report["findings"][0]["score_components"]["novelty_lead_time"]
             ),
             "hostile_content_privileged_effects": 0,
             "hostile_variants_reaching_models": sum(

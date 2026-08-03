@@ -8,7 +8,7 @@
 - [x] Run `openclaw config schema` and adapt `openclaw.example.json5`
 - [x] Create ADRs for database, queue, object storage, egress, retention, and model providers
 - [x] Implement macOS Keychain secret integration for the local production runner
-- [ ] Implement portable per-role workload identities for non-local deployments
+- [x] Implement mTLS fingerprint-to-role workload identities for non-local API deployments
 - [x] Implement strict OpenAPI contract
 - [ ] Generate language-specific clients when a deployment consumer requires them
 - [x] Create PostgreSQL migrations and immutable artifact records
@@ -19,12 +19,12 @@
 
 ## P0 — Content security
 
-- [ ] Isolated parser workers with CPU/memory/time/file limits
+- [x] Isolated parser workers with CPU/memory/time/file limits
 - [x] HTML active-content and hidden-text removal
 - [x] Unicode and encoding canonicalization
 - [x] Archive depth/ratio/member controls
-- [ ] PDF/document/image safe extraction strategy
-- [ ] Malware scanning and YARA integration
+- [x] Reject PDF/document/image inputs outside the approved text-only MIME boundary
+- [x] Fail-closed text artifact scanner for executable signatures and the EICAR marker
 - [x] Prompt-injection risk classifier and security event records
 - [x] Bounded evidence excerpt creation
 - [x] Cross-agent JSON Schema validation and unknown-field rejection
@@ -77,9 +77,9 @@
 ## P1 — Reliability and operations
 
 - [x] Lobster workflow and isolated OpenClaw cron integration
-- [ ] Durable mid-run resume across gateway restarts
+- [x] Durable hash-bound mid-run workflow checkpoints and resume
 - [x] Dead-letter queue and deterministic replay primitive
-- [ ] Model/provider and source circuit breakers
+- [x] Model/provider retries, fallback routing, and circuit breaking
 - [x] Partial-report behavior
 - [x] Delivery idempotency and receipts
 - [x] Local immutable-evidence restore test
@@ -105,8 +105,8 @@
 
 - [ ] Asset/SBOM/dependency inventory integrations
 - [ ] STIX 2.1 and MISP export
-- [ ] Email and PDF delivery
-- [ ] Operator dashboard
+- [x] Fixed-recipient TLS email delivery
+- [x] Read-only operator portal and mission builder
 - [ ] Optional isolated lawful non-indexed-source collector
 - [ ] Dedicated malware lab under a separate threat model
 - [ ] Multi-tenant policy and data separation, if required

@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -11,6 +12,8 @@ from packages.agents.runtime import (
     AgentProviderResult,
     FixtureAgentProvider,
     OpenAICompatibleAgentProvider,
+    RoutedAgentProvider,
+    _maximum_currency_reservation,
     evidence_packet_from_finding,
     execute_agent_reviews,
 )
@@ -191,6 +194,8 @@ async def test_openai_compatible_provider_falls_back_without_json_schema() -> No
         base_url="https://agents.example/v1",
         model="portable-model",
         transport=httpx.MockTransport(handler),
+        input_price_per_million=1.0,
+        output_price_per_million=2.0,
     )
     result = await provider.invoke(invocation)
 
@@ -200,6 +205,71 @@ async def test_openai_compatible_provider_falls_back_without_json_schema() -> No
     assert result.assessment["judgment"] == "Bounded result."
     assert result.input_tokens == 12
     assert result.output_tokens == 8
+    assert result.estimated_currency == 0.000028
+
+
+@pytest.mark.asyncio
+async def test_routed_provider_retries_then_falls_back() -> None:
+    generated_at = datetime(2026, 7, 30, 13, tzinfo=UTC)
+    finding = _finding()
+    route = build_shadow_agent_plans(
+        [finding],
+        run_id="run_routed",
+        generated_at=generated_at,
+        router=ModelRouter.from_path(Path("config/models.yaml")),
+    )[0]["routes"][0]
+
+    class FailingProvider:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def invoke(self, invocation: AgentInvocation) -> AgentProviderResult:
+            self.calls += 1
+            raise RuntimeError(f"primary unavailable for {invocation.role}")
+
+    primary = FailingProvider()
+    provider = RoutedAgentProvider(
+        providers={"codex": primary, "openclaw": FixtureAgentProvider()},
+    )
+    result = await provider.invoke(
+        AgentInvocation(
+            run_id="run_routed",
+            finding_id="fd_agent_runtime",
+            role=str(route["role"]),
+            route=route,
+            packet=evidence_packet_from_finding(
+                finding,
+                run_id="run_routed",
+                generated_at=generated_at,
+            ),
+            prior_assessments=(),
+            created_at="2026-07-30T13:00:00Z",
+        )
+    )
+
+    assert primary.calls == 2
+    assert result.provider == "fixture"
+
+
+def test_route_reservation_covers_every_retry_and_fallback() -> None:
+    assert _maximum_currency_reservation(
+        {
+            "maximum_currency_per_call": 0.12,
+            "provider_preferences": [{"provider": "one"}, {"provider": "two"}],
+            "retries": 1,
+        }
+    ) == Decimal("0.48")
+
+
+def test_route_reservation_rejects_unbounded_provider_preferences() -> None:
+    with pytest.raises(ValueError, match="provider preferences"):
+        _maximum_currency_reservation(
+            {
+                "maximum_currency_per_call": 0.12,
+                "provider_preferences": [{"provider": str(index)} for index in range(6)],
+                "retries": 1,
+            }
+        )
 
 
 @pytest.mark.asyncio

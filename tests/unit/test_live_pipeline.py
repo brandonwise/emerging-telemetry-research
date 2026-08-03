@@ -22,7 +22,6 @@ from packages.inference.semantic import (
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.pipeline.live import (
     LiveRunSettings,
-    _discovery_baselines,
     _existing_morning_result,
     _prioritized_candidates,
     _select_report_findings,
@@ -31,32 +30,6 @@ from packages.pipeline.live import (
 )
 from packages.storage.object_store import LocalImmutableObjectStore
 from packages.storage.repository import MemoryRepository
-
-
-def test_discovery_baseline_uses_first_current_signal_per_cve() -> None:
-    generated_at = datetime(2026, 7, 24, 12, tzinfo=UTC)
-    signals = [
-        DiscoverySignal(
-            source_id="brave-web",
-            title="Current report",
-            url="https://example.com/one",
-            summary="CVE-2026-12345",
-            published_at=datetime(2026, 7, 24, 10, tzinfo=UTC),
-            identifiers=("CVE-2026-12345",),
-        ),
-        DiscoverySignal(
-            source_id="x-researchers",
-            title="Earlier post",
-            url="https://x.com/example/status/1",
-            summary="CVE-2026-12345",
-            published_at=datetime(2026, 7, 24, 9, tzinfo=UTC),
-            identifiers=("CVE-2026-12345",),
-            source_handle="example",
-        ),
-    ]
-    assert _discovery_baselines(signals, generated_at) == {
-        "CVE-2026-12345": datetime(2026, 7, 24, 9, tzinfo=UTC)
-    }
 
 
 def test_web_queries_allow_surface_specific_freshness() -> None:

@@ -151,6 +151,28 @@ one signal family.
 The default gate requires at least four surfaces, no single source above 60% of cited evidence, X
 at or below 50%, full attribution, and non-X evidence on every finding.
 
+### 8. Outcome mission suite
+
+Each mission declares its useful-outcome rate and source-diversity floor. Run its checked-in signal
+fixture in plan mode, then use `threat-radar mission evaluate` on the immutable report. The built-in
+developer-product mission proves that the engine can produce a cited, code-ranked non-security
+outcome from three source types.
+
+Mission gates cover:
+
+- valid mission, signal, report, and feedback contracts;
+- fixed five-role dependencies and mission-specific role briefs;
+- source registration, surface matching, independent hosts, and maximum evidence age;
+- citation coverage and code-owned ranking;
+- source diversity and useful-outcome rate;
+- tamper-evident activation and exact rollback;
+- zero live collection authority in plan mode;
+- immutable useful, not useful, and needs-work feedback.
+
+Before analyst feedback exists, evaluation labels usefulness as a `priority_proxy`. Once feedback
+exists for the report, it switches to `analyst_feedback` and uses the latest label per outcome.
+Neither path can change source approval or score weights automatically.
+
 ## Evaluation loop
 
 1. Run the frozen acceptance suite.
@@ -198,6 +220,8 @@ at or below 50%, full attribution, and non-X evidence on every finding.
 | Duplicate delivery under retry tests | 0 |
 | Reproducible report output | 100% for frozen fixtures |
 | Cost attribution | 100% |
+| Mission claims cited | 100% |
+| Mission source registration and age enforcement | 100% |
 
 ## Analyst feedback taxonomy
 

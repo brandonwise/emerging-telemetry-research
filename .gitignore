@@ -1,4 +1,6 @@
 .env
+.outcome-radar/
+radar.env
 .venv/
 __pycache__/
 *.py[cod]
@@ -17,5 +19,7 @@ build/
 runtime/
 artifacts/
 reports/generated/
+reports/missions/
+reports/mission-feedback/
 state/
 openclaw/agents/*/openclaw-workspace-state.json

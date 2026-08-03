@@ -58,7 +58,7 @@
     </div>
     {% endif %}
     <dl class="detail-grid">
-      <div><dt>Confidence</dt><dd>{{ finding.confidence.level|title }} · {{ "%.0f%%"|format(finding.confidence.probability * 100) }}</dd></div>
+      <div><dt>Evidence confidence</dt><dd>{{ finding.confidence.level|title }} · {{ "%.0f%%"|format(finding.confidence.probability * 100) }}</dd></div>
       <div><dt>Stage</dt><dd>{{ finding.emergence_stage|replace("_", " ")|title }}</dd></div>
       <div><dt>Category</dt><dd>{{ finding.category|replace("_", " ")|title }}</dd></div>
       <div><dt>Next check</dt><dd>{{ finding.next_check_at|compact_date }}</dd></div>
@@ -72,7 +72,7 @@
       <div class="score-component-grid">
         {% for name, value in finding.get("score_components", {}).items() %}
         <div class="score-component {% if name == 'penalties' %}penalty{% endif %}">
-          <span>{{ name|replace("_", " ") }}</span>
+          <span>{{ "freshness / novelty" if name == "novelty_lead_time" else name|replace("_", " ") }}</span>
           <strong>{% if name == "penalties" and value %}−{% endif %}{{ "%.1f"|format(value) }}</strong>
         </div>
         {% endfor %}

@@ -1,22 +1,24 @@
 import hmac
 import ipaddress
 import json
+import os
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from apps.report_renderer.render import render_report
 from packages.agents.contracts import validate_assessment
 from packages.common.canonical import canonical_json_bytes, stable_id
 from packages.contracts.validation import ContractViolation, validate_payload
+from packages.security_gateway.secrets import resolve_secret
 from packages.storage.repository import (
     IdempotencyConflict,
     PostgresRepository,
@@ -37,6 +39,14 @@ class ApiSettings(BaseSettings):
     external_delivery_enabled: bool = False
     database_url: str | None = None
     trusted_proxy_ips_json: str = '["127.0.0.1", "::1"]'
+
+    @model_validator(mode="after")
+    def resolve_database_secret_reference(self) -> Self:
+        if os.environ.get("RADAR_API_DATABASE_URL") or os.environ.get(
+            "RADAR_API_DATABASE_URL_REF"
+        ):
+            self.database_url = resolve_secret("RADAR_API_DATABASE_URL", required=False)
+        return self
 
     def identity_roles(self) -> dict[str, str]:
         value = json.loads(self.mtls_identities_json)
@@ -92,7 +102,7 @@ def create_app(
         else UnavailableRepository()
     )
     application = FastAPI(
-        title="OpenClaw Emerging Threat Radar internal API",
+        title="Outcome Radar internal API",
         version="1.0.0",
         docs_url=None,
         redoc_url=None,
@@ -141,6 +151,19 @@ def create_app(
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": "repository unavailable"},
+        )
+
+    @application.get("/healthz", include_in_schema=False)
+    async def liveness() -> dict[str, str]:
+        """Expose process liveness without leaking configuration or weakening API auth."""
+        return {"status": "ok"}
+
+    @application.get("/readyz", include_in_schema=False)
+    async def readiness() -> JSONResponse:
+        ready = await repo.available()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "ready" if ready else "unavailable"},
         )
 
     @application.get("/v1/health")

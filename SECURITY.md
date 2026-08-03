@@ -51,7 +51,8 @@ Prompt-injection detection is useful telemetry, but it is not the primary safety
 
 ### Parsing controls
 
-- Perform parsing in a disposable sandbox
+- Perform parsing in a disposable spawn-process sandbox with parent-enforced timeout, CPU,
+  memory, and output limits on every supported operating system
 - Disable macros, JavaScript, plugins, external resource loading, and embedded file execution
 - Limit archive depth, member count, path length, and expansion ratio
 - Reject path traversal and device files
@@ -127,12 +128,24 @@ The model must not receive browser-rendered page state, hidden content, tool des
 ## Secret management
 
 - Store credentials in a managed secret store or protected deployment environment
+- Resolve credentials through `env://`, OS-backed `keyring://`, or owner-only absolute `file://`
+  references; never place secret values in generated adapter configuration
 - Use one credential per connector/destination where possible
 - Use short-lived tokens and workload identity where available
 - Restrict GitHub, Discord, email, object-store, database, and model credentials independently
 - Never make secrets available in container images, repository files, test fixtures, logs, traces, reports, or model prompts
 - Scrub authorization headers, query parameters, cookies, and signed URLs from telemetry
 - Rotate a connector credential after any suspected source-content escape
+
+## Deployment authority
+
+- Repository configuration is never proof of operational approval
+- Collection, external delivery, and self-improvement application are separate capabilities
+- Local approvals bind the exact code, security controls, terms, and enabled-source hash
+- Changed protected content, a different source set, capability mismatch, or expiration fails closed
+- Approval requests and receipts contain identities and hashes, never credentials
+- Installing a collector or agent-provider package grants no capability; entry points require an
+  explicit local allowlist and still pass mission/deployment approval gates
 
 ## GitHub and CI security
 

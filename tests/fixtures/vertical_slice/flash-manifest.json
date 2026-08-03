@@ -1,6 +1,7 @@
 {
   "run_id": "run_fixture_flash",
   "generated_at": "2026-07-22T17:00:00Z",
+  "media_baseline_checked": true,
   "edition": "morning",
   "window": {
     "start": "2026-07-22T12:00:00Z",

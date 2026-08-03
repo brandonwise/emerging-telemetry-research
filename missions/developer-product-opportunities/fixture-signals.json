@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "signals": [
+    {
+      "source_id": "developer-product-opportunity-radar-news",
+      "source_type": "news",
+      "title": "Teams struggle to govern AI coding agent workflows",
+      "url": "https://news.example.com/agent-governance-workflow",
+      "summary": "Engineering teams report growing pain in the coding agent approval workflow when reviewing and auditing changes across repositories.",
+      "published_at": "2026-07-30T13:00:00Z",
+      "source_handle": "Developer Workflow News"
+    },
+    {
+      "source_id": "developer-product-opportunity-radar-github",
+      "source_type": "github",
+      "title": "Request: one approval trail for coding agent changes",
+      "url": "https://github.com/example/agent-control/issues/482",
+      "summary": "A popular developer tool issue requests one coding agent approval workflow for plans, diffs, tests, and rollbacks across repositories.",
+      "published_at": "2026-07-30T16:30:00Z",
+      "source_handle": "example/agent-control"
+    },
+    {
+      "source_id": "developer-product-opportunity-radar-reddit",
+      "source_type": "reddit",
+      "title": "Coding agent governance is becoming a workflow bottleneck",
+      "url": "https://www.reddit.com/r/devtools/comments/example_agent_governance/",
+      "summary": "Developers describe recurring friction in the coding agent approval workflow, including failed checks and rollback decisions across separate tools.",
+      "published_at": "2026-07-31T02:15:00Z",
+      "source_handle": "r/devtools"
+    },
+    {
+      "source_id": "developer-product-opportunity-radar-web",
+      "source_type": "web",
+      "title": "Local-first test environments remain painful for service teams",
+      "url": "https://engineering.example.org/local-test-environments",
+      "summary": "Service developers report recurring pain and want disposable local test environment automation for production dependencies.",
+      "published_at": "2026-07-29T18:00:00Z",
+      "source_handle": "Engineering Practice"
+    },
+    {
+      "source_id": "developer-product-opportunity-radar-github",
+      "source_type": "github",
+      "title": "Automate disposable local test environments",
+      "url": "https://github.com/example/dev-environments/issues/91",
+      "summary": "Maintainers request disposable local test environment automation built from service manifests without custom setup scripts.",
+      "published_at": "2026-07-30T09:20:00Z",
+      "source_handle": "example/dev-environments"
+    },
+    {
+      "source_id": "developer-product-opportunity-radar-news",
+      "source_type": "news",
+      "title": "Disposable local test environments move into developer platforms",
+      "url": "https://platform.example.net/disposable-local-environments",
+      "summary": "Developer platform teams are adopting disposable local test environment automation to reduce setup pain and integration drift.",
+      "published_at": "2026-07-30T21:00:00Z",
+      "source_handle": "Platform Engineering Review"
+    }
+  ]
+}

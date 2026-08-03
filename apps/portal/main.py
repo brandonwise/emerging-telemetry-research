@@ -7,12 +7,14 @@ import hmac
 import io
 import ipaddress
 import json
+import re
 import time
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import parse_qs
 
+import yaml
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (
     FileResponse,
@@ -27,11 +29,20 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from packages.analytics.store import AnalyticsStore
+from packages.contracts.validation import validate_payload
+from packages.missions.compiler import (
+    BUILTIN_MISSIONS_ROOT,
+    compile_mission,
+    draft_mission,
+    load_mission,
+)
 
 PORTAL_ROOT = Path(__file__).resolve().parent
 DOCUMENTS_ROOT = PORTAL_ROOT.parents[1] / "docs"
 ARCHITECTURE_MOTION_PATH = DOCUMENTS_ROOT / "architecture-motion.html"
 ARCHITECTURE_BLUEPRINT_PATH = DOCUMENTS_ROOT / "architecture-visual.html"
+MISSION_ENGINE_PATH = DOCUMENTS_ROOT / "mission-engine.html"
+ARCHITECTURE_GIF_PATH = DOCUMENTS_ROOT / "assets" / "threat-radar-architecture-motion.gif"
 SESSION_COOKIE = "radar_session"
 SESSION_SECONDS = 12 * 60 * 60
 CSV_FIELDS = (
@@ -57,14 +68,14 @@ CSV_FINDING_FIELDS = (
     "confidence_level",
     "confidence_probability",
 )
+MISSION_ID_PATTERN = re.compile(r"^ms_[a-z0-9][a-z0-9_-]{2,63}$")
 
 
-def _inline_style_hash(path: Path) -> str:
-    document = path.read_text(encoding="utf-8")
+def _inline_style_hash(document: str) -> str:
     _, start, remainder = document.partition("<style>")
     stylesheet, end, _ = remainder.partition("</style>")
     if not start or not end:
-        raise ValueError(f"Architecture document has no inline stylesheet: {path}")
+        raise ValueError("Architecture document has no inline stylesheet")
     digest = hashlib.sha256(stylesheet.encode("utf-8")).digest()
     return base64.b64encode(digest).decode("ascii")
 
@@ -74,12 +85,14 @@ class PortalSettings(BaseSettings):
 
     analytics_db: Path = Path("state/radar.db")
     reports_root: Path = Path("reports/generated")
+    missions_root: Path = BUILTIN_MISSIONS_ROOT
+    mission_reports_root: Path = Path("reports/missions")
     lan_mode: bool = False
     auth_mode: Literal["auto", "required", "disabled"] = "auto"
     access_token: str | None = None
     secure_cookie: bool = False
     allowed_networks: str = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
-    title: str = Field(default="Threat Radar", min_length=1, max_length=80)
+    title: str = Field(default="Outcome Radar", min_length=1, max_length=80)
 
     @model_validator(mode="after")
     def validate_lan_auth(self) -> PortalSettings:
@@ -123,9 +136,10 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
     store = AnalyticsStore(portal_settings.analytics_db)
     store.sync_reports(portal_settings.reports_root)
     templates = _templates()
-    architecture_style_hashes = {
-        "/architecture": _inline_style_hash(ARCHITECTURE_MOTION_PATH),
-        "/architecture/blueprint": _inline_style_hash(ARCHITECTURE_BLUEPRINT_PATH),
+    architecture_documents = {
+        "/architecture": ARCHITECTURE_MOTION_PATH,
+        "/architecture/blueprint": ARCHITECTURE_BLUEPRINT_PATH,
+        "/architecture/missions": MISSION_ENGINE_PATH,
     }
     application = FastAPI(
         title=f"{portal_settings.title} portal",
@@ -162,8 +176,11 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             return RedirectResponse("/login", status_code=303)
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
-        architecture_style_hash = architecture_style_hashes.get(request.url.path)
-        if architecture_style_hash is not None:
+        architecture_document = architecture_documents.get(request.url.path)
+        if architecture_document is not None:
+            architecture_style_hash = _inline_style_hash(
+                architecture_document.read_text(encoding="utf-8")
+            )
             response.headers["Content-Security-Policy"] = (
                 f"default-src 'none'; style-src 'sha256-{architecture_style_hash}'; "
                 "img-src data:; "
@@ -252,7 +269,6 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             active="overview",
             overview=store.overview(days=bounded_days),
             intelligence=store.intelligence_summary(days=bounded_days),
-            evaluation=_evaluation_snapshot(portal_settings.reports_root),
             source_posture=_source_posture(store.source_health(limit=500)),
             trend=trend,
             max_findings=max((int(item["findings"]) for item in trend), default=1),
@@ -284,6 +300,132 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             ),
             q=safe_query or "",
             edition=safe_edition or "",
+        )
+
+    @application.get("/missions", response_class=HTMLResponse)
+    async def missions(request: Request) -> HTMLResponse:
+        return _render(
+            templates,
+            "missions.html",
+            request=request,
+            settings=portal_settings,
+            active="missions",
+            missions=_mission_cards(
+                portal_settings.missions_root,
+                portal_settings.mission_reports_root,
+            ),
+        )
+
+    @application.get("/missions/new", response_class=HTMLResponse)
+    async def mission_new(
+        request: Request,
+        objective: str | None = None,
+        name: str | None = None,
+        outcome: str | None = None,
+        window_hours: int = 168,
+        cadence: str = "daily",
+    ) -> HTMLResponse:
+        preview: dict[str, Any] | None = None
+        error: str | None = None
+        safe_objective = objective.strip()[:1200] if objective else ""
+        safe_name = name.strip()[:100] if name else ""
+        safe_outcome = outcome.strip()[:40] if outcome else ""
+        bounded_window = max(1, min(window_hours, 2160))
+        safe_cadence = cadence if cadence in {"manual", "hourly", "daily", "weekly"} else "daily"
+        if safe_objective:
+            try:
+                mission = draft_mission(
+                    safe_objective,
+                    name=safe_name or None,
+                    outcome_noun=safe_outcome or None,
+                    window_hours=bounded_window,
+                    cadence=safe_cadence,
+                )
+                preview = compile_mission(mission).to_contract()
+            except ValueError as exc:
+                error = str(exc)
+        return _render(
+            templates,
+            "mission_new.html",
+            request=request,
+            settings=portal_settings,
+            active="missions",
+            objective=safe_objective,
+            mission_name=safe_name,
+            outcome=safe_outcome,
+            window_hours=bounded_window,
+            cadence=safe_cadence,
+            preview=preview,
+            error=error,
+        )
+
+    @application.get("/missions/download")
+    async def mission_download(
+        objective: str,
+        name: str | None = None,
+        outcome: str | None = None,
+        window_hours: int = 168,
+        cadence: str = "daily",
+    ) -> Response:
+        try:
+            mission = draft_mission(
+                objective.strip()[:1200],
+                name=name.strip()[:100] if name else None,
+                outcome_noun=outcome.strip()[:40] if outcome else None,
+                window_hours=max(1, min(window_hours, 2160)),
+                cadence=cadence,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        document = yaml.safe_dump(mission.to_contract(), sort_keys=False, allow_unicode=True)
+        filename = mission.mission_id.removeprefix("ms_") + ".mission.yaml"
+        return Response(
+            document,
+            media_type="application/yaml",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @application.get("/missions/{mission_id}/reports/{report_id}", response_class=HTMLResponse)
+    async def mission_report_detail(
+        request: Request,
+        mission_id: str,
+        report_id: str,
+    ) -> HTMLResponse:
+        path = _mission_report_path(
+            portal_settings.mission_reports_root,
+            mission_id,
+            report_id,
+        )
+        if path is None:
+            raise HTTPException(status_code=404, detail="mission report not found")
+        report = _read_mission_report(path)
+        if not report:
+            raise HTTPException(status_code=404, detail="mission report not found")
+        return _render(
+            templates,
+            "mission_report.html",
+            request=request,
+            settings=portal_settings,
+            active="missions",
+            report=report,
+        )
+
+    @application.get("/missions/{mission_id}", response_class=HTMLResponse)
+    async def mission_detail(request: Request, mission_id: str) -> HTMLResponse:
+        item = _mission_by_id(
+            portal_settings.missions_root,
+            portal_settings.mission_reports_root,
+            mission_id,
+        )
+        if item is None:
+            raise HTTPException(status_code=404, detail="mission not found")
+        return _render(
+            templates,
+            "mission_detail.html",
+            request=request,
+            settings=portal_settings,
+            active="missions",
+            mission=item,
         )
 
     @application.get("/findings", response_class=HTMLResponse)
@@ -379,6 +521,10 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             'href="architecture-visual.html"',
             'href="/architecture/blueprint"',
         )
+        document = document.replace(
+            'href="assets/threat-radar-architecture-motion.gif"',
+            'href="/exports/architecture.gif"',
+        )
         return HTMLResponse(document)
 
     @application.get("/architecture/blueprint", response_class=HTMLResponse)
@@ -394,6 +540,23 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             'href="/architecture"',
         )
         return HTMLResponse(document)
+
+    @application.get("/architecture/missions", response_class=HTMLResponse)
+    async def mission_architecture() -> HTMLResponse:
+        document = MISSION_ENGINE_PATH.read_text(encoding="utf-8")
+        document = document.replace(
+            'href="../README.md"',
+            'href="/missions"',
+        )
+        return HTMLResponse(document)
+
+    @application.get("/exports/architecture.gif")
+    async def export_architecture_gif() -> FileResponse:
+        return FileResponse(
+            ARCHITECTURE_GIF_PATH,
+            media_type="image/gif",
+            filename="threat-radar-architecture-motion.gif",
+        )
 
     @application.get("/exports/reports.csv")
     async def export_csv() -> Response:
@@ -615,98 +778,78 @@ def _source_posture(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _evaluation_snapshot(reports_root: Path) -> dict[str, Any]:
-    agent = _latest_json(
-        reports_root.glob("agent-evaluation*/agent-eval-results.json"),
-        preferred=lambda value: value.get("adapter") != "fixture",
-    )
-    coverage = _latest_json(
-        reports_root.rglob("source-coverage-results.json"),
-        preferred=_is_live_coverage,
-    )
-    acceptance = _latest_json(reports_root.rglob("acceptance-results.json"))
-    agent_metrics = agent.get("metrics", {}) if agent else {}
-    coverage_metrics = coverage.get("metrics", {}) if coverage else {}
-    acceptance_gates = acceptance.get("gates", {}) if acceptance else {}
-    return {
-        "agent": {
-            "present": bool(agent),
-            "passed": agent.get("passed") is True if agent else False,
-            "adapter": str(agent.get("adapter", "—")) if agent else "—",
-            "role_completion": float(agent_metrics.get("role_completion_rate", 0)) * 100,
-            "citation_coverage": float(
-                agent_metrics.get(
-                    "factual_claim_citation_coverage",
-                    agent_metrics.get("assessment_claim_coverage", 0),
-                )
-            )
-            * 100,
-            "agreement": float(agent_metrics.get("coordinator_disposition_agreement", 0))
-            * 100,
-            "failed_roles": int(agent_metrics.get("failed_role_count", 0)),
-            "duration_ms": int(agent_metrics.get("mean_review_duration_ms", 0)),
-            "tokens": int(agent_metrics.get("mean_review_tokens", 0)),
-        },
-        "coverage": {
-            "present": bool(coverage),
-            "passed": coverage.get("passed") is True if coverage else False,
-            "surfaces": int(coverage_metrics.get("surface_count", 0)),
-            "signal_surfaces": int(coverage_metrics.get("signal_surface_count", 0)),
-            "x_share": float(coverage_metrics.get("x_share", 0)) * 100,
-            "largest_share": float(coverage_metrics.get("largest_surface_share", 0)) * 100,
-            "non_x_evidence": int(coverage_metrics.get("non_x_evidence_count", 0)),
-            "unattributed": int(coverage_metrics.get("unattributed_evidence_count", 0)),
-        },
-        "acceptance": {
-            "present": bool(acceptance),
-            "passed": acceptance.get("passed") is True if acceptance else False,
-            "privileged_effects": int(
-                acceptance_gates.get("hostile_content_privileged_effects", 0)
-            ),
-            "model_exposure": int(
-                acceptance_gates.get("hostile_variants_reaching_models", 0)
-            ),
-            "replay_match": all(
-                acceptance_gates.get(key) is True
-                for key in (
-                    "audit_replay_match",
-                    "html_replay_match",
-                    "report_json_replay_match",
-                )
-            ),
-        },
-    }
-
-
-def _latest_json(
-    paths: Iterable[Path],
-    *,
-    preferred: Callable[[dict[str, Any]], bool] | None = None,
-) -> dict[str, Any]:
-    candidates: list[tuple[float, dict[str, Any]]] = []
-    for path in paths:
-        if not path.is_file() or path.stat().st_size > 2_000_000:
-            continue
+def _mission_cards(missions_root: Path, reports_root: Path) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    if not missions_root.is_dir():
+        return cards
+    seen: set[str] = set()
+    for path in sorted(missions_root.glob("**/mission*.yaml")):
         try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            mission = load_mission(path)
+            compiled = compile_mission(mission)
+        except (OSError, ValueError):
             continue
-        if isinstance(value, dict):
-            candidates.append((path.stat().st_mtime, value))
-    if not candidates:
-        return {}
-    if preferred is not None:
-        preferred_candidates = [item for item in candidates if preferred(item[1])]
-        if preferred_candidates:
-            candidates = preferred_candidates
-    return max(candidates, key=lambda item: item[0])[1]
+        if mission.mission_id in seen:
+            continue
+        seen.add(mission.mission_id)
+        report_paths = _mission_report_paths(reports_root, mission.mission_id)
+        cards.append(
+            {
+                "definition": mission.to_contract(),
+                "compiled": compiled.to_contract(),
+                "path": path,
+                "reports": [_read_mission_report(item) for item in report_paths],
+            }
+        )
+    return cards
 
 
-def _is_live_coverage(value: dict[str, Any]) -> bool:
-    reports = value.get("reports")
-    return isinstance(reports, list) and any(
-        isinstance(path, str) and not path.startswith("tests/fixtures") for path in reports
+def _mission_by_id(
+    missions_root: Path,
+    reports_root: Path,
+    mission_id: str,
+) -> dict[str, Any] | None:
+    if not _valid_mission_id(mission_id):
+        return None
+    return next(
+        (
+            item
+            for item in _mission_cards(missions_root, reports_root)
+            if item["definition"]["mission_id"] == mission_id
+        ),
+        None,
     )
+
+
+def _mission_report_paths(root: Path, mission_id: str) -> list[Path]:
+    mission_root = (root / mission_id).resolve()
+    if root.resolve() not in mission_root.parents or not mission_root.is_dir():
+        return []
+    return sorted(mission_root.glob("*/report.json"), reverse=True)[:100]
+
+
+def _mission_report_path(root: Path, mission_id: str, report_id: str) -> Path | None:
+    if not _valid_mission_id(mission_id) or not report_id.startswith("mr_"):
+        return None
+    candidate = (root / mission_id / report_id / "report.json").resolve()
+    if root.resolve() not in candidate.parents or not candidate.is_file():
+        return None
+    return candidate
+
+
+def _read_mission_report(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            return {}
+        validate_payload("mission-report.schema.json", value)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+    return value
+
+
+def _valid_mission_id(value: str) -> bool:
+    return MISSION_ID_PATTERN.fullmatch(value) is not None
 
 
 app = create_app()

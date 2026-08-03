@@ -1,4 +1,34 @@
 services:
+  radar-api:
+    image: outcome-radar:1.0.0
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    profiles: ["application"]
+    user: "65532:65532"
+    init: true
+    read_only: true
+    pids_limit: 256
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=64m,mode=1770,uid=65532,gid=65532
+    volumes:
+      - radar_reports:/var/lib/threat-radar/reports
+    secrets:
+      - radar_api_database_url
+    environment:
+      RADAR_API_DATABASE_URL_REF: file:///run/secrets/radar_api_database_url
+      RADAR_API_MTLS_IDENTITIES_JSON: ${RADAR_API_MTLS_IDENTITIES_JSON:-{}}
+      RADAR_API_TRUSTED_PROXY_IPS_JSON: ${RADAR_API_TRUSTED_PROXY_IPS_JSON:-["127.0.0.1","::1"]}
+      RADAR_API_EXTERNAL_DELIVERY_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${RADAR_API_HOST_PORT:-18080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: pgvector/pgvector:0.8.0-pg16
     environment:
@@ -68,3 +98,8 @@ volumes:
   radar_postgres:
   radar_minio:
   radar_grafana:
+  radar_reports:
+
+secrets:
+  radar_api_database_url:
+    environment: RADAR_API_DATABASE_URL

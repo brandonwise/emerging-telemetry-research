@@ -16,6 +16,7 @@ from packages.common.canonical import (
     sha256_hex,
     stable_id,
 )
+from packages.connectors.isolation import parse_tier0_contracts_isolated
 from packages.connectors.tier0 import parse_tier0
 from packages.contracts.validation import validate_payload
 from packages.lineage.graph import (
@@ -61,6 +62,7 @@ def run_frozen_fixture(
     identifier_filter: frozenset[str] | None = None,
     shadow_mode: bool = True,
     thresholds: PublicationThresholds = DEFAULT_THRESHOLDS,
+    isolate_parsers: bool = False,
 ) -> FrozenRunResult:
     manifest = _load_manifest(manifest_path)
     run_id = str(manifest["run_id"])
@@ -145,18 +147,21 @@ def run_frozen_fixture(
             degraded_sources.append(source_id)
             source_health.append(_source_health(source_id, "degraded", generated_text, 1.0))
             continue
-        parsed = parse_tier0(source_id, raw, retrieved_at)
+        parsed_contracts = (
+            parse_tier0_contracts_isolated(source_id, raw, retrieved_at)
+            if isolate_parsers
+            else tuple(item.to_contract() for item in parse_tier0(source_id, raw, retrieved_at))
+        )
         if identifier_filter is not None:
             normalized_filter = {item.upper() for item in identifier_filter}
-            parsed = tuple(
-                draft
-                for draft in parsed
+            parsed_contracts = tuple(
+                contract
+                for contract in parsed_contracts
                 if normalized_filter.intersection(
-                    identifier.upper() for identifier in draft.identifiers
+                    str(identifier).upper() for identifier in contract["identifiers"]
                 )
             )
-        for draft in parsed:
-            contract = draft.to_contract()
+        for contract in parsed_contracts:
             validate_payload("observation.schema.json", contract)
             observations.append(contract)
             evidence_id = stable_id(
@@ -185,8 +190,8 @@ def run_frozen_fixture(
             "observations.extracted",
             actor="deterministic-extractor",
             input_hash=decision.sanitized_hash,
-            output_hash=sha256_hex(canonical_json_bytes([item.to_contract() for item in parsed])),
-            details={"source_id": source_id, "count": len(parsed)},
+            output_hash=sha256_hex(canonical_json_bytes(parsed_contracts)),
+            details={"source_id": source_id, "count": len(parsed_contracts)},
         )
 
     identifiers = sorted(
@@ -213,9 +218,11 @@ def run_frozen_fixture(
     media_baseline = (
         parse_timestamp(str(media_baseline_value)) if media_baseline_value is not None else None
     )
+    media_baseline_checked = manifest.get("media_baseline_checked") is True
     content_risk = max(risks or ["low"], key=RISK_ORDER.__getitem__)
     signals = ClusterSignals(
         first_observed_at=first_observed,
+        evaluated_at=generated_at,
         evidence_count=len(evidence),
         independent_source_count=independent_count,
         direct_artifact_count=sum(
@@ -227,6 +234,7 @@ def run_frozen_fixture(
         epss_probability=_maximum_optional(observations, "epss_probability"),
         known_exploited=any(bool(item["known_exploited"]) for item in observations),
         media_baseline_at=media_baseline,
+        media_baseline_checked=media_baseline_checked,
         organization_match=_organization_match(observations, manifest.get("inventory", [])),
         content_risk=content_risk,
     )
@@ -252,6 +260,7 @@ def run_frozen_fixture(
             "evidence_count": len(evidence),
             "known_exploited": signals.known_exploited,
             "media_baseline_present": media_baseline is not None,
+            "media_baseline_checked": media_baseline_checked,
         },
         "preliminary_score": score.total,
         "content_risk": content_risk,
@@ -434,11 +443,16 @@ def _build_finding(
     probability = 0.9 if confidence_level == "high" else 0.65
     first_observed_text = format_timestamp(signals.first_observed_at)
     last_updated = format_timestamp(generated_at)
-    lead_time = (
-        round((signals.media_baseline_at - signals.first_observed_at).total_seconds() / 3600, 2)
-        if signals.media_baseline_at
-        else None
-    )
+    lead_time = None
+    if (
+        signals.media_baseline_checked
+        and signals.media_baseline_at is not None
+        and generated_at < signals.media_baseline_at
+    ):
+        lead_time = round(
+            (signals.media_baseline_at - generated_at).total_seconds() / 3600,
+            2,
+        )
     skeptic = next(item for item in assessments if item["agent_role"] == "skeptic")
     return {
         "schema_version": "1.0",
@@ -452,18 +466,30 @@ def _build_finding(
         "why_now": (
             (
                 "Authoritative exploitation evidence and independent technical records "
-                "converged before a media baseline was present."
-                if signals.media_baseline_at is None
-                else "Authoritative exploitation evidence remains material, but broad "
-                "reporting now reduces the novelty score."
+                "converged; no qualifying media coverage was observed by the baseline check."
+                if signals.media_baseline_checked and signals.media_baseline_at is None
+                else (
+                    "Authoritative exploitation evidence remains material, but qualifying "
+                    "media coverage was already present at evaluation time."
+                    if signals.media_baseline_checked
+                    else "Authoritative exploitation evidence and independent technical "
+                    "records converged. No media-saturation credit was applied because an "
+                    "approved baseline was not measured."
+                )
             )
             if shadow_mode
             else (
-                "Fresh web or X discovery signals triggered verification against CISA and "
-                "independent authoritative vulnerability records."
-                if signals.media_baseline_at is not None
-                else "Recent authoritative source updates triggered independent verification "
-                "across vulnerability and exploitability records."
+                "Fresh discovery signals triggered verification against CISA and independent "
+                "authoritative vulnerability records. No media-saturation credit was applied "
+                "because an approved baseline was not measured."
+                if not signals.media_baseline_checked
+                else (
+                    "Fresh discovery signals triggered verification before qualifying media "
+                    "coverage was observed."
+                    if signals.media_baseline_at is None
+                    else "Fresh discovery signals triggered verification, but qualifying media "
+                    "coverage was already present at evaluation time."
+                )
             )
         ),
         "category": "active_exploitation" if signals.known_exploited else "vulnerability",
@@ -490,6 +516,12 @@ def _build_finding(
         "momentum": "accelerating" if signals.evidence_count >= 4 else "rising",
         "novelty": "high" if score.novelty_lead_time >= 10 else "low",
         "lead_time_hours": lead_time,
+        "media_baseline_at": (
+            format_timestamp(signals.media_baseline_at)
+            if signals.media_baseline_at is not None
+            else None
+        ),
+        "media_baseline_checked": signals.media_baseline_checked,
         "first_observed_at": first_observed_text,
         "last_updated_at": last_updated,
         "affected": list(affected_map.values()),

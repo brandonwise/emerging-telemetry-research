@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set definition = mission.definition %}
+{% block title %}{{ definition.name }} · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading compact-heading">
+  <p class="eyebrow">{{ definition.vocabulary.collection }}</p>
+  <h1>{{ definition.name }}</h1>
+  <p class="lede">{{ definition.objective }}</p>
+  <p><a href="/architecture/missions">View the mission engine architecture →</a></p>
+</section>
+<section class="mission-detail-grid">
+  <div class="panel">
+    <div class="panel-heading"><div><p class="eyebrow">Compiled plan</p><h2>Collection</h2></div>
+      <span class="status-chip {{ definition.governance.collection_mode }}">{{ definition.governance.collection_mode }}</span></div>
+    <div class="query-plan">
+      {% for query in mission.compiled.query_plan %}
+      <div><span>{{ query.surface }}</span><code>{{ query.query }}</code></div>
+      {% endfor %}
+    </div>
+  </div>
+  <aside class="panel">
+    <p class="eyebrow">Evidence gate</p>
+    <dl class="detail-grid single">
+      <div><dt>Independent sources</dt><dd>{{ definition.evidence.minimum_independent_sources }}</dd></div>
+      <div><dt>Maximum evidence age</dt><dd>{{ definition.evidence.maximum_evidence_age_hours }} hours</dd></div>
+      <div><dt>Maximum outcomes</dt><dd>{{ definition.output.maximum_outcomes }}</dd></div>
+      <div><dt>External delivery</dt><dd>Disabled</dd></div>
+    </dl>
+  </aside>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Challenge workflow</p><h2>Five bounded roles</h2></div></div>
+  <div class="role-grid">
+    {% for role in definition.workflow.roles %}<article><span>{{ "%02d"|format(loop.index) }}</span>
+      <h3>{{ role.role_id|replace('_', ' ')|title }}</h3><p>{{ role.purpose }}</p></article>{% endfor %}
+  </div>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">Mission reports</p><h2>Verified outcomes</h2></div></div>
+  {% if mission.reports %}<div class="report-list">
+    {% for report in mission.reports if report %}<a href="/missions/{{ definition.mission_id }}/reports/{{ report.report_id }}">
+      <strong>{{ report.generated_at|compact_date }}</strong><span>{{ report.outcomes|length }} outcomes · {{ report.workflow.agent_mode }} review</span></a>{% endfor %}
+  </div>{% else %}<div class="empty-state compact"><strong>No runs yet.</strong>
+    <span>Fixture runs are safe in plan mode. Live runs require an activated mission.</span></div>{% endif %}
+</section>
+{% endblock %}

@@ -76,7 +76,7 @@
         id: "radar-orchestrator",
         default: true,
         name: "Threat Radar Orchestrator",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/orchestrator",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/orchestrator",
         // Embedded Lobster is disabled in sandboxed contexts. This agent is therefore
         // unsandboxed but has no general shell/browser/channel tools. It may invoke only
         // reviewed, repository-owned Lobster workflows through the lobster tool.
@@ -100,7 +100,7 @@
       {
         id: "radar-collection-planner",
         name: "Collection Planner",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collection-planner",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collection-planner",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "low",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -117,7 +117,7 @@
       {
         id: "radar-collector-official",
         name: "Official Advisory Source Specialist",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collector-official",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collector-official",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: {
@@ -139,7 +139,7 @@
       {
         id: "radar-collector-web",
         name: "Web and Research Source Specialist",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/collector-web",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collector-web",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "low",
         sandbox: {
@@ -167,7 +167,7 @@
       {
         id: "radar-extractor",
         name: "Structured Evidence Extractor",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/extractor",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/extractor",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -181,7 +181,7 @@
       {
         id: "radar-specialist",
         name: "Threat Intelligence Specialist",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/specialist",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/specialist",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -198,7 +198,7 @@
       {
         id: "radar-impact",
         name: "Impact and Relevance Analyst",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/impact",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/impact",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -218,7 +218,7 @@
       {
         id: "radar-skeptic",
         name: "Adversarial Intelligence Reviewer",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/skeptic",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/skeptic",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -235,7 +235,7 @@
       {
         id: "radar-verifier",
         name: "Claim and Citation Verifier",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/verifier",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/verifier",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -252,7 +252,7 @@
       {
         id: "radar-chief",
         name: "Chief Emerging Threat Coordinator",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/coordinator",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/coordinator",
         model: { primary: "openai/gpt-5.6-sol", fallbacks: [] },
         // "max" is the current highest documented config enum. Confirm with
         // `openclaw config schema` if this installation exposes another label.
@@ -269,7 +269,7 @@
       {
         id: "radar-publisher",
         name: "Threat Radar Publisher",
-        workspace: "~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/agents/publisher",
+        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/publisher",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -291,7 +291,7 @@
       "threat-radar-boundary"
     ],
     load: {
-      paths: ["~/.openclaw/workspace/openclaw-emerging-threat-radar/openclaw/plugins/threat-radar-boundary"],
+      paths: ["~/.openclaw/workspace/outcome-radar/openclaw/plugins/threat-radar-boundary"],
     },
     entries: {
       codex: { enabled: true },
@@ -305,7 +305,7 @@
           allowConversationAccess: false,
         },
         config: {
-          reportRoot: "/opt/openclaw-emerging-threat-radar/reports/generated",
+          reportRoot: "/opt/outcome-radar/reports/generated",
           discordChannelId: "000000000000000000",
           discordAccountId: "threat-radar-bot",
           externalDeliveryEnabled: false,

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/mission-report.v1.json",
+  "title": "Mission Outcome Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "run_id",
+    "mission_id",
+    "mission_name",
+    "objective",
+    "generated_at",
+    "window",
+    "vocabulary",
+    "outcomes",
+    "source_health",
+    "workflow",
+    "verification",
+    "usage"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "report_id": {"type": "string", "pattern": "^mr_[A-Za-z0-9_-]+$"},
+    "run_id": {"type": "string", "pattern": "^run_[A-Za-z0-9_-]+$"},
+    "mission_id": {"type": "string", "pattern": "^ms_[a-z0-9][a-z0-9_-]{2,63}$"},
+    "mission_name": {"type": "string", "minLength": 4, "maxLength": 100},
+    "objective": {"type": "string", "minLength": 12, "maxLength": 1200},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "timezone"],
+      "properties": {
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "timezone": {"type": "string"}
+      }
+    },
+    "vocabulary": {"type": "object"},
+    "executive_summary": {"type": "string", "maxLength": 4000},
+    "outcomes": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/outcome"}
+    },
+    "source_health": {"type": "array", "maxItems": 100, "items": {"type": "object"}},
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mission_sha256", "graph", "agent_mode", "agent_plans", "agent_reviews"],
+      "properties": {
+        "mission_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "graph": {"type": "object"},
+        "agent_mode": {"enum": ["plan", "shadow", "active"]},
+        "agent_plans": {"type": "array", "items": {"type": "object"}},
+        "agent_reviews": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all_claims_cited",
+        "minimum_evidence_enforced",
+        "maximum_evidence_age_enforced",
+        "code_owned_ranking"
+      ],
+      "properties": {
+        "all_claims_cited": {"type": "boolean"},
+        "minimum_evidence_enforced": {"type": "boolean"},
+        "maximum_evidence_age_enforced": {"type": "boolean"},
+        "code_owned_ranking": {"const": true}
+      }
+    },
+    "usage": {"type": "array", "items": {"type": "object"}}
+  },
+  "$defs": {
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_id",
+        "cluster_id",
+        "title",
+        "why_now",
+        "outcome_type",
+        "stage",
+        "priority_class",
+        "priority_score",
+        "score_components",
+        "confidence",
+        "first_observed_at",
+        "known",
+        "unknown",
+        "recommended_actions",
+        "claims",
+        "source_evidence",
+        "next_check_at"
+      ],
+      "properties": {
+        "outcome_id": {"type": "string", "pattern": "^oc_[A-Za-z0-9_-]+$"},
+        "cluster_id": {"type": "string", "pattern": "^cl_[A-Za-z0-9_-]+$"},
+        "title": {"type": "string", "minLength": 3, "maxLength": 240},
+        "why_now": {"type": "string", "minLength": 8, "maxLength": 1000},
+        "outcome_type": {"type": "string", "minLength": 2, "maxLength": 60},
+        "stage": {"enum": ["observed", "early_signal", "emerging", "established", "corrected"]},
+        "priority_class": {"enum": ["urgent", "high", "standard", "archive"]},
+        "priority_score": {"type": "number", "minimum": 0, "maximum": 100},
+        "score_components": {
+          "type": "object",
+          "minProperties": 3,
+          "additionalProperties": {"type": "number", "minimum": 0, "maximum": 100}
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "probability", "rationale"],
+          "properties": {
+            "level": {"enum": ["low", "medium", "high"]},
+            "probability": {"type": "number", "minimum": 0, "maximum": 1},
+            "rationale": {"type": "string", "maxLength": 1000}
+          }
+        },
+        "first_observed_at": {"type": "string", "format": "date-time"},
+        "known": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1200}},
+        "unknown": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1200}},
+        "recommended_actions": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 1000}},
+        "claims": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"$ref": "#/$defs/claim"}},
+        "source_evidence": {"type": "array", "minItems": 1, "maxItems": 50, "items": {"$ref": "#/$defs/evidence"}},
+        "review_summary": {"type": "string", "maxLength": 3000},
+        "contradictions": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1000}},
+        "next_check_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "text", "certainty", "evidence_ids", "verification_status"],
+      "properties": {
+        "claim_id": {"type": "string"},
+        "text": {"type": "string", "maxLength": 1200},
+        "certainty": {"enum": ["observed", "reported", "inferred", "confirmed"]},
+        "evidence_ids": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string"}},
+        "verification_status": {"enum": ["verified", "pending", "rejected"]}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "source_id", "source_type", "title", "url", "published_at", "retrieved_at", "excerpt", "source_handle"],
+      "properties": {
+        "evidence_id": {"type": "string", "pattern": "^ev_[A-Za-z0-9_-]+$"},
+        "source_id": {"type": "string", "minLength": 1, "maxLength": 100},
+        "source_type": {"type": "string", "minLength": 1, "maxLength": 100},
+        "title": {"type": "string", "minLength": 1, "maxLength": 240},
+        "url": {"type": "string", "format": "uri"},
+        "published_at": {"type": ["string", "null"], "format": "date-time"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "excerpt": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "source_handle": {"type": ["string", "null"], "maxLength": 120}
+      }
+    }
+  }
+}

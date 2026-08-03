@@ -5,7 +5,7 @@
   <div>
     <div class="status-line">
       <span class="live-dot" aria-hidden="true"></span>
-      <span>Collection online</span>
+      <span>{{ "Live telemetry indexed" if overview.latest else "No live telemetry indexed" }}</span>
       <span class="muted">·</span>
       <span>{{ days }}-day intelligence window</span>
     </div>
@@ -40,25 +40,25 @@
   <article class="metric-card priority">
     <div class="metric-head"><span>Priority queue</span><i class="metric-signal critical"></i></div>
     <strong>{{ intelligence.high_priority }}</strong>
-    <small>findings scoring 75 or higher</small>
+    <small>unique findings scoring 75 or higher</small>
     <div class="metric-foot"><span>{{ intelligence.publication.flash }} flash</span><span>{{ intelligence.publication.watch }} watch</span></div>
   </article>
   <article class="metric-card">
-    <div class="metric-head"><span>Mean confidence</span><i class="metric-signal good"></i></div>
-    <strong>{{ "%.0f"|format(intelligence.mean_confidence * 100) }}<b>%</b></strong>
-    <small>{{ intelligence.verified_claim_count }} of {{ intelligence.claim_count }} claims verified</small>
-    <div class="meter"><span class="w-{{ ((intelligence.mean_confidence * 10)|round(0, "ceil")|int) }}"></span></div>
+    <div class="metric-head"><span>Claim verification</span><i class="metric-signal {{ 'good' if intelligence.claim_count and intelligence.claim_verification_rate == 100 else 'warning' }}"></i></div>
+    <strong>{{ "%.0f"|format(intelligence.claim_verification_rate) }}<b>%</b></strong>
+    <small>{{ intelligence.verified_claim_count }} of {{ intelligence.claim_count }} cited claims verified</small>
+    <div class="metric-foot"><span>{{ "%.0f"|format(intelligence.mean_confidence * 100) }}% mean evidence confidence</span></div>
   </article>
   <article class="metric-card">
-    <div class="metric-head"><span>Early warning</span><i class="metric-signal cyan"></i></div>
-    <strong>{{ "%.1f"|format(intelligence.mean_lead_hours) }}<b>h</b></strong>
-    <small>mean lead before the baseline</small>
-    <div class="metric-foot"><span>{{ intelligence.early_findings }} early calls</span><span>{{ intelligence.emerging }} still emerging</span></div>
+    <div class="metric-head"><span>New findings</span><i class="metric-signal cyan"></i></div>
+    <strong>{{ intelligence.new_findings }}</strong>
+    <small>first appeared in a live report during this window</small>
+    <div class="metric-foot"><span>{{ intelligence.recurring_findings }} seen before</span><span>{{ intelligence.findings }} unique total</span></div>
   </article>
   <article class="metric-card">
-    <div class="metric-head"><span>Evidence surfaces</span><i class="metric-signal cyan"></i></div>
-    <strong>{{ intelligence.surface_count }}</strong>
-    <small>{{ intelligence.evidence_count }} attributed evidence objects</small>
+    <div class="metric-head"><span>Evidence sources</span><i class="metric-signal cyan"></i></div>
+    <strong>{{ intelligence.source_count }}</strong>
+    <small>{{ intelligence.evidence_count }} distinct cited evidence objects</small>
     <div class="metric-foot"><span>{{ intelligence.non_x_evidence }} non-X</span><span>{{ "%.1f"|format(intelligence.x_share) }}% X</span></div>
   </article>
   <article class="metric-card">
@@ -68,10 +68,17 @@
     <div class="meter"><span class="w-{{ ((source_posture.health_rate / 10)|round(0, "ceil")|int) }}"></span></div>
   </article>
   <article class="metric-card">
-    <div class="metric-head"><span>Agent review</span><i class="metric-signal {{ 'good' if evaluation.agent.passed else 'warning' }}"></i></div>
-    <strong>{{ "%.0f"|format(evaluation.agent.role_completion) }}<b>%</b></strong>
-    <small>{{ evaluation.agent.adapter }} eval · {{ evaluation.agent.failed_roles }} failed roles</small>
-    <div class="metric-foot"><span>{{ evaluation.agent.tokens|compact_number }} tokens</span><span>{{ evaluation.agent.duration_ms|duration }}</span></div>
+    {% if intelligence.agent_role_completion_rate is not none %}
+    <div class="metric-head"><span>Agent review</span><i class="metric-signal {{ 'good' if intelligence.agent_role_completion_rate == 100 and intelligence.agent_failed_role_count == 0 else 'warning' }}"></i></div>
+    <strong>{{ "%.0f"|format(intelligence.agent_role_completion_rate) }}<b>%</b></strong>
+    <small>{{ intelligence.agent_assessment_count }} of {{ intelligence.agent_expected_role_count }} live roles completed</small>
+    <div class="metric-foot"><span>{{ intelligence.agent_failed_role_count }} failed</span><span>{{ intelligence.agent_blocked_role_count }} blocked</span><span>{{ intelligence.agent_review_duration_ms|duration }}</span></div>
+    {% else %}
+    <div class="metric-head"><span>Agent review</span><i class="metric-signal warning"></i></div>
+    <strong>—</strong>
+    <small>No live agent reviews in this window</small>
+    <div class="metric-foot"><span>{{ intelligence.agent_plan_count }} shadow plans recorded</span></div>
+    {% endif %}
   </article>
 </section>
 
@@ -93,7 +100,7 @@
           <div class="intel-meta">
             <span>{{ finding.category|replace("_", " ") }}</span>
             <span>{{ finding.generated_at|compact_date }}</span>
-            <span>{{ "%.0f"|format(finding.confidence_probability * 100) }}% confidence</span>
+            <span>{{ "%.0f"|format(finding.confidence_probability * 100) }}% evidence confidence</span>
           </div>
           <h3>{{ finding.title }}</h3>
           <div class="score-track" aria-label="Priority score {{ "%.1f"|format(finding.priority_score) }} out of 100">
@@ -101,7 +108,6 @@
           </div>
           <div class="tag-list compact">
             {% for item in finding.source_types[:4] %}<span class="tag source-tag">{{ item|replace("_", " ") }}</span>{% endfor %}
-            {% if finding.lead_time_hours %}<span class="tag lead-tag">+{{ "%.1f"|format(finding.lead_time_hours) }}h lead</span>{% endif %}
           </div>
         </div>
         <span class="row-arrow" aria-hidden="true">↗</span>
@@ -166,14 +172,11 @@
     <div class="source-mix">
       {% for source in intelligence.sources[:8] %}
       <div class="source-mix-row">
-        <div><strong>{{ source.source_type|replace("_", " ") }}</strong><span>{{ source.evidence }} evidence objects</span></div>
+        <div><strong>{{ source.source_type|replace("_", " ") }}</strong><span>{{ source.evidence }} evidence objects · {{ source.source_count }} sources</span></div>
         <div class="source-track"><span class="w-{{ source.width }}"></span></div>
         <strong>{{ "%.1f"|format(source.share) }}%</strong>
       </div>
       {% endfor %}
-    </div>
-    <div class="source-rule">
-      <span>Gate: 4+ surfaces</span><span>Largest source ≤60%</span><span>X ≤50%</span>
     </div>
     {% else %}
     <div class="empty-state"><strong>No source evidence indexed yet.</strong><span>Origin-level metrics appear after the next verified report.</span></div>
@@ -183,47 +186,47 @@
 
 <section class="panel eval-panel">
   <div class="panel-heading">
-    <div><p class="eyebrow">System confidence</p><h2>The checks behind the checks</h2></div>
-    <span class="panel-badge good">Immutable results</span>
+    <div><p class="eyebrow">Metric contract</p><h2>What these numbers actually count</h2></div>
+    <span class="panel-badge good">Operational telemetry only</span>
   </div>
   <div class="eval-grid">
     <article class="eval-card">
       <div class="eval-card-head">
-        <span class="eval-icon">A</span>
-        <span class="status-chip {{ 'pass' if evaluation.agent.passed else 'fail' }}">{{ 'Pass' if evaluation.agent.passed else 'Needs review' }}</span>
+        <span class="eval-icon">L</span>
+        <span class="status-chip pass">Live</span>
       </div>
-      <p class="eyebrow">Five-role agent DAG</p>
-      <h3>{{ "%.0f"|format(evaluation.agent.role_completion) }}% role completion</h3>
+      <p class="eyebrow">Report scope</p>
+      <h3>{{ overview.reports }} operational reports</h3>
       <dl>
-        <div><dt>Citation coverage</dt><dd>{{ "%.0f"|format(evaluation.agent.citation_coverage) }}%</dd></div>
-        <div><dt>Coordinator agreement</dt><dd>{{ "%.0f"|format(evaluation.agent.agreement) }}%</dd></div>
-        <div><dt>Failed roles</dt><dd>{{ evaluation.agent.failed_roles }}</dd></div>
+        <div><dt>Required provenance</dt><dd>Discovery telemetry</dd></div>
+        <div><dt>Fixtures and evals</dt><dd>Excluded</dd></div>
+        <div><dt>Window</dt><dd>{{ days }} days</dd></div>
       </dl>
     </article>
     <article class="eval-card">
       <div class="eval-card-head">
-        <span class="eval-icon">S</span>
-        <span class="status-chip {{ 'pass' if evaluation.coverage.passed else 'fail' }}">{{ 'Pass' if evaluation.coverage.passed else 'Needs review' }}</span>
+        <span class="eval-icon">ID</span>
+        <span class="status-chip pass">Deduped</span>
       </div>
-      <p class="eyebrow">Source concentration</p>
-      <h3>{{ evaluation.coverage.surfaces }} evidence surfaces</h3>
+      <p class="eyebrow">Finding identity</p>
+      <h3>{{ intelligence.findings }} unique findings</h3>
       <dl>
-        <div><dt>X evidence share</dt><dd>{{ "%.1f"|format(evaluation.coverage.x_share) }}%</dd></div>
-        <div><dt>Largest source</dt><dd>{{ "%.1f"|format(evaluation.coverage.largest_share) }}%</dd></div>
-        <div><dt>Unattributed</dt><dd>{{ evaluation.coverage.unattributed }}</dd></div>
+        <div><dt>Count key</dt><dd>Finding ID</dd></div>
+        <div><dt>State used</dt><dd>Newest in window</dd></div>
+        <div><dt>Seen before window</dt><dd>{{ intelligence.recurring_findings }}</dd></div>
       </dl>
     </article>
     <article class="eval-card">
       <div class="eval-card-head">
-        <span class="eval-icon">X</span>
-        <span class="status-chip {{ 'pass' if evaluation.acceptance.passed else 'fail' }}">{{ 'Pass' if evaluation.acceptance.passed else 'Needs review' }}</span>
+        <span class="eval-icon">$</span>
+        <span class="status-chip pass">Labeled</span>
       </div>
-      <p class="eyebrow">Hostile-content acceptance</p>
-      <h3>{{ evaluation.acceptance.privileged_effects }} privileged effects</h3>
+      <p class="eyebrow">Usage accounting</p>
+      <h3>{{ overview.requests }} measured requests</h3>
       <dl>
-        <div><dt>Payloads reaching models</dt><dd>{{ evaluation.acceptance.model_exposure }}</dd></div>
-        <div><dt>Replay match</dt><dd>{{ 'Exact' if evaluation.acceptance.replay_match else 'Check' }}</dd></div>
-        <div><dt>Publication authority</dt><dd>None</dd></div>
+        <div><dt>Tokens</dt><dd>{{ overview.tokens|compact_number }}</dd></div>
+        <div><dt>Currency</dt><dd>API-equivalent estimate</dd></div>
+        <div><dt>Cash spend</dt><dd>Not claimed</dd></div>
       </dl>
     </article>
   </div>

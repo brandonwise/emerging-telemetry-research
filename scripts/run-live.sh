@@ -69,7 +69,7 @@ export RADAR_AGENT_ADAPTER="${RADAR_AGENT_ADAPTER:-openclaw}"
 export RADAR_AGENT_TIMEOUT_SECONDS="${RADAR_AGENT_TIMEOUT_SECONDS:-300}"
 
 cd "${radar_repo_root}"
-exec uv run threat-radar live run \
+exec uv run outcome-radar live run \
   --output "${radar_repo_root}/reports/generated" \
   --edition "${radar_edition}" \
   --json

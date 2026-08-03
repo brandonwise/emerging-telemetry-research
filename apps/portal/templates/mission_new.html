@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}New mission · {{ settings.title }}{% endblock %}
+{% block content %}
+<section class="page-heading compact-heading">
+  <p class="eyebrow">Mission builder</p>
+  <h1>What do you want to learn?</h1>
+  <p class="lede">Use plain language. Define the decision this research should support,
+    not a list of search terms.</p>
+</section>
+<section class="mission-builder">
+  <form class="mission-form panel" method="get" action="/missions/new">
+    <label for="objective">Desired outcome</label>
+    <textarea id="objective" name="objective" rows="6" minlength="12" maxlength="1200"
+      required placeholder="Find recurring developer workflow pain that could support a useful product in the next quarter.">{{ objective }}</textarea>
+    <div class="mission-form-grid">
+      <div><label for="name">Mission name <span>optional</span></label>
+        <input id="name" name="name" maxlength="100" value="{{ mission_name }}"
+          placeholder="Developer Product Opportunity Radar"></div>
+      <div><label for="outcome">One result is an… <span>optional</span></label>
+        <input id="outcome" name="outcome" maxlength="40" value="{{ outcome }}"
+          placeholder="opportunity"></div>
+      <div><label for="window-hours">Research window</label>
+        <select id="window-hours" name="window_hours">
+          {% for value, label in [(24, '24 hours'), (168, '7 days'), (336, '14 days'), (720, '30 days')] %}
+          <option value="{{ value }}" {% if window_hours == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select></div>
+      <div><label for="cadence">Cadence</label>
+        <select id="cadence" name="cadence">
+          {% for value in ['manual', 'hourly', 'daily', 'weekly'] %}
+          <option value="{{ value }}" {% if cadence == value %}selected{% endif %}>{{ value|title }}</option>
+          {% endfor %}
+        </select></div>
+    </div>
+    <button class="primary-button" type="submit">Build research plan</button>
+  </form>
+  <aside class="builder-guide">
+    <p class="eyebrow">A useful objective says</p>
+    <ol>
+      <li><strong>What should be found?</strong><span>Opportunity, risk, lead, trend, or change.</span></li>
+      <li><strong>Who will use it?</strong><span>Name the team, customer, or decision.</span></li>
+      <li><strong>What makes it useful?</strong><span>Give timing, evidence, or action constraints.</span></li>
+    </ol>
+    <div class="notice"><strong>Descriptions never become scraper code.</strong>
+      They compile into a reviewable query plan. Live collection stays off until approval.</div>
+  </aside>
+</section>
+{% if error %}<div class="notice error"><strong>Could not build this mission.</strong> {{ error }}</div>{% endif %}
+{% if preview %}
+<section class="panel mission-preview">
+  <div class="panel-heading"><div><p class="eyebrow">Plan preview</p>
+    <h2>{{ preview.mission_name }}</h2></div>
+    <span class="status-chip plan">collection off</span></div>
+  <p class="preview-objective">{{ preview.objective }}</p>
+  <div class="preview-grid">
+    <div><span>Queries</span><strong>{{ preview.query_plan|length }}</strong></div>
+    <div><span>Sources</span><strong>{{ preview.query_plan|map(attribute='source_id')|unique|list|length }}</strong></div>
+    <div><span>Evidence floor</span><strong>{{ preview.evidence.minimum_independent_sources }}</strong></div>
+    <div><span>Review roles</span><strong>{{ preview.roles|length }}</strong></div>
+  </div>
+  <div class="query-plan">
+    {% for query in preview.query_plan %}
+    <div><span>{{ query.surface }}</span><code>{{ query.query }}</code></div>
+    {% endfor %}
+  </div>
+  <div class="preview-actions">
+    <a class="primary-button" href="/missions/download?objective={{ objective|urlencode }}&name={{ mission_name|urlencode }}&outcome={{ outcome|urlencode }}&window_hours={{ window_hours }}&cadence={{ cadence }}">Download mission</a>
+    <span>Review the YAML, then activate it from the CLI with an approval ID.</span>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -15,6 +15,8 @@ from typing import Any, Literal, cast
 
 from packages.common.canonical import canonical_json_bytes, stable_id
 from packages.contracts.validation import validate_payload
+from packages.security_gateway.permissions import harden_private_path
+from packages.security_gateway.secrets import resolve_secret
 from packages.verification.claims import require_verified_report
 
 EMAIL_ADDRESS = re.compile(
@@ -52,7 +54,7 @@ class SmtpDeliverySettings:
             recipient=_required_env("RADAR_EMAIL_RECIPIENT"),
             security=cast(Literal["ssl", "starttls"], security),
             username=os.environ.get("RADAR_SMTP_USERNAME") or None,
-            password=os.environ.get("RADAR_SMTP_PASSWORD") or None,
+            password=resolve_secret("RADAR_SMTP_PASSWORD", required=False),
             timeout_seconds=timeout_seconds,
         )
 
@@ -162,7 +164,7 @@ def send_email_delivery_plan(
     try:
         with receipt_path.open("x", encoding="utf-8") as handle:
             handle.write(json.dumps(pending, separators=(",", ":"), sort_keys=True) + "\n")
-        receipt_path.chmod(0o600)
+        harden_private_path(receipt_path)
     except FileExistsError:
         raced = _read_optional_receipt(receipt_path)
         if raced is None:
@@ -200,7 +202,7 @@ def send_email_delivery_plan(
     )
     with staged_path.open("x", encoding="utf-8") as handle:
         handle.write(json.dumps(receipt, separators=(",", ":"), sort_keys=True) + "\n")
-    staged_path.chmod(0o600)
+    harden_private_path(staged_path)
     staged_path.replace(receipt_path)
     return {**receipt, "duplicate": False}
 
@@ -248,10 +250,10 @@ def _normalize_email_address(value: str) -> str:
 
 
 def _required_env(name: str) -> str:
-    value = os.environ.get(name)
-    if value is None or not value.strip():
+    value = resolve_secret(name)
+    if value is None:
         raise ValueError(f"{name} is required")
-    return value.strip()
+    return value
 
 
 def _read_json_object(path: Path, label: str) -> dict[str, Any]:

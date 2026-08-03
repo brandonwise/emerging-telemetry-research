@@ -1,0 +1,108 @@
+schema_version: '1.0'
+mission_id: ms_cyber-threat-early-warning
+name: Cyber Threat Early Warning
+objective: >-
+  Identify emerging cybersecurity threats with credible evidence of exploitation,
+  material technical impact, or rapidly increasing defender attention.
+description: The original security workflow expressed as a reusable mission pack.
+vocabulary:
+  singular: threat
+  plural: threats
+  collection: Threat radar
+  empty_result: No threats met the evidence and priority thresholds.
+scope:
+  include_terms: [cybersecurity, vulnerability, exploitation, malware, campaign, defender]
+  exclude_terms: [fictional, training-only]
+  window_hours: 168
+  languages: [en]
+  geographies: []
+sources:
+  - source_id: cyber-threat-web
+    surface: web
+    adapter: brave_surface_search
+    enabled: true
+    query_templates:
+      - '{keywords} emerging exploitation {exclusions}'
+      - '{keywords} active campaign defender {exclusions}'
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: cyber-threat-news
+    surface: news
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['{keywords} security advisory {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: cyber-threat-reddit
+    surface: reddit
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['site:reddit.com {keywords} exploitation {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: cyber-threat-github
+    surface: github
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['site:github.com {keywords} exploit detection {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+evidence:
+  minimum_independent_sources: 2
+  require_citations: true
+  maximum_evidence_age_hours: 168
+scoring:
+  dimensions:
+    - {dimension_id: mission_alignment, label: Threat alignment, weight: 20, feature: objective_alignment}
+    - {dimension_id: evidence_strength, label: Evidence strength, weight: 30, feature: evidence_strength}
+    - {dimension_id: source_authority, label: Source authority, weight: 20, feature: source_authority}
+    - {dimension_id: momentum, label: Momentum, weight: 15, feature: momentum}
+    - {dimension_id: recency, label: Recency, weight: 15, feature: recency}
+  thresholds: {urgent: 85, high: 70, standard: 48}
+workflow:
+  roles:
+    - role_id: specialist
+      purpose: >-
+        Analyze the technical evidence, likely prerequisites, affected scope, and
+        defensive action. Separate observed facts from reports and inference.
+      depends_on: []
+    - role_id: impact
+      purpose: >-
+        Assess likely blast radius and operational relevance without assuming assets,
+        exposure, affected versions, or organization-specific inventory.
+      depends_on: []
+    - role_id: skeptic
+      purpose: >-
+        Try to falsify the threat; find copied sourcing, chronology errors, hype,
+        benign explanations, unsupported attribution, and score inflation.
+      depends_on: []
+    - role_id: citation_verifier
+      purpose: >-
+        Verify every material claim against allowed evidence and reject unknown evidence
+        identifiers, unsupported certainty, and false source independence.
+      depends_on: [specialist, impact, skeptic]
+    - role_id: coordinator
+      purpose: >-
+        Synthesize the bounded reviews into a concise threat recommendation while
+        leaving ranking and publication authority in deterministic code.
+      depends_on: [citation_verifier]
+  maximum_parallel_roles: 3
+output:
+  cadence: daily
+  formats: [json, html]
+  maximum_outcomes: 30
+  delivery: local_only
+governance:
+  collection_mode: plan
+  human_approval_required: true
+  external_delivery_enabled: false
+  maximum_queries_per_run: 12
+  maximum_results_per_query: 20
+evaluation:
+  success_metric: useful_threat_rate
+  minimum_useful_outcome_rate: 0.75
+  minimum_source_diversity: 3

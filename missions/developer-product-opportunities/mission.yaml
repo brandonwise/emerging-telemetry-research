@@ -1,0 +1,118 @@
+schema_version: '1.0'
+mission_id: ms_developer-product-opportunity-radar
+name: Developer Product Opportunity Radar
+objective: >-
+  Identify recurring developer pain and newly changing workflows that could support a
+  useful product, integration, or automation within the next quarter.
+description: Researches opportunities that directly support the stated objective.
+vocabulary:
+  singular: opportunity
+  plural: opportunities
+  collection: Opportunity radar
+  empty_result: No opportunities met the evidence and priority thresholds.
+scope:
+  include_terms:
+    - identify
+    - recurring
+    - developer
+    - pain
+    - newly
+    - changing
+    - workflows
+    - support
+    - useful
+    - product
+    - integration
+    - automation
+  exclude_terms: []
+  window_hours: 336
+  languages: [en]
+  geographies: []
+sources:
+  - source_id: developer-product-opportunity-radar-web
+    surface: web
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['{objective}', '{keywords} emerging {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: developer-product-opportunity-radar-news
+    surface: news
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['{keywords} announcement change {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: developer-product-opportunity-radar-github
+    surface: github
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['site:github.com {keywords} {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+  - source_id: developer-product-opportunity-radar-reddit
+    surface: reddit
+    adapter: brave_surface_search
+    enabled: true
+    query_templates: ['site:reddit.com {keywords} {exclusions}']
+    freshness: week
+    approval: {status: draft, approval_id: null}
+    retention_days: 1
+evidence:
+  minimum_independent_sources: 2
+  require_citations: true
+  maximum_evidence_age_hours: 336
+scoring:
+  dimensions:
+    - {dimension_id: outcome_alignment, label: Outcome alignment, weight: 25, feature: objective_alignment}
+    - {dimension_id: evidence_strength, label: Evidence strength, weight: 25, feature: evidence_strength}
+    - {dimension_id: momentum, label: Momentum, weight: 20, feature: momentum}
+    - {dimension_id: recency, label: Recency, weight: 15, feature: recency}
+    - {dimension_id: actionability, label: Actionability, weight: 15, feature: actionability}
+  thresholds: {urgent: 82, high: 68, standard: 45}
+workflow:
+  roles:
+    - role_id: specialist
+      purpose: >-
+        Analyze domain evidence for each developer-product opportunity against the
+        mission objective. Separate reported pain from inferred product value.
+      depends_on: []
+    - role_id: impact
+      purpose: >-
+        Judge likely user value, reachable audience, urgency, and timing without
+        inventing market size or willingness to pay.
+      depends_on: []
+    - role_id: skeptic
+      purpose: >-
+        Try to disprove each proposed opportunity; flag copied sourcing, stale evidence,
+        isolated complaints, hype, and weak objective alignment.
+      depends_on: []
+    - role_id: citation_verifier
+      purpose: >-
+        Verify every material claim against allowed evidence and reject unsupported
+        certainty or syndicated sources presented as independent.
+      depends_on: [specialist, impact, skeptic]
+    - role_id: coordinator
+      purpose: >-
+        Synthesize bounded reviews into a concise opportunity recommendation while
+        leaving ranking and publication authority in deterministic code.
+      depends_on: [citation_verifier]
+  maximum_parallel_roles: 3
+output:
+  cadence: weekly
+  formats: [json, html]
+  maximum_outcomes: 20
+  delivery: local_only
+governance:
+  collection_mode: plan
+  human_approval_required: true
+  external_delivery_enabled: false
+  maximum_queries_per_run: 12
+  maximum_results_per_query: 20
+evaluation:
+  success_metric: useful_product_opportunity_rate
+  minimum_useful_outcome_rate: 0.6
+  minimum_source_diversity: 3

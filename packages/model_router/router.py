@@ -25,6 +25,22 @@ class RouteRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class ProviderPreference:
+    provider: str
+    model: str
+    harness: str | None
+    thinking: str | None
+
+    def to_contract(self) -> dict[str, str | None]:
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "harness": self.harness,
+            "thinking": self.thinking,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ModelRoute:
     route_name: str
     provider: str | None
@@ -34,6 +50,9 @@ class ModelRoute:
     max_input_tokens: int | None
     max_output_tokens: int | None
     tools: tuple[str, ...]
+    provider_preferences: tuple[ProviderPreference, ...]
+    retries: int
+    maximum_currency_per_call: Decimal
 
 
 class ModelRouter:
@@ -74,17 +93,36 @@ class ModelRouter:
                 max_input_tokens=None,
                 max_output_tokens=None,
                 tools=(),
+                provider_preferences=(),
+                retries=0,
+                maximum_currency_per_call=Decimal("0"),
             )
-        provider = route["provider_preferences"][0]
+        preferences = tuple(
+            ProviderPreference(
+                provider=str(item["provider"]),
+                model=str(item["model"]),
+                harness=str(item["harness"]) if item.get("harness") else None,
+                thinking=str(item["thinking"]) if item.get("thinking") else None,
+            )
+            for item in route["provider_preferences"]
+        )
+        if not preferences:
+            raise ValueError(f"model route has no provider preferences: {route_name}")
+        provider = preferences[0]
         return ModelRoute(
             route_name=route_name,
-            provider=str(provider["provider"]),
-            model=str(provider["model"]),
-            harness=str(provider["harness"]) if provider.get("harness") else None,
-            thinking=str(provider["thinking"]) if provider.get("thinking") else None,
+            provider=provider.provider,
+            model=provider.model,
+            harness=provider.harness,
+            thinking=provider.thinking,
             max_input_tokens=int(route["max_input_tokens"]),
             max_output_tokens=int(route["max_output_tokens"]),
             tools=tuple(str(item) for item in route.get("tools", [])),
+            provider_preferences=preferences,
+            retries=int(route.get("retries", 0)),
+            maximum_currency_per_call=Decimal(
+                str(route.get("maximum_currency_per_call", 0))
+            ),
         )
 
 

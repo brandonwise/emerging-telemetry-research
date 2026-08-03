@@ -1,11 +1,32 @@
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
 
 from packages.analytics.store import AnalyticsStore
 from packages.pipeline.frozen import run_frozen_fixture
+
+
+def _mark_operational(report: dict[str, object]) -> None:
+    report["discovery_telemetry"] = {
+        "discovered_signal_count": 1,
+        "prepared_signal_count": 1,
+        "cited_evidence_count": 1,
+        "surfaces": [
+            {
+                "source_id": "x-researchers",
+                "status": "healthy",
+                "requests": 1,
+                "discovered_signal_count": 1,
+                "prepared_signal_count": 1,
+                "selected_finding_count": 1,
+                "cited_evidence_count": 1,
+                "source_types": ["x_post"],
+            }
+        ],
+    }
 
 
 def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) -> None:
@@ -57,6 +78,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
             },
         ]
     )
+    _mark_operational(report)
     finding_category = report["findings"][0]["category"]
     result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
     store = AnalyticsStore(tmp_path / "state" / "radar.db")
@@ -85,7 +107,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     assert replay.inserted is False
     assert overview["reports"] == 1
     assert overview["findings"] == 1
-    assert intelligence["surface_count"] == 1
+    assert intelligence["source_count"] == 1
     assert intelligence["high_priority"] == 1
     assert intelligence["evidence_count"] == 1
     assert intelligence["x_share"] == 100.0
@@ -97,6 +119,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
         {
             "source_type": "x_post",
             "evidence": 1,
+            "source_count": 1,
             "share": 100.0,
             "width": 10,
         }
@@ -173,10 +196,13 @@ def test_sync_skips_candidate_reports(tmp_path: Path) -> None:
     candidate = report_root / "run_fixture_early" / "candidates" / "CVE-2026-9999"
     candidate.mkdir(parents=True)
     (candidate / result.report_json_path.name).write_bytes(result.report_json_path.read_bytes())
+    report = json.loads(result.report_json_path.read_text(encoding="utf-8"))
+    _mark_operational(report)
+    result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
 
     synced = AnalyticsStore(tmp_path / "radar.db").sync_reports(report_root)
 
-    assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1}
+    assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1, "excluded": 0}
 
 
 def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
@@ -185,6 +211,9 @@ def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
         Path("tests/fixtures/vertical_slice/early-manifest.json"),
         report_root / "run_fixture_early",
     )
+    report = json.loads(result.report_json_path.read_text(encoding="utf-8"))
+    _mark_operational(report)
+    result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
     evaluation = report_root / "evaluation" / "early"
     evaluation.mkdir(parents=True)
     mutated = json.loads(result.report_json_path.read_text(encoding="utf-8"))
@@ -196,12 +225,12 @@ def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
 
     synced = AnalyticsStore(tmp_path / "radar.db").sync_reports(report_root)
 
-    assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1}
+    assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1, "excluded": 0}
 
 
 def test_analytics_migrates_v1_to_usage_schema(tmp_path: Path) -> None:
     database = tmp_path / "radar.db"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection:
         connection.execute(
             "CREATE TABLE analytics_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
@@ -216,7 +245,7 @@ def test_analytics_migrates_v1_to_usage_schema(tmp_path: Path) -> None:
         "tags": [],
         "source_types": [],
     }
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection:
         version = connection.execute(
             "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
         ).fetchone()
@@ -226,9 +255,61 @@ def test_analytics_migrates_v1_to_usage_schema(tmp_path: Path) -> None:
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             ).fetchall()
         }
-    assert version == ("3",)
+    assert version == ("4",)
     assert {
         "analytics_finding_tags",
         "analytics_finding_sources",
         "analytics_usage",
     }.issubset(tables)
+
+
+def test_operational_metrics_dedupe_recurring_findings_and_exclude_fixtures(
+    tmp_path: Path,
+) -> None:
+    result = run_frozen_fixture(
+        Path("tests/fixtures/vertical_slice/early-manifest.json"),
+        tmp_path / "reports" / "run_fixture_early",
+    )
+    first = json.loads(result.report_json_path.read_text(encoding="utf-8"))
+    _mark_operational(first)
+    first["report_id"] = "rp_operational_first"
+    first["findings"][0]["tags"] = ["first"]
+    second = json.loads(json.dumps(first))
+    second["report_id"] = "rp_operational_repeat"
+    second["generated_at"] = "2026-07-23T13:30:00Z"
+    second["findings"][0]["priority_score"] = 50
+    second["findings"][0]["tags"] = ["latest"]
+    fixture = json.loads(json.dumps(second))
+    fixture.pop("discovery_telemetry")
+    fixture["report_id"] = "rp_fixture_contamination"
+    fixture["generated_at"] = "2026-07-24T13:30:00Z"
+    fixture["findings"][0]["priority_score"] = 99
+    fixture["findings"][0]["tags"] = ["fixture-only"]
+    store = AnalyticsStore(tmp_path / "radar.db")
+
+    first_result = store.index_report(
+        first,
+        report_path=result.report_json_path,
+        html_path=result.rendered.path,
+    )
+    second_result = store.index_report(
+        second,
+        report_path=result.report_json_path,
+        html_path=result.rendered.path,
+    )
+    fixture_result = store.index_report(
+        fixture,
+        report_path=result.report_json_path,
+        html_path=result.rendered.path,
+    )
+
+    assert first_result.telemetry_scope == "operational"
+    assert second_result.telemetry_scope == "operational"
+    assert fixture_result.telemetry_scope == "fixture"
+    assert store.overview(days=365)["reports"] == 2
+    assert store.overview(days=365)["findings"] == 1
+    assert store.intelligence_summary(days=365)["findings"] == 1
+    assert store.list_findings(days=365)[0]["priority_score"] == 50
+    assert store.taxonomy_counts(days=365)["tags"] == [
+        {"name": "latest", "findings": 1}
+    ]

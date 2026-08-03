@@ -1,1 +1,1 @@
-"""Read-only Threat Radar operations portal."""
+"""Read-only Outcome Radar operations portal."""

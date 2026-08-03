@@ -16,8 +16,7 @@ sources:
     name: CISA Known Exploited Vulnerabilities
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: cisa_kev
     schedule: "*/15 * * * *"
     rate_limit_per_minute: 4
@@ -27,8 +26,7 @@ sources:
     name: CVE List V5
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: cve_v5
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 4
@@ -38,8 +36,7 @@ sources:
     name: NVD CVE API
     class: authoritative_vulnerability
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: nvd
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 5
@@ -49,8 +46,7 @@ sources:
     name: FIRST EPSS
     class: exploit_probability
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: epss
     schedule: "17 */6 * * *"
     rate_limit_per_minute: 4
@@ -60,8 +56,7 @@ sources:
     name: Open Source Vulnerabilities
     class: ecosystem_advisory
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: osv
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 10
@@ -71,8 +66,7 @@ sources:
     name: GitHub Global Security Advisories
     class: ecosystem_advisory
     trust_tier: 0
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: github_advisory
     schedule: "*/30 * * * *"
     rate_limit_per_minute: 10
@@ -142,8 +136,7 @@ sources:
     name: Curated X Researcher Signals
     class: social_research
     trust_tier: 2
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: xai_x_search
     schedule: "7 * * * *"
     rate_limit_per_minute: 10
@@ -157,8 +150,7 @@ sources:
     name: Reddit Security Surface Search
     class: social_research
     trust_tier: 2
-    enabled: true
-    collection_approval_id: discord-1532390370367901717
+    enabled: false
     adapter: brave_surface_search
     schedule: "13 * * * *"
     rate_limit_per_minute: 10
@@ -186,8 +178,7 @@ sources:
     name: TikTok Security Signals
     class: social_research
     trust_tier: 2
-    enabled: true
-    collection_approval_id: discord-1532390370367901717
+    enabled: false
     adapter: brave_surface_search
     schedule: "19 * * * *"
     rate_limit_per_minute: 10
@@ -215,8 +206,7 @@ sources:
     name: Brave Web Discovery
     class: web_discovery
     trust_tier: 2
-    enabled: true
-    collection_approval_id: discord-1530156178129289346
+    enabled: false
     adapter: brave_search_api
     schedule: "23 * * * *"
     rate_limit_per_minute: 10

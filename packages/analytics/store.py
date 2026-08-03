@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from packages.common.canonical import canonical_json_bytes, sha256_hex, stable_id
 from packages.contracts.validation import validate_payload
@@ -19,6 +21,7 @@ class IndexResult:
     report_id: str
     inserted: bool
     finding_count: int
+    telemetry_scope: Literal["operational", "fixture"]
 
 
 class AnalyticsStore:
@@ -35,12 +38,14 @@ class AnalyticsStore:
         *,
         report_path: Path,
         html_path: Path | None = None,
+        telemetry_scope: Literal["operational", "fixture"] | None = None,
     ) -> IndexResult:
         validate_payload("report.schema.json", report)
         require_verified_report(report)
         encoded = canonical_json_bytes(report)
         report_hash = sha256_hex(encoded)
         report_id = str(report["report_id"])
+        scope = telemetry_scope or _report_telemetry_scope(report)
         findings = [item for item in report["findings"] if isinstance(item, dict)]
         scores = [float(item["priority_score"]) for item in findings]
         usage = [item for item in report["usage"] if isinstance(item, dict)]
@@ -66,21 +71,33 @@ class AnalyticsStore:
                 int(item.get("input_tokens", 0)) + int(item.get("output_tokens", 0))
                 for item in usage
             ),
-            sum(float(item.get("estimated_currency", 0)) for item in usage),
+            sum(_usage_cost(item) for item in usage),
             str(report_path.resolve()),
             str(html_path.resolve()) if html_path is not None else None,
             report_hash,
             encoded.decode("utf-8"),
+            scope,
         )
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
-                "SELECT report_hash FROM analytics_reports WHERE report_id = ?",
+                "SELECT report_hash, telemetry_scope FROM analytics_reports WHERE report_id = ?",
                 (report_id,),
             ).fetchone()
             if existing is not None:
                 if str(existing["report_hash"]) != report_hash:
                     raise ValueError(f"immutable analytics conflict for {report_id}")
+                if str(existing["telemetry_scope"]) != scope:
+                    connection.execute(
+                        "UPDATE analytics_reports SET telemetry_scope = ? WHERE report_id = ?",
+                        (scope, report_id),
+                    )
+                    connection.execute(
+                        "UPDATE analytics_events SET telemetry_scope = ? "
+                        "WHERE metric = 'report.indexed' "
+                        "AND json_extract(dimensions_json, '$.report_id') = ?",
+                        (scope, report_id),
+                    )
                 _index_finding_dimensions(
                     connection,
                     report_id=report_id,
@@ -91,16 +108,33 @@ class AnalyticsStore:
                     report_id=report_id,
                     usage=usage,
                 )
+                connection.execute(
+                    """
+                    UPDATE analytics_reports
+                    SET request_count = ?, token_count = ?, estimated_cost = ?
+                    WHERE report_id = ?
+                    """,
+                    (
+                        sum(int(item.get("requests", 0)) for item in usage),
+                        sum(
+                            int(item.get("input_tokens", 0))
+                            + int(item.get("output_tokens", 0))
+                            for item in usage
+                        ),
+                        sum(_usage_cost(item) for item in usage),
+                        report_id,
+                    ),
+                )
                 connection.commit()
-                return IndexResult(report_id, False, len(findings))
+                return IndexResult(report_id, False, len(findings), scope)
             connection.execute(
                 """
                 INSERT INTO analytics_reports (
                   report_id, generated_at, edition, finding_count, max_score,
                   mean_score, flash_count, watch_count, daily_count, archive_count,
                   degraded_source_count, request_count, token_count, estimated_cost,
-                  report_path, html_path, report_hash, report_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  report_path, html_path, report_hash, report_json, telemetry_scope
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 row,
             )
@@ -143,10 +177,16 @@ class AnalyticsStore:
                 "edition": str(report["edition"]),
                 "finding_count": str(len(findings)),
             },
+            telemetry_scope=scope,
         )
-        return IndexResult(report_id, True, len(findings))
+        return IndexResult(report_id, True, len(findings), scope)
 
-    def index_path(self, report_path: Path) -> IndexResult:
+    def index_path(
+        self,
+        report_path: Path,
+        *,
+        telemetry_scope: Literal["operational", "fixture"] | None = None,
+    ) -> IndexResult:
         value = json.loads(report_path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise ValueError("report JSON must contain one object")
@@ -155,14 +195,16 @@ class AnalyticsStore:
             value,
             report_path=report_path,
             html_path=html_path if html_path.is_file() else None,
+            telemetry_scope=telemetry_scope,
         )
 
     def sync_reports(self, reports_root: Path) -> dict[str, int]:
         inserted = 0
         unchanged = 0
         skipped = 0
+        excluded = 0
         if not reports_root.exists():
-            return {"inserted": 0, "unchanged": 0, "skipped": 0}
+            return {"inserted": 0, "unchanged": 0, "skipped": 0, "excluded": 0}
         for path in sorted(reports_root.rglob("rp_*.json")):
             relative_parts = path.relative_to(reports_root).parts
             if (
@@ -174,11 +216,18 @@ class AnalyticsStore:
                 skipped += 1
                 continue
             result = self.index_path(path)
+            if result.telemetry_scope != "operational":
+                excluded += 1
             if result.inserted:
                 inserted += 1
             else:
                 unchanged += 1
-        return {"inserted": inserted, "unchanged": unchanged, "skipped": skipped}
+        return {
+            "inserted": inserted,
+            "unchanged": unchanged,
+            "skipped": skipped,
+            "excluded": excluded,
+        }
 
     def record_event(
         self,
@@ -189,6 +238,7 @@ class AnalyticsStore:
         dimensions: dict[str, str],
         occurred_at: str | None = None,
         run_id: str | None = None,
+        telemetry_scope: Literal["operational", "fixture"] = "operational",
     ) -> str:
         if not metric or len(metric) > 100:
             raise ValueError("metric must contain 1 to 100 characters")
@@ -207,31 +257,49 @@ class AnalyticsStore:
             unit,
             dimensions_text,
         )
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 INSERT OR IGNORE INTO analytics_events (
-                  event_id, occurred_at, run_id, metric, value, unit, dimensions_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                  event_id, occurred_at, run_id, metric, value, unit, dimensions_json,
+                  telemetry_scope
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (event_id, timestamp, run_id, metric, value, unit, dimensions_text),
+                (
+                    event_id,
+                    timestamp,
+                    run_id,
+                    metric,
+                    value,
+                    unit,
+                    dimensions_text,
+                    telemetry_scope,
+                ),
             )
         return event_id
 
     def overview(self, *, days: int = 30) -> dict[str, Any]:
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             totals = connection.execute(
                 """
                 SELECT COUNT(*) AS reports,
-                       COALESCE(SUM(finding_count), 0) AS findings,
                        COALESCE(MAX(max_score), 0) AS max_score,
                        COALESCE(SUM(degraded_source_count), 0) AS degraded,
                        COALESCE(SUM(request_count), 0) AS requests,
                        COALESCE(SUM(token_count), 0) AS tokens,
                        COALESCE(SUM(estimated_cost), 0) AS estimated_cost
                 FROM analytics_reports
-                WHERE generated_at >= ?
+                WHERE telemetry_scope = 'operational' AND generated_at >= ?
+                """,
+                (since,),
+            ).fetchone()
+            finding_count = connection.execute(
+                """
+                SELECT COUNT(DISTINCT f.finding_id) AS findings
+                FROM analytics_findings f
+                JOIN analytics_reports r ON r.report_id = f.report_id
+                WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
                 """,
                 (since,),
             ).fetchone()
@@ -239,6 +307,7 @@ class AnalyticsStore:
                 """
                 SELECT report_id, generated_at, edition, finding_count, max_score
                 FROM analytics_reports
+                WHERE telemetry_scope = 'operational'
                 ORDER BY generated_at DESC
                 LIMIT 1
                 """
@@ -247,16 +316,17 @@ class AnalyticsStore:
                 """
                 SELECT COUNT(*) AS events
                 FROM analytics_events
-                WHERE occurred_at >= ?
+                WHERE telemetry_scope = 'operational' AND occurred_at >= ?
                 """,
                 (since,),
             ).fetchone()
         assert totals is not None
+        assert finding_count is not None
         assert event_count is not None
         return {
             "days": days,
             "reports": int(totals["reports"]),
-            "findings": int(totals["findings"]),
+            "findings": int(finding_count["findings"]),
             "max_score": float(totals["max_score"]),
             "degraded": int(totals["degraded"]),
             "requests": int(totals["requests"]),
@@ -267,42 +337,106 @@ class AnalyticsStore:
         }
 
     def intelligence_summary(self, *, days: int = 30) -> dict[str, Any]:
-        """Build the read-only posture metrics used by the intelligence console."""
+        """Build deduplicated posture metrics from operational report telemetry only."""
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             findings = connection.execute(
                 """
+                WITH operational_findings AS (
+                  SELECT f.*, r.generated_at,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY f.finding_id
+                           ORDER BY r.generated_at DESC, r.report_id DESC
+                         ) AS recency_rank
+                  FROM analytics_findings f
+                  JOIN analytics_reports r ON r.report_id = f.report_id
+                  WHERE r.telemetry_scope = 'operational'
+                ),
+                first_seen AS (
+                  SELECT finding_id, MIN(generated_at) AS first_report_at
+                  FROM operational_findings
+                  GROUP BY finding_id
+                ),
+                latest_in_window AS (
+                  SELECT *
+                  FROM (
+                    SELECT f.*, r.generated_at,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY f.finding_id
+                             ORDER BY r.generated_at DESC, r.report_id DESC
+                           ) AS window_rank
+                    FROM analytics_findings f
+                    JOIN analytics_reports r ON r.report_id = f.report_id
+                    WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                  )
+                  WHERE window_rank = 1
+                )
                 SELECT COUNT(*) AS findings,
                        COALESCE(AVG(f.priority_score), 0) AS mean_score,
                        COALESCE(AVG(f.confidence_probability), 0) AS mean_confidence,
-                       COALESCE(AVG(f.lead_time_hours), 0) AS mean_lead_hours,
-                       SUM(CASE WHEN f.lead_time_hours > 0 THEN 1 ELSE 0 END) AS early_findings,
-                       COUNT(DISTINCT CASE
-                         WHEN f.priority_score >= 75 THEN f.finding_id
-                       END) AS high_priority,
+                       SUM(CASE WHEN s.first_report_at >= ? THEN 1 ELSE 0 END) AS new_findings,
+                       SUM(CASE WHEN f.priority_score >= 75 THEN 1 ELSE 0 END) AS high_priority,
                        SUM(CASE WHEN f.publication_class = 'flash' THEN 1 ELSE 0 END) AS flash,
                        SUM(CASE WHEN f.publication_class = 'watch' THEN 1 ELSE 0 END) AS watch,
                        SUM(CASE WHEN f.publication_class = 'daily' THEN 1 ELSE 0 END) AS daily,
                        SUM(CASE WHEN f.publication_class = 'archive' THEN 1 ELSE 0 END) AS archive,
                        SUM(CASE WHEN f.emergence_stage != 'confirmed' THEN 1 ELSE 0 END)
                          AS emerging
-                FROM analytics_findings f
-                JOIN analytics_reports r ON r.report_id = f.report_id
-                WHERE r.generated_at >= ?
+                FROM latest_in_window f
+                JOIN first_seen s ON s.finding_id = f.finding_id
                 """,
-                (since,),
+                (since, since),
             ).fetchone()
             source_rows = connection.execute(
                 """
-                SELECT s.source_type, COUNT(*) AS evidence
-                FROM analytics_finding_sources s
-                JOIN analytics_reports r ON r.report_id = s.report_id
-                WHERE r.generated_at >= ?
+                WITH latest_findings AS (
+                  SELECT *
+                  FROM (
+                    SELECT f.finding_id, f.report_id,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY f.finding_id
+                             ORDER BY r.generated_at DESC, r.report_id DESC
+                           ) AS recency_rank
+                    FROM analytics_findings f
+                    JOIN analytics_reports r ON r.report_id = f.report_id
+                    WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                  )
+                  WHERE recency_rank = 1
+                )
+                SELECT s.source_type,
+                       COUNT(DISTINCT s.evidence_id) AS evidence,
+                       COUNT(DISTINCT s.source_id) AS source_count
+                FROM latest_findings f
+                JOIN analytics_finding_sources s
+                  ON s.report_id = f.report_id AND s.finding_id = f.finding_id
                 GROUP BY s.source_type
                 ORDER BY evidence DESC, s.source_type
                 """,
                 (since,),
             ).fetchall()
+            source_total = connection.execute(
+                """
+                WITH latest_findings AS (
+                  SELECT *
+                  FROM (
+                    SELECT f.finding_id, f.report_id,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY f.finding_id
+                             ORDER BY r.generated_at DESC, r.report_id DESC
+                           ) AS recency_rank
+                    FROM analytics_findings f
+                    JOIN analytics_reports r ON r.report_id = f.report_id
+                    WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                  )
+                  WHERE recency_rank = 1
+                )
+                SELECT COUNT(DISTINCT s.source_id) AS source_count
+                FROM latest_findings f
+                JOIN analytics_finding_sources s
+                  ON s.report_id = f.report_id AND s.finding_id = f.finding_id
+                """,
+                (since,),
+            ).fetchone()
             usage = connection.execute(
                 """
                 SELECT COALESCE(SUM(
@@ -323,27 +457,45 @@ class AnalyticsStore:
                        END) AS agent_models
                 FROM analytics_usage u
                 JOIN analytics_reports r ON r.report_id = u.report_id
-                WHERE r.generated_at >= ?
+                WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
                 """,
                 (since,),
             ).fetchone()
             report_rows = connection.execute(
                 """
-                SELECT report_json
+                SELECT report_id, report_json
                 FROM analytics_reports
-                WHERE generated_at >= ?
+                WHERE telemetry_scope = 'operational' AND generated_at >= ?
                 ORDER BY generated_at DESC
-                LIMIT 500
+                """,
+                (since,),
+            ).fetchall()
+            latest_finding_rows = connection.execute(
+                """
+                SELECT finding_id, report_id
+                FROM (
+                  SELECT f.finding_id, f.report_id,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY f.finding_id
+                           ORDER BY r.generated_at DESC, r.report_id DESC
+                         ) AS recency_rank
+                  FROM analytics_findings f
+                  JOIN analytics_reports r ON r.report_id = f.report_id
+                  WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                )
+                WHERE recency_rank = 1
                 """,
                 (since,),
             ).fetchall()
         assert findings is not None
+        assert source_total is not None
         assert usage is not None
         total_evidence = sum(int(row["evidence"]) for row in source_rows)
         sources: list[dict[str, Any]] = [
             {
                 "source_type": str(row["source_type"]),
                 "evidence": int(row["evidence"]),
+                "source_count": int(row["source_count"]),
                 "share": (
                     round(int(row["evidence"]) / total_evidence * 100, 1)
                     if total_evidence
@@ -367,10 +519,12 @@ class AnalyticsStore:
         assessment_count = 0
         failed_role_count = 0
         review_duration_ms = 0
+        report_index: dict[str, dict[str, Any]] = {}
         for row in report_rows:
             report = json.loads(str(row["report_json"]))
             if not isinstance(report, dict):
                 continue
+            report_index[str(row["report_id"])] = report
             plans = report.get("agent_shadow_plans")
             if isinstance(plans, list):
                 plan_count += len(plans)
@@ -385,26 +539,42 @@ class AnalyticsStore:
                     assessment_count += len(assessments) if isinstance(assessments, list) else 0
                     failed_role_count += len(failures) if isinstance(failures, list) else 0
                     review_duration_ms += int(review.get("duration_ms", 0))
-            for finding in report.get("findings", []):
-                if not isinstance(finding, dict):
+        latest_references = {
+            (str(row["report_id"]), str(row["finding_id"])) for row in latest_finding_rows
+        }
+        for report_id, finding_id in latest_references:
+            report = report_index.get(report_id, {})
+            current = next(
+                (
+                    item
+                    for item in report.get("findings", [])
+                    if isinstance(item, dict) and str(item.get("finding_id")) == finding_id
+                ),
+                None,
+            )
+            if current is None:
+                continue
+            for claim in current.get("claims", []):
+                if not isinstance(claim, dict):
                     continue
-                for claim in finding.get("claims", []):
-                    if not isinstance(claim, dict):
-                        continue
-                    claim_count += 1
-                    if (
-                        claim.get("verification_status") == "verified"
-                        and isinstance(claim.get("evidence_ids"), list)
-                        and claim["evidence_ids"]
-                    ):
-                        verified_claim_count += 1
+                claim_count += 1
+                if (
+                    claim.get("verification_status") == "verified"
+                    and isinstance(claim.get("evidence_ids"), list)
+                    and claim["evidence_ids"]
+                ):
+                    verified_claim_count += 1
+        unique_findings = int(findings["findings"])
+        new_findings = int(findings["new_findings"] or 0)
+        expected_role_count = review_count * 5
         return {
             "days": days,
-            "findings": int(findings["findings"]),
+            "telemetry_scope": "operational",
+            "findings": unique_findings,
             "mean_score": float(findings["mean_score"]),
             "mean_confidence": float(findings["mean_confidence"]),
-            "mean_lead_hours": float(findings["mean_lead_hours"]),
-            "early_findings": int(findings["early_findings"] or 0),
+            "new_findings": new_findings,
+            "recurring_findings": max(0, unique_findings - new_findings),
             "high_priority": int(findings["high_priority"] or 0),
             "publication": {
                 "flash": int(findings["flash"] or 0),
@@ -414,7 +584,8 @@ class AnalyticsStore:
             },
             "emerging": int(findings["emerging"] or 0),
             "evidence_count": total_evidence,
-            "surface_count": len(sources),
+            "source_count": int(source_total["source_count"] or 0),
+            "evidence_type_count": len(sources),
             "sources": sources,
             "x_share": round(x_evidence / total_evidence * 100, 1) if total_evidence else 0.0,
             "non_x_evidence": total_evidence - x_evidence,
@@ -427,6 +598,16 @@ class AnalyticsStore:
             "agent_review_count": review_count,
             "agent_assessment_count": assessment_count,
             "agent_failed_role_count": failed_role_count,
+            "agent_expected_role_count": expected_role_count,
+            "agent_blocked_role_count": max(
+                0,
+                expected_role_count - assessment_count - failed_role_count,
+            ),
+            "agent_role_completion_rate": (
+                round(assessment_count / expected_role_count * 100, 1)
+                if expected_role_count
+                else None
+            ),
             "agent_review_duration_ms": review_duration_ms,
             "agent_requests": int(usage["agent_requests"]),
             "agent_tokens": int(usage["agent_tokens"]),
@@ -436,7 +617,7 @@ class AnalyticsStore:
     def cost_breakdown(self, *, days: int = 30) -> dict[str, Any]:
         """Analyze API-equivalent usage estimates without claiming cash spend."""
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             totals = connection.execute(
                 """
                 SELECT COUNT(DISTINCT r.report_id) AS reports,
@@ -445,7 +626,7 @@ class AnalyticsStore:
                        COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
                 FROM analytics_reports r
                 LEFT JOIN analytics_usage u ON u.report_id = r.report_id
-                WHERE r.generated_at >= ?
+                WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
                 """,
                 (since,),
             ).fetchone()
@@ -458,7 +639,7 @@ class AnalyticsStore:
                        COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
                 FROM analytics_usage u
                 JOIN analytics_reports r ON r.report_id = u.report_id
-                WHERE r.generated_at >= ?
+                WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
                 GROUP BY u.provider, u.model
                 ORDER BY estimated_cost DESC, requests DESC, u.provider, u.model
                 """,
@@ -472,7 +653,7 @@ class AnalyticsStore:
                        COALESCE(SUM(u.estimated_cost), 0) AS estimated_cost
                 FROM analytics_usage u
                 JOIN analytics_reports r ON r.report_id = u.report_id
-                WHERE r.generated_at >= ?
+                WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
                 GROUP BY u.stage
                 ORDER BY estimated_cost DESC, requests DESC, u.stage
                 """,
@@ -498,11 +679,12 @@ class AnalyticsStore:
 
     def local_inference_status(self) -> dict[str, Any] | None:
         """Return the newest persisted semantic shadow observation, if any."""
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT report_id, generated_at, report_json
                 FROM analytics_reports
+                WHERE telemetry_scope = 'operational'
                 ORDER BY generated_at DESC
                 LIMIT 100
                 """
@@ -528,7 +710,7 @@ class AnalyticsStore:
         edition: str | None = None,
         query: str | None = None,
     ) -> list[dict[str, Any]]:
-        clauses: list[str] = []
+        clauses: list[str] = ["r.telemetry_scope = 'operational'"]
         parameters: list[Any] = []
         if edition:
             clauses.append("r.edition = ?")
@@ -543,7 +725,7 @@ class AnalyticsStore:
             parameters.extend((pattern, pattern))
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
         parameters.append(max(1, min(limit, 500)))
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 f"""
                 SELECT r.report_id, r.generated_at, r.edition, r.finding_count,
@@ -559,12 +741,12 @@ class AnalyticsStore:
         return [dict(row) for row in rows]
 
     def get_report(self, report_id: str) -> dict[str, Any] | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT report_json
                 FROM analytics_reports
-                WHERE report_id = ?
+                WHERE report_id = ? AND telemetry_scope = 'operational'
                 """,
                 (report_id,),
             ).fetchone()
@@ -584,49 +766,66 @@ class AnalyticsStore:
         days: int | None = None,
         priority_first: bool = False,
     ) -> list[dict[str, Any]]:
-        clauses: list[str] = []
-        parameters: list[Any] = []
+        base_clauses = ["r.telemetry_scope = 'operational'"]
+        base_parameters: list[Any] = []
+        clauses = ["f.recency_rank = 1"]
+        filter_parameters: list[Any] = []
         if query:
             clauses.append("(f.finding_id LIKE ? OR f.title LIKE ?)")
             pattern = f"%{query}%"
-            parameters.extend((pattern, pattern))
+            filter_parameters.extend((pattern, pattern))
         if category:
             clauses.append("f.category = ?")
-            parameters.append(category)
+            filter_parameters.append(category)
         if tag:
             clauses.append(
                 "EXISTS (SELECT 1 FROM analytics_finding_tags ft "
                 "WHERE ft.report_id = f.report_id AND ft.finding_id = f.finding_id "
                 "AND ft.tag = ?)"
             )
-            parameters.append(tag)
+            filter_parameters.append(tag)
         if source_type:
             clauses.append(
                 "EXISTS (SELECT 1 FROM analytics_finding_sources fs "
                 "WHERE fs.report_id = f.report_id AND fs.finding_id = f.finding_id "
                 "AND fs.source_type = ?)"
             )
-            parameters.append(source_type)
+            filter_parameters.append(source_type)
         if days is not None:
-            clauses.append("r.generated_at >= ?")
-            parameters.append(
+            base_clauses.append("r.generated_at >= ?")
+            base_parameters.append(
                 (datetime.now(UTC) - timedelta(days=max(1, min(days, 3650)))).isoformat()
             )
-        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        base_where = " AND ".join(base_clauses)
+        where = " AND ".join(clauses)
         order = (
-            "f.priority_score DESC, r.generated_at DESC, f.finding_id"
+            "f.priority_score DESC, f.generated_at DESC, f.finding_id"
             if priority_first
-            else "r.generated_at DESC, f.priority_score DESC, f.finding_id"
+            else "f.generated_at DESC, f.priority_score DESC, f.finding_id"
         )
-        parameters.append(max(1, min(limit, 1000)))
-        with self._connect() as connection:
+        parameters = [
+            *base_parameters,
+            *filter_parameters,
+            max(1, min(limit, 1000)),
+        ]
+        with self._connection() as connection:
             rows = connection.execute(
                 f"""
+                WITH ranked_findings AS (
+                  SELECT f.*, r.generated_at, r.edition,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY f.finding_id
+                           ORDER BY r.generated_at DESC, r.report_id DESC
+                         ) AS recency_rank
+                  FROM analytics_findings f
+                  JOIN analytics_reports r ON r.report_id = f.report_id
+                  WHERE {base_where}
+                )
                 SELECT f.finding_id, f.report_id, f.title, f.category,
                        f.emergence_stage, f.publication_class, f.priority_score,
                        f.confidence_level, f.confidence_probability,
                        f.first_observed_at, f.lead_time_hours,
-                       r.generated_at, r.edition,
+                       f.generated_at, f.edition,
                        COALESCE((
                          SELECT GROUP_CONCAT(tag, '|')
                          FROM (
@@ -647,9 +846,8 @@ class AnalyticsStore:
                            ORDER BY fs.source_type
                          )
                        ), '') AS source_types
-                FROM analytics_findings f
-                JOIN analytics_reports r ON r.report_id = f.report_id
-                {where}
+                FROM ranked_findings f
+                WHERE {where}
                 ORDER BY {order}
                 LIMIT ?
                 """,  # noqa: S608 -- clauses are fixed application strings
@@ -658,15 +856,33 @@ class AnalyticsStore:
         return [_finding_row(row) for row in rows]
 
     def taxonomy_options(self) -> dict[str, list[str]]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             categories = connection.execute(
-                "SELECT DISTINCT category FROM analytics_findings ORDER BY category"
+                """
+                SELECT DISTINCT f.category
+                FROM analytics_findings f
+                JOIN analytics_reports r ON r.report_id = f.report_id
+                WHERE r.telemetry_scope = 'operational'
+                ORDER BY f.category
+                """
             ).fetchall()
             tags = connection.execute(
-                "SELECT DISTINCT tag FROM analytics_finding_tags ORDER BY tag"
+                """
+                SELECT DISTINCT t.tag
+                FROM analytics_finding_tags t
+                JOIN analytics_reports r ON r.report_id = t.report_id
+                WHERE r.telemetry_scope = 'operational'
+                ORDER BY t.tag
+                """
             ).fetchall()
             source_types = connection.execute(
-                "SELECT DISTINCT source_type FROM analytics_finding_sources ORDER BY source_type"
+                """
+                SELECT DISTINCT s.source_type
+                FROM analytics_finding_sources s
+                JOIN analytics_reports r ON r.report_id = s.report_id
+                WHERE r.telemetry_scope = 'operational'
+                ORDER BY s.source_type
+                """
             ).fetchall()
         return {
             "categories": [str(row["category"]) for row in categories],
@@ -676,13 +892,25 @@ class AnalyticsStore:
 
     def taxonomy_counts(self, *, days: int = 30) -> dict[str, list[dict[str, Any]]]:
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             categories = connection.execute(
                 """
+                WITH latest_findings AS (
+                  SELECT *
+                  FROM (
+                    SELECT f.category, f.finding_id, f.report_id,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY f.finding_id
+                             ORDER BY r.generated_at DESC, r.report_id DESC
+                           ) AS recency_rank
+                    FROM analytics_findings f
+                    JOIN analytics_reports r ON r.report_id = f.report_id
+                    WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                  )
+                  WHERE recency_rank = 1
+                )
                 SELECT f.category AS name, COUNT(*) AS findings
-                FROM analytics_findings f
-                JOIN analytics_reports r ON r.report_id = f.report_id
-                WHERE r.generated_at >= ?
+                FROM latest_findings f
                 GROUP BY f.category
                 ORDER BY findings DESC, name
                 """,
@@ -690,10 +918,24 @@ class AnalyticsStore:
             ).fetchall()
             tags = connection.execute(
                 """
+                WITH latest_findings AS (
+                  SELECT *
+                  FROM (
+                    SELECT f.finding_id, f.report_id,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY f.finding_id
+                             ORDER BY r.generated_at DESC, r.report_id DESC
+                           ) AS recency_rank
+                    FROM analytics_findings f
+                    JOIN analytics_reports r ON r.report_id = f.report_id
+                    WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                  )
+                  WHERE recency_rank = 1
+                )
                 SELECT t.tag AS name, COUNT(*) AS findings
                 FROM analytics_finding_tags t
-                JOIN analytics_reports r ON r.report_id = t.report_id
-                WHERE r.generated_at >= ?
+                JOIN latest_findings f
+                  ON f.report_id = t.report_id AND f.finding_id = t.finding_id
                 GROUP BY t.tag
                 ORDER BY findings DESC, name
                 """,
@@ -706,35 +948,73 @@ class AnalyticsStore:
 
     def daily_trend(self, *, days: int = 30) -> list[dict[str, Any]]:
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
-                SELECT substr(generated_at, 1, 10) AS day,
-                       COUNT(*) AS reports,
-                       SUM(finding_count) AS findings,
-                       MAX(max_score) AS max_score,
-                       SUM(flash_count) AS flash,
-                       SUM(watch_count) AS watch,
-                       SUM(daily_count) AS daily,
-                       SUM(degraded_source_count) AS degraded
-                FROM analytics_reports
-                WHERE generated_at >= ?
-                GROUP BY substr(generated_at, 1, 10)
-                ORDER BY day
+                WITH report_days AS (
+                  SELECT substr(generated_at, 1, 10) AS day,
+                         COUNT(*) AS reports,
+                         SUM(degraded_source_count) AS degraded
+                  FROM analytics_reports
+                  WHERE telemetry_scope = 'operational' AND generated_at >= ?
+                  GROUP BY substr(generated_at, 1, 10)
+                ),
+                ranked_findings AS (
+                  SELECT substr(r.generated_at, 1, 10) AS day,
+                         f.finding_id, f.priority_score, f.publication_class,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY substr(r.generated_at, 1, 10), f.finding_id
+                           ORDER BY r.generated_at DESC, r.report_id DESC
+                         ) AS recency_rank
+                  FROM analytics_findings f
+                  JOIN analytics_reports r ON r.report_id = f.report_id
+                  WHERE r.telemetry_scope = 'operational' AND r.generated_at >= ?
+                ),
+                finding_days AS (
+                  SELECT day,
+                         COUNT(*) AS findings,
+                         MAX(priority_score) AS max_score,
+                         SUM(CASE WHEN publication_class = 'flash' THEN 1 ELSE 0 END) AS flash,
+                         SUM(CASE WHEN publication_class = 'watch' THEN 1 ELSE 0 END) AS watch,
+                         SUM(CASE WHEN publication_class = 'daily' THEN 1 ELSE 0 END) AS daily
+                  FROM ranked_findings
+                  WHERE recency_rank = 1
+                  GROUP BY day
+                )
+                SELECT r.day, r.reports,
+                       COALESCE(f.findings, 0) AS findings,
+                       COALESCE(f.max_score, 0) AS max_score,
+                       COALESCE(f.flash, 0) AS flash,
+                       COALESCE(f.watch, 0) AS watch,
+                       COALESCE(f.daily, 0) AS daily,
+                       r.degraded
+                FROM report_days r
+                LEFT JOIN finding_days f ON f.day = r.day
+                ORDER BY r.day
                 """,
-                (since,),
+                (since, since),
             ).fetchall()
         return [dict(row) for row in rows]
 
     def source_health(self, *, limit: int = 200) -> list[dict[str, Any]]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
-                SELECT h.source_id, h.status, h.last_success_at,
-                       h.freshness_seconds, h.error_rate, r.generated_at
-                FROM analytics_source_health h
-                JOIN analytics_reports r ON r.report_id = h.report_id
-                ORDER BY r.generated_at DESC, h.source_id
+                SELECT source_id, status, last_success_at,
+                       freshness_seconds, error_rate, generated_at
+                FROM (
+                  SELECT h.source_id, h.status, h.last_success_at,
+                         h.freshness_seconds, h.error_rate, r.generated_at,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY h.source_id
+                           ORDER BY r.generated_at DESC, r.report_id DESC
+                         ) AS recency_rank
+                  FROM analytics_source_health h
+                  JOIN analytics_reports r ON r.report_id = h.report_id
+                  WHERE r.telemetry_scope = 'operational'
+                )
+                WHERE recency_rank = 1
+                ORDER BY source_id
                 LIMIT ?
                 """,
                 (max(1, min(limit, 1000)),),
@@ -743,15 +1023,15 @@ class AnalyticsStore:
 
     def event_summary(self, *, days: int = 30) -> list[dict[str, Any]]:
         since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
-                SELECT metric, COUNT(*) AS events, SUM(value) AS total_value,
+                SELECT metric, unit, COUNT(*) AS events, SUM(value) AS total_value,
                        MAX(occurred_at) AS latest_at
                 FROM analytics_events
-                WHERE occurred_at >= ?
-                GROUP BY metric
-                ORDER BY latest_at DESC, metric
+                WHERE telemetry_scope = 'operational' AND occurred_at >= ?
+                GROUP BY metric, unit
+                ORDER BY latest_at DESC, metric, unit
                 """,
                 (since,),
             ).fetchall()
@@ -764,7 +1044,7 @@ class AnalyticsStore:
         return self.list_findings(limit=1000)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS analytics_meta (
@@ -772,7 +1052,7 @@ class AnalyticsStore:
                   value TEXT NOT NULL
                 );
                 INSERT OR IGNORE INTO analytics_meta (key, value)
-                  VALUES ('schema_version', '3');
+                  VALUES ('schema_version', '4');
                 CREATE TABLE IF NOT EXISTS analytics_reports (
                   report_id TEXT PRIMARY KEY,
                   generated_at TEXT NOT NULL,
@@ -792,6 +1072,8 @@ class AnalyticsStore:
                   html_path TEXT,
                   report_hash TEXT NOT NULL,
                   report_json TEXT NOT NULL,
+                  telemetry_scope TEXT NOT NULL DEFAULT 'fixture'
+                    CHECK (telemetry_scope IN ('operational', 'fixture')),
                   indexed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS analytics_reports_generated_idx
@@ -869,23 +1151,75 @@ class AnalyticsStore:
                   metric TEXT NOT NULL,
                   value REAL NOT NULL,
                   unit TEXT NOT NULL,
-                  dimensions_json TEXT NOT NULL
+                  dimensions_json TEXT NOT NULL,
+                  telemetry_scope TEXT NOT NULL DEFAULT 'operational'
+                    CHECK (telemetry_scope IN ('operational', 'fixture'))
                 );
                 CREATE INDEX IF NOT EXISTS analytics_events_metric_idx
                   ON analytics_events (metric, occurred_at DESC);
                 """
             )
+            report_columns = {
+                str(row["name"])
+                for row in connection.execute("PRAGMA table_info(analytics_reports)").fetchall()
+            }
+            if "telemetry_scope" not in report_columns:
+                connection.execute(
+                    "ALTER TABLE analytics_reports "
+                    "ADD COLUMN telemetry_scope TEXT NOT NULL DEFAULT 'fixture'"
+                )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS analytics_reports_scope_generated_idx "
+                "ON analytics_reports (telemetry_scope, generated_at DESC)"
+            )
+            event_columns = {
+                str(row["name"])
+                for row in connection.execute("PRAGMA table_info(analytics_events)").fetchall()
+            }
+            if "telemetry_scope" not in event_columns:
+                connection.execute(
+                    "ALTER TABLE analytics_events "
+                    "ADD COLUMN telemetry_scope TEXT NOT NULL DEFAULT 'operational'"
+                )
             version = connection.execute(
                 "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
             ).fetchone()
-            if version is not None and str(version["value"]) in {"1", "2"}:
+            if version is not None and str(version["value"]) in {"1", "2", "3"}:
+                for row in connection.execute(
+                    "SELECT report_id, report_json FROM analytics_reports"
+                ).fetchall():
+                    try:
+                        report = json.loads(str(row["report_json"]))
+                    except json.JSONDecodeError:
+                        report = None
+                    scope = (
+                        _report_telemetry_scope(report)
+                        if isinstance(report, dict)
+                        else "fixture"
+                    )
+                    connection.execute(
+                        "UPDATE analytics_reports SET telemetry_scope = ? WHERE report_id = ?",
+                        (scope, str(row["report_id"])),
+                    )
                 connection.execute(
-                    "UPDATE analytics_meta SET value = '3' WHERE key = 'schema_version'"
+                    """
+                    UPDATE analytics_events
+                    SET telemetry_scope = 'fixture'
+                    WHERE metric = 'report.indexed'
+                      AND json_extract(dimensions_json, '$.report_id') IN (
+                        SELECT report_id
+                        FROM analytics_reports
+                        WHERE telemetry_scope = 'fixture'
+                      )
+                    """
+                )
+                connection.execute(
+                    "UPDATE analytics_meta SET value = '4' WHERE key = 'schema_version'"
                 )
                 version = connection.execute(
                     "SELECT value FROM analytics_meta WHERE key = 'schema_version'"
                 ).fetchone()
-            if version is None or str(version["value"]) != "3":
+            if version is None or str(version["value"]) != "4":
                 raise RuntimeError("unsupported analytics schema")
 
     def _connect(self) -> sqlite3.Connection:
@@ -896,12 +1230,33 @@ class AnalyticsStore:
         connection.execute("PRAGMA busy_timeout = 5000")
         return connection
 
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
+
 
 def _run_id_from_path(path: Path) -> str | None:
     for part in path.parts:
         if part.startswith("run_"):
             return part
     return None
+
+
+def _report_telemetry_scope(
+    report: dict[str, Any],
+) -> Literal["operational", "fixture"]:
+    discovery = report.get("discovery_telemetry")
+    if not isinstance(discovery, dict):
+        return "fixture"
+    surfaces = discovery.get("surfaces")
+    if not isinstance(surfaces, list):
+        return "fixture"
+    return "operational"
 
 
 def _index_finding_dimensions(

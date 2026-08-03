@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/mission-feedback.v1.json",
+  "title": "Mission outcome feedback",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feedback_id",
+    "mission_id",
+    "report_id",
+    "outcome_id",
+    "label",
+    "reason",
+    "submitted_by",
+    "submitted_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "feedback_id": {"type": "string", "pattern": "^mf_[A-Za-z0-9_-]+$"},
+    "mission_id": {"type": "string", "pattern": "^ms_[a-z0-9][a-z0-9_-]{2,63}$"},
+    "report_id": {"type": "string", "pattern": "^mr_[A-Za-z0-9_-]+$"},
+    "outcome_id": {"type": "string", "pattern": "^oc_[A-Za-z0-9_-]+$"},
+    "label": {"enum": ["useful", "not_useful", "needs_work"]},
+    "reason": {"type": "string", "minLength": 3, "maxLength": 1200},
+    "submitted_by": {"type": "string", "minLength": 2, "maxLength": 120},
+    "submitted_at": {"type": "string", "format": "date-time"}
+  }
+}

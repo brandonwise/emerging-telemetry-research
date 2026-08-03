@@ -9,6 +9,7 @@ from packages.scoring.engine import ScoreComponents
 @dataclass(frozen=True, slots=True)
 class ClusterSignals:
     first_observed_at: datetime
+    evaluated_at: datetime
     evidence_count: int
     independent_source_count: int
     direct_artifact_count: int
@@ -16,6 +17,7 @@ class ClusterSignals:
     epss_probability: float | None
     known_exploited: bool
     media_baseline_at: datetime | None
+    media_baseline_checked: bool
     organization_match: bool
     content_risk: str
     material_contradictions: int = 0
@@ -33,7 +35,12 @@ def compute_score(signals: ClusterSignals) -> ScoreComponents:
         + max(0, signals.independent_source_count - 1) * 3.0,
     )
     momentum = min(15.0, 4.0 + max(0, signals.evidence_count - 1) * 1.5)
-    novelty = _novelty(signals.first_observed_at, signals.media_baseline_at)
+    novelty = _novelty(
+        signals.first_observed_at,
+        signals.evaluated_at,
+        signals.media_baseline_at,
+        signals.media_baseline_checked,
+    )
     organization_relevance = 6.0 if signals.organization_match else 0.0
     penalties = 0.0
     if signals.independent_source_count <= 1 and signals.evidence_count > 1:
@@ -46,7 +53,15 @@ def compute_score(signals: ClusterSignals) -> ScoreComponents:
         f"{signals.independent_source_count} independent source origin(s)",
         f"{signals.evidence_count} evidence item(s)",
         "known exploited" if signals.known_exploited else "not confirmed exploited",
-        "media baseline absent" if signals.media_baseline_at is None else "media baseline present",
+        (
+            "media baseline not measured"
+            if not signals.media_baseline_checked
+            else (
+                "media baseline absent at evaluation"
+                if signals.media_baseline_at is None
+                else "media baseline measured"
+            )
+        ),
     )
     return ScoreComponents(
         impact=impact,
@@ -60,10 +75,23 @@ def compute_score(signals: ClusterSignals) -> ScoreComponents:
     )
 
 
-def _novelty(first_seen: datetime, media_baseline: datetime | None) -> float:
-    if media_baseline is None:
-        return 15.0
-    lead_hours = (media_baseline - first_seen).total_seconds() / 3600
-    if lead_hours <= 0:
+def _novelty(
+    first_seen: datetime,
+    evaluated_at: datetime,
+    media_baseline: datetime | None,
+    media_baseline_checked: bool,
+) -> float:
+    """Return bounded freshness credit only when an approved baseline was measured."""
+    if not media_baseline_checked:
         return 0.0
-    return round(min(15.0, lead_hours / 168 * 15), 2)
+
+    age_hours = max(0.0, (evaluated_at - first_seen).total_seconds() / 3600)
+    freshness_credit = max(0.0, (168.0 - age_hours) / 168.0 * 15.0)
+    if media_baseline is None:
+        return round(freshness_credit, 2)
+    if evaluated_at >= media_baseline:
+        return 0.0
+
+    lead_hours = (media_baseline - evaluated_at).total_seconds() / 3600
+    lead_credit = min(15.0, lead_hours / 168.0 * 15.0)
+    return round(min(freshness_credit, lead_credit), 2)

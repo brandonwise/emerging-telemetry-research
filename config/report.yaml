@@ -25,7 +25,7 @@ html:
   include_evidence_timeline: true
 
 publication:
-  shadow_mode: false
+  shadow_mode: true
   external_delivery_enabled: false
   allow_empty_report: true
   include_degraded_source_banner: true

@@ -11,12 +11,9 @@ if [[ ! -f "${radar_root}/pyproject.toml" ]]; then
   exit 1
 fi
 
-if [[ -f "${radar_config_root}/radar.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "${radar_config_root}/radar.env"
-  set +a
-fi
-
 cd "${radar_root}"
-exec uv run threat-radar portable run --json "$@"
+radar_env_args=()
+if [[ -f "${radar_config_root}/radar.env" ]]; then
+  radar_env_args=(--env-file "${radar_config_root}/radar.env")
+fi
+exec uv run outcome-radar "${radar_env_args[@]}" portable run --json "$@"

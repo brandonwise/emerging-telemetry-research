@@ -2,19 +2,19 @@
 
 UV ?= uv
 PYTHON := $(UV) run python
-RADAR := $(UV) run threat-radar
+RADAR := $(UV) run outcome-radar
 REPORT_ROOT ?= reports/generated
 AGENT_ADAPTER ?= fixture
 AGENT_REPEATS ?= 3
 
-.PHONY: help setup validate lint typecheck test acceptance eval-agents eval-coverage \
+.PHONY: help setup validate lint typecheck test audit acceptance eval-agents eval-coverage \
 	eval-coverage-fixture eval-all check \
-	build clean-build live portable agent-shadow agent-active analytics api portal \
+	build package-smoke sbom clean-build live portable agent-shadow agent-active analytics api portal \
 	portal-install portal-status portal-uninstall stack-up stack-down restore-test \
 	openclaw-agents-check openclaw-agents-install
 
 help: ## Show available targets and common overrides.
-	@awk 'BEGIN {FS = ":.*## "; printf "Threat Radar workflows\n\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Outcome Radar workflows\n\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@printf "\nOverrides: REPORT_ROOT=..., AGENT_ADAPTER=fixture|openclaw|codex|claude|openai-compatible, AGENT_REPEATS=1..10\n"
 
 setup: ## Install the project and development dependencies with uv.
@@ -36,7 +36,10 @@ typecheck: ## Run strict mypy across application and package code.
 	$(UV) run mypy apps packages
 
 test: ## Run the complete pytest suite.
-	$(UV) run pytest
+	$(UV) run pytest -W error
+
+audit: ## Audit the complete locked dependency graph for known vulnerabilities.
+	$(UV) --preview-features audit audit --locked --all-extras
 
 acceptance: ## Run the frozen end-to-end and hostile-content acceptance suite.
 	$(RADAR) eval acceptance --output $(REPORT_ROOT)/acceptance --json
@@ -58,7 +61,14 @@ restore-test: ## Verify that immutable state restores and replays exactly.
 check: validate lint typecheck test eval-all restore-test ## Run every local merge gate.
 
 build: ## Build wheel and source distributions.
-	$(UV) build
+	$(UV) build --clear
+
+package-smoke: build ## Install the wheel in a clean environment and run a fixture mission.
+	$(PYTHON) scripts/smoke_wheel.py
+
+sbom: build ## Generate a CycloneDX JSON software bill of materials for the locked environment.
+	$(UV) --preview-features sbom-export --quiet export --frozen --format cyclonedx1.5 \
+		--no-dev --output-file dist/outcome-radar.cdx.json
 
 clean-build: ## Remove package build artifacts with uv's build backend.
 	$(UV) build --clear

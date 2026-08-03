@@ -15,16 +15,24 @@ RUN python -m pip install --no-cache-dir --disable-pip-version-check "uv==${UV_V
 
 WORKDIR /app
 
-COPY --chown=radar:radar pyproject.toml uv.lock README.md ./
+COPY --chown=radar:radar pyproject.toml uv.lock README.md LICENSE ./
 COPY --chown=radar:radar apps ./apps
 COPY --chown=radar:radar packages ./packages
 COPY --chown=radar:radar schemas ./schemas
 COPY --chown=radar:radar config ./config
 COPY --chown=radar:radar integrations ./integrations
+COPY --chown=radar:radar migrations ./migrations
+COPY --chown=radar:radar missions ./missions
+COPY --chown=radar:radar openapi ./openapi
+COPY --chown=radar:radar openclaw ./openclaw
+COPY --chown=radar:radar policies ./policies
+COPY --chown=radar:radar docs ./docs
 
 RUN uv sync --frozen --no-dev
 
 USER 65532:65532
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)" || exit 1
 
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--no-server-header"]
