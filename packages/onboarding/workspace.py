@@ -12,7 +12,11 @@ from urllib.parse import urlsplit
 import yaml
 
 from packages.security_gateway.permissions import harden_private_path
-from packages.security_gateway.secrets import inspect_secret, store_keyring_secret
+from packages.security_gateway.secrets import (
+    inspect_secret,
+    keyring_secret_reference,
+    store_keyring_secret,
+)
 
 RESOURCE_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIRECTORY = ".outcome-radar"
@@ -144,7 +148,8 @@ def configure_keyring_secret(
     config_path: Path,
     service: str = "outcome-radar",
 ) -> str:
-    reference = store_keyring_secret(name, value, service=service)
+    reference = keyring_secret_reference(name, service=service)
+    store_keyring_secret(name, value, service=service)
     _set_config_value(config_path, f"{name}_REF", reference)
     return reference
 

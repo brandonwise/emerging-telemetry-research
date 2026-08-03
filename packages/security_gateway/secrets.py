@@ -91,7 +91,7 @@ def store_keyring_secret(
     *,
     service: str = "outcome-radar",
     keyring_backend: KeyringBackend | None = None,
-) -> str:
+) -> None:
     _validate_name(name)
     if not KEYRING_SERVICE.fullmatch(service):
         raise SecretResolutionError("keyring service name is invalid")
@@ -105,6 +105,13 @@ def store_keyring_secret(
             "OS credential store rejected the secret; configure a supported keyring backend "
             "or use an env:// reference"
         ) from exc
+
+
+def keyring_secret_reference(name: str, *, service: str = "outcome-radar") -> str:
+    """Build a secret reference exclusively from validated non-secret metadata."""
+    _validate_name(name)
+    if not KEYRING_SERVICE.fullmatch(service):
+        raise SecretResolutionError("keyring service name is invalid")
     return f"keyring://{service}/{name}"
 
 

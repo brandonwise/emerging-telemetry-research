@@ -11,6 +11,7 @@ from packages.onboarding.workspace import initialize_workspace, run_doctor
 from packages.security_gateway.secrets import (
     SecretResolutionError,
     inspect_secret,
+    keyring_secret_reference,
     resolve_secret,
     store_keyring_secret,
 )
@@ -87,14 +88,16 @@ def test_secret_resolution_supports_owner_only_file_references(tmp_path: Path) -
         )
 
 
-def test_keyring_storage_returns_only_a_reference() -> None:
+def test_keyring_storage_is_separate_from_non_secret_reference() -> None:
     keyring = MemoryKeyring()
-    reference = store_keyring_secret(
+    result = store_keyring_secret(
         "XAI_API_KEY",
         "never-print-this",
         keyring_backend=keyring,
     )
+    reference = keyring_secret_reference("XAI_API_KEY")
 
+    assert result is None
     assert reference == "keyring://outcome-radar/XAI_API_KEY"
     assert "never-print-this" not in reference
     assert inspect_secret(
