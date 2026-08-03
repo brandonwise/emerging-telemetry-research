@@ -15,7 +15,7 @@ RUN python -m pip install --no-cache-dir --disable-pip-version-check "uv==${UV_V
 
 WORKDIR /app
 
-COPY --chown=radar:radar pyproject.toml uv.lock README.md SECURITY.md LICENSE ./
+COPY --chown=radar:radar pyproject.toml uv.lock README.md SECURITY.md THREAT_MODEL.md THREAT_MODEL_APPROVAL.md LICENSE ./
 COPY --chown=radar:radar apps ./apps
 COPY --chown=radar:radar packages ./packages
 COPY --chown=radar:radar schemas ./schemas
