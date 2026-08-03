@@ -43,6 +43,17 @@ jobs:
                   findings.extend(run.get("results", []))
           if findings:
               for finding in findings[:20]:
-                  print(finding.get("ruleId", "unknown-rule"))
+                  physical = (
+                      (finding.get("locations") or [{}])[0]
+                      .get("physicalLocation", {})
+                  )
+                  artifact = physical.get("artifactLocation", {})
+                  region = physical.get("region", {})
+                  message = finding.get("message", {}).get("text", "")
+                  print(
+                      f"{finding.get('ruleId', 'unknown-rule')} "
+                      f"{artifact.get('uri', 'unknown-path')}:"
+                      f"{region.get('startLine', '?')}: {message}"
+                  )
               raise SystemExit(f"CodeQL reported {len(findings)} finding(s)")
           print(f"CodeQL completed with zero findings across {len(paths)} result file(s)")

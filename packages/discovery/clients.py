@@ -679,13 +679,21 @@ def _integer(value: object) -> int:
     return int(value) if isinstance(value, int) and value >= 0 else 0
 
 
+def _hostname_matches(hostname: str, domain: str) -> bool:
+    normalized_hostname = hostname.rstrip(".").lower()
+    normalized_domain = domain.rstrip(".").lower()
+    return normalized_hostname == normalized_domain or normalized_hostname.endswith(
+        f".{normalized_domain}"
+    )
+
+
 def _source_type_for_url(url: str, source_id: str) -> str:
     hostname = (urlsplit(url).hostname or "").lower()
-    if hostname.endswith("reddit.com") or source_id.startswith("reddit-"):
+    if _hostname_matches(hostname, "reddit.com") or source_id.startswith("reddit-"):
         return "reddit_post"
-    if hostname.endswith("tiktok.com") or source_id.startswith("tiktok-"):
+    if _hostname_matches(hostname, "tiktok.com") or source_id.startswith("tiktok-"):
         return "tiktok_video"
-    if hostname.endswith("github.com") or source_id.startswith("github-"):
+    if _hostname_matches(hostname, "github.com") or source_id.startswith("github-"):
         return "github_activity"
     return "website"
 
@@ -694,17 +702,17 @@ def _surface_url_allowed(url: str, source_id: str) -> bool:
     parts = urlsplit(url)
     hostname = (parts.hostname or "").lower()
     if source_id.startswith("reddit-"):
-        return hostname.endswith("reddit.com") and re.match(
+        return _hostname_matches(hostname, "reddit.com") and re.match(
             r"^/r/[^/]+/comments/[A-Za-z0-9]+/",
             parts.path,
         ) is not None
     if source_id.startswith("tiktok-"):
-        return hostname.endswith("tiktok.com") and re.match(
+        return _hostname_matches(hostname, "tiktok.com") and re.match(
             r"^/@[^/]+/video/[0-9]+/?$",
             parts.path,
         ) is not None
     if source_id.startswith("github-"):
-        return hostname.endswith("github.com")
+        return _hostname_matches(hostname, "github.com")
     return True
 
 

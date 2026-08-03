@@ -1,13 +1,16 @@
-FROM python:3.12.11-slim-bookworm
+FROM python:3.12.13-slim-bookworm
 
-ARG UV_VERSION=0.10.10
+ARG UV_VERSION=0.12.1
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:${PATH}" \
     RADAR_API_REPORT_ROOT="/var/lib/threat-radar/reports"
 
-RUN python -m pip install --no-cache-dir --disable-pip-version-check "uv==${UV_VERSION}" \
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --no-cache-dir --disable-pip-version-check "uv==${UV_VERSION}" \
     && groupadd --system --gid 65532 radar \
     && useradd --system --uid 65532 --gid 65532 --home-dir /nonexistent radar \
     && mkdir -p /app /var/lib/threat-radar/reports \

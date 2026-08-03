@@ -138,6 +138,41 @@ async def test_brave_tiktok_surface_rejects_discovery_pages() -> None:
 
 
 @pytest.mark.asyncio
+async def test_brave_surface_rejects_lookalike_domains() -> None:
+    payload = {
+        "web": {
+            "results": [
+                {
+                    "title": "Lookalike Reddit host",
+                    "url": "https://evilreddit.com/r/netsec/comments/abc/example/",
+                    "description": "A deceptive hostname must not pass the source boundary.",
+                }
+            ]
+        }
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"Content-Type": "application/json"},
+            content=json.dumps(payload).encode(),
+            request=request,
+        )
+
+    service = SafeFetchService(
+        resolver=SequenceResolver(
+            {"api.search.brave.com": iter([("93.184.216.34",), ("93.184.216.34",)])}
+        ),
+        transport=httpx.MockTransport(handler),
+    )
+    signals = await BraveSearchClient(
+        "brave-secret",
+        fetch_service=service,
+    ).search("site:reddit.com cybersecurity", source_id="reddit-security")
+    assert signals == ()
+
+
+@pytest.mark.asyncio
 async def test_reddit_search_uses_oauth_for_configured_public_communities() -> None:
     payload = {
         "data": {
