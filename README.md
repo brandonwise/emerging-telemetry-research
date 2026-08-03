@@ -1,9 +1,9 @@
-# Outcome Radar
+# Emerging Telemetry Research
 
-A mission-driven, evidence-backed research system that turns a clearly described outcome into a
-bounded collection plan, deterministic scorecard, adversarial review workflow, and verified
-report. It runs with OpenClaw, Claude Code, Codex, Perplexity, any OpenAI-compatible API, or a
-plain scheduler.
+An AI-native emerging telemetry research workflow that turns a clearly described objective into a
+bounded collection plan, deterministic scorecard, adversarial review graph, and verified report.
+It runs with OpenClaw, Claude Code, Codex, Perplexity, any OpenAI-compatible API, or a plain
+scheduler.
 
 Cyber-threat early warning is the original mission pack, not a hardcoded product boundary. The
 same engine can research developer-product opportunities, customer pain, market changes,
@@ -33,32 +33,32 @@ Requires Python 3.12–3.14 and `uv`. The setup command creates a private, ignor
 tracked source collection, schedules, delivery, and self-mutation all remain disabled.
 
 ```bash
-git clone <private-repository-url> outcome-radar
-cd outcome-radar
+git clone <private-repository-url> emerging-telemetry-research
+cd emerging-telemetry-research
 uv sync --frozen --extra dev
-uv run outcome-radar setup init --profile portable --json
-uv run outcome-radar setup secret-set BRAVE_API_KEY
-uv run outcome-radar setup secret-set XAI_API_KEY
+uv run emerging-telemetry-research setup init --profile portable --json
+uv run emerging-telemetry-research setup secret-set BRAVE_API_KEY
+uv run emerging-telemetry-research setup secret-set XAI_API_KEY
 ```
 
-Review `.outcome-radar/config/`, then bind an approval to the exact code, policies, source terms,
+Review `.emerging-telemetry-research/config/`, then bind an approval to the exact code, policies, source terms,
 and enabled local sources:
 
 ```bash
-uv run outcome-radar setup approval-request --environment-id workstation --json
-uv run outcome-radar setup approval-apply \
-  .outcome-radar/deployment-approval-request.json \
+uv run emerging-telemetry-research setup approval-request --environment-id workstation --json
+uv run emerging-telemetry-research setup approval-apply \
+  .emerging-telemetry-research/deployment-approval-request.json \
   --approved-by "Your name" \
   --approval-id "change-or-ticket-id" \
   --json
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   setup doctor --profile portable --json
 ```
 
 Run fixture mode before any network collection:
 
 ```bash
-uv run outcome-radar mission run \
+uv run emerging-telemetry-research mission run \
   missions/developer-product-opportunities/mission.yaml \
   --signals missions/developer-product-opportunities/fixture-signals.json \
   --output reports/missions \
@@ -73,7 +73,7 @@ See [setup and operation](docs/SETUP.md) and the
 Describe a new research outcome:
 
 ```bash
-uv run outcome-radar mission create \
+uv run emerging-telemetry-research mission create \
   --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
   --outcome opportunity \
   --json
@@ -82,11 +82,11 @@ uv run outcome-radar mission create \
 Preview the generated source and review plan, then prove it without network access:
 
 ```bash
-uv run outcome-radar mission plan \
+uv run emerging-telemetry-research mission plan \
   missions/developer-product-opportunities/mission.yaml \
   --json
 
-uv run outcome-radar mission run \
+uv run emerging-telemetry-research mission run \
   missions/developer-product-opportunities/mission.yaml \
   --signals missions/developer-product-opportunities/fixture-signals.json \
   --output reports/missions \
@@ -100,21 +100,21 @@ collection stays off until an operator reviews and activates the compiled source
 Generate one complete fixture report:
 
 ```bash
-uv run outcome-radar fixture run \
+uv run emerging-telemetry-research fixture run \
   tests/fixtures/vertical_slice/flash-manifest.json \
-  --output /tmp/radar-flash \
+  --output /tmp/research-flash \
   --json
 ```
 
 Run the zero-infrastructure portable profile:
 
 ```bash
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   portable run --output reports/generated --json
 ```
 
 This writes immutable evidence objects to `state/objects`, verified reports to
-`reports/generated`, trend/report telemetry to `state/radar.db`, and a file-only delivery plan. It
+`reports/generated`, trend/report telemetry to `state/research.db`, and a file-only delivery plan. It
 never sends externally.
 
 Run the approved live pipeline locally:
@@ -128,8 +128,8 @@ FileVault, starts the loopback-only data services when needed, applies immutable
 bucket retention, writes one verified report to PostgreSQL and the analytics index, and emits a
 file-only audit plan. Scheduled runs do not send Discord messages.
 
-Set `RADAR_EMAIL_RECIPIENT` on the production run to emit a fixed-recipient email plan. Sending is
-a separate operator-approved step: `outcome-radar report email-send` requires both external-delivery
+Set `ETR_EMAIL_RECIPIENT` on the production run to emit a fixed-recipient email plan. Sending is
+a separate operator-approved step: `emerging-telemetry-research report email-send` requires both external-delivery
 gates, TLS-protected SMTP, a plan that matches the configured recipient, verified report artifacts,
 and an idempotency receipt. SMTP credentials come from the process secret store and never enter a
 report or delivery plan. See `docs/SETUP.md` for the variables and command.
@@ -146,7 +146,7 @@ An explicitly configured local profile can send bounded sanitized signal text to
 `nomic-embed-text:latest` model through loopback-only Ollama. It runs as a shadow observer: semantic
 candidate pairs, deterministic overlap, latency, and token volume are recorded in the immutable
 report and analytics index, but embeddings cannot change clusters, scores, verification, or
-publication. Ollama failure does not interrupt the deterministic radar.
+publication. Ollama failure does not interrupt the deterministic research.
 
 ## Analytics and reports
 
@@ -158,9 +158,9 @@ or committed plans can make incremental cost lower or effectively zero.
 Re-index existing immutable reports at any time:
 
 ```bash
-uv run outcome-radar analytics sync --json
-uv run outcome-radar analytics overview --days 90 --json
-uv run outcome-radar analytics events --days 90 --json
+uv run emerging-telemetry-research analytics sync --json
+uv run emerging-telemetry-research analytics overview --days 90 --json
+uv run emerging-telemetry-research analytics events --days 90 --json
 ```
 
 The index is derived and rebuildable; immutable evidence and report JSON remain the source of truth.
@@ -198,7 +198,7 @@ Keychain without writing it to the plist or logs.
 Choose one first-class adapter and generate it into a project checkout:
 
 ```bash
-uv run outcome-radar setup generate --platform codex --json
+uv run emerging-telemetry-research setup generate --platform codex --json
 ```
 
 Replace `codex` with `openclaw`, `claude-code`, `perplexity`, or `generic` for another adapter.
@@ -305,7 +305,7 @@ snapshot and receipt.
 Record one analyst label:
 
 ```bash
-uv run outcome-radar feedback record \
+uv run emerging-telemetry-research feedback record \
   reports/generated/<run-id>/<report-id>.json \
   <finding-id> \
   actionable_and_early \
@@ -316,8 +316,8 @@ uv run outcome-radar feedback record \
 Run one proposal-only cycle:
 
 ```bash
-uv run outcome-radar improve advise --json
-uv run outcome-radar improve analyze \
+uv run emerging-telemetry-research improve advise --json
+uv run emerging-telemetry-research improve analyze \
   --reports reports/generated \
   --feedback reports/feedback \
   --output reports/generated/improvement \
@@ -330,7 +330,7 @@ Run the reviewed workflow through the OpenClaw Lobster tool with this payload:
 {
   "action": "run",
   "pipeline": "openclaw/workflows/self-improvement.lobster",
-  "cwd": "workspace/outcome-radar"
+  "cwd": "workspace/emerging-telemetry-research"
 }
 ```
 

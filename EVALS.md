@@ -16,13 +16,13 @@ make eval-all
 
 The current executable suites are:
 
-- `threat-radar eval acceptance`: frozen Flash, Watch, archive, false-positive, and hostile-content
+- `telemetry-research eval acceptance`: frozen Flash, Watch, archive, false-positive, and hostile-content
   cases with byte-stable replay checks.
-- `threat-radar eval agents`: repeats the five-role DAG over historical fixtures. It records every
+- `telemetry-research eval agents`: repeats the five-role DAG over historical fixtures. It records every
   role response under `reviews/`, hashes the artifact, and measures role completion, assessment
   claim presence, claim-level citation coverage, per-role and coordinator agreement, latency,
   input/output tokens, estimated cost, and fixture reproducibility.
-- `threat-radar eval coverage`: inspects immutable reports for source attribution, surface count,
+- `telemetry-research eval coverage`: inspects immutable reports for source attribution, surface count,
   largest-source concentration, X share, non-X evidence, and findings backed only by X.
 - `scripts/verify_restore.py`: restores immutable state and compares replayed output.
 
@@ -154,7 +154,7 @@ at or below 50%, full attribution, and non-X evidence on every finding.
 ### 8. Outcome mission suite
 
 Each mission declares its useful-outcome rate and source-diversity floor. Run its checked-in signal
-fixture in plan mode, then use `threat-radar mission evaluate` on the immutable report. The built-in
+fixture in plan mode, then use `telemetry-research mission evaluate` on the immutable report. The built-in
 developer-product mission proves that the engine can produce a cited, code-ranked non-security
 outcome from three source types.
 

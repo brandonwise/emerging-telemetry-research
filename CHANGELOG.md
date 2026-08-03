@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Outcome Radar are recorded here. The project follows Semantic Versioning
+All notable changes to Emerging Telemetry Research are recorded here. The project follows Semantic Versioning
 for release identifiers while it remains private.
 
 ## [Unreleased]
@@ -34,4 +34,4 @@ for release identifiers while it remains private.
 
 ### Added
 
-- Initial emerging-threat radar vertical slice.
+- Initial emerging-threat research vertical slice.

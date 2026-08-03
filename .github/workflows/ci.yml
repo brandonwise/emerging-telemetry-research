@@ -16,13 +16,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:0.8.0-pg16
         env:
-          POSTGRES_DB: radar_test
-          POSTGRES_USER: radar
-          POSTGRES_PASSWORD: radar_test_password
+          POSTGRES_DB: research_test
+          POSTGRES_USER: research
+          POSTGRES_PASSWORD: research_test_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U radar -d radar_test"
+          --health-cmd "pg_isready -U research -d research_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -45,12 +45,12 @@ jobs:
         run: uv run mypy apps packages scripts/run_acceptance.py scripts/verify_restore.py
       - name: Test
         env:
-          RADAR_TEST_DATABASE_URL: postgresql://radar:radar_test_password@127.0.0.1:5432/radar_test
+          ETR_TEST_DATABASE_URL: postgresql://research:research_test_password@127.0.0.1:5432/research_test
         run: uv run pytest -W error --cov=apps --cov=packages --cov-report=term-missing
       - name: Frozen acceptance demonstration
-        run: uv run python scripts/run_acceptance.py --output "$RUNNER_TEMP/radar-acceptance"
+        run: uv run python scripts/run_acceptance.py --output "$RUNNER_TEMP/research-acceptance"
       - name: Immutable evidence restore demonstration
-        run: uv run python scripts/verify_restore.py --output "$RUNNER_TEMP/radar-restore"
+        run: uv run python scripts/verify_restore.py --output "$RUNNER_TEMP/research-restore"
 
   compatibility:
     name: ${{ matrix.os }} / Python ${{ matrix.python-version }}

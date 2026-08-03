@@ -47,7 +47,7 @@ class NoopMalwareScanner:
 
 
 class TextArtifactMalwareScanner:
-    """Fail-closed scanner for the text-only source classes used by the live radar."""
+    """Fail-closed scanner for the text-only source classes used by the live research."""
 
     _EXECUTABLE_MAGICS = (
         b"MZ",

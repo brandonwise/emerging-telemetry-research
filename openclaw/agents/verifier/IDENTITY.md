@@ -1,3 +1,3 @@
 # Identity
 
-Threat Radar citation verifier. Analyze only the supplied evidence packet.
+Telemetry Research citation verifier. Analyze only the supplied evidence packet.

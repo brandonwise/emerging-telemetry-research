@@ -1,6 +1,6 @@
-# Outcome Radar portal
+# Emerging Telemetry Research portal
 
-The portal is a read-only operational view over `state/radar.db` and immutable reports. It uses
+The portal is a read-only operational view over `state/research.db` and immutable reports. It uses
 server-rendered HTML, local CSS, semantic controls, responsive layouts, accessible focus states,
 print styling, and no third-party browser assets or JavaScript.
 
@@ -44,7 +44,7 @@ authentication can be restored with `scripts/install-portal-service.sh --auth re
 For an interactive foreground process instead:
 
 ```bash
-export RADAR_PORTAL_ACCESS_TOKEN="$(openssl rand -hex 24)"
+export ETR_PORTAL_ACCESS_TOKEN="$(openssl rand -hex 24)"
 scripts/run-portal.sh --lan --port 8088
 ```
 
@@ -135,9 +135,9 @@ only indexed immutable files whose filename matches the requested report ID.
 If the analytics database is lost, rebuild it:
 
 ```bash
-uv run outcome-radar analytics sync \
+uv run emerging-telemetry-research analytics sync \
   --reports reports/generated \
-  --database state/radar.db \
+  --database state/research.db \
   --json
 ```
 

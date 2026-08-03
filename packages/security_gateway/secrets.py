@@ -89,7 +89,7 @@ def store_keyring_secret(
     name: str,
     value: str,
     *,
-    service: str = "outcome-radar",
+    service: str = "emerging-telemetry-research",
     keyring_backend: KeyringBackend | None = None,
 ) -> None:
     _validate_name(name)
@@ -107,7 +107,7 @@ def store_keyring_secret(
         ) from exc
 
 
-def keyring_reference(name: str, *, service: str = "outcome-radar") -> str:
+def keyring_reference(name: str, *, service: str = "emerging-telemetry-research") -> str:
     """Build a credential locator exclusively from validated non-sensitive metadata."""
     _validate_name(name)
     if not KEYRING_SERVICE.fullmatch(service):

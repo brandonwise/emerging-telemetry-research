@@ -62,16 +62,16 @@ function pluginConfig(api) {
 
 function flowStartTool(api, toolContext) {
   return {
-    name: "radar_flow_start",
-    label: "Start Threat Radar TaskFlow",
-    description: "Create one managed TaskFlow for a reviewed Threat Radar run.",
+    name: "research_flow_start",
+    label: "Start Telemetry Research TaskFlow",
+    description: "Create one managed TaskFlow for a reviewed Telemetry Research run.",
     parameters: FLOW_START_PARAMETERS,
     async execute(_toolCallId, raw) {
       const params = raw;
       const taskFlow = api.runtime.tasks.flow.fromToolContext(toolContext);
       const created = taskFlow.createManaged({
-        controllerId: "threat-radar/orchestrator-v1",
-        goal: `Run Threat Radar ${params.mode}`,
+        controllerId: "telemetry-research/orchestrator-v1",
+        goal: `Run Telemetry Research ${params.mode}`,
         currentStep: "planned",
         stateJson: {
           runId: params.run_id,
@@ -91,9 +91,9 @@ function flowStartTool(api, toolContext) {
 
 function flowFinishTool(api, toolContext) {
   return {
-    name: "radar_flow_finish",
-    label: "Finish Threat Radar TaskFlow",
-    description: "Finish a managed Threat Radar TaskFlow with typed object references only.",
+    name: "research_flow_finish",
+    label: "Finish Telemetry Research TaskFlow",
+    description: "Finish a managed Telemetry Research TaskFlow with typed object references only.",
     parameters: FLOW_FINISH_PARAMETERS,
     async execute(_toolCallId, raw) {
       const params = raw;
@@ -125,8 +125,8 @@ function flowFinishTool(api, toolContext) {
 
 function deliveryTool(api) {
   return {
-    name: "radar_delivery_send",
-    label: "Send Verified Threat Radar Report",
+    name: "research_delivery_send",
+    label: "Send Verified Telemetry Research Report",
     description: "Send one verified report to the single configured Discord channel.",
     parameters: DELIVERY_PARAMETERS,
     async execute(_toolCallId, raw) {
@@ -291,18 +291,18 @@ async function validateReportFiles(config, params) {
 }
 
 export default definePluginEntry({
-  id: "threat-radar-boundary",
-  name: "Threat Radar Boundary",
+  id: "telemetry-research-boundary",
+  name: "Telemetry Research Boundary",
   description: "Narrow TaskFlow lifecycle and verified Discord delivery.",
   register(api) {
     api.registerTool((ctx) => flowStartTool(api, ctx), {
-      names: ["radar_flow_start"]
+      names: ["research_flow_start"]
     });
     api.registerTool((ctx) => flowFinishTool(api, ctx), {
-      names: ["radar_flow_finish"]
+      names: ["research_flow_finish"]
     });
     api.registerTool(deliveryTool(api), {
-      name: "radar_delivery_send"
+      name: "research_delivery_send"
     });
   }
 });

@@ -4,14 +4,14 @@
 
 ```bash
 git clone <repository-url>
-cd outcome-radar
+cd emerging-telemetry-research
 uv sync --frozen --extra dev
 make validate
-uv run outcome-radar setup init --profile portable --json
+uv run emerging-telemetry-research setup init --profile portable --json
 ```
 
 Python 3.12–3.14 is supported on Linux, macOS, and Windows. `setup init` creates an ignored,
-owner-only `.outcome-radar/` workspace containing editable config, state, and report paths. It
+owner-only `.emerging-telemetry-research/` workspace containing editable config, state, and report paths. It
 never changes the tracked fail-closed defaults. `make help` lists every supported workflow.
 
 ## 2. Configure secrets
@@ -19,8 +19,8 @@ never changes the tracked fail-closed defaults. `make help` lists every supporte
 Use the OS credential store for an interactive workstation:
 
 ```bash
-uv run outcome-radar setup secret-set BRAVE_API_KEY
-uv run outcome-radar setup secret-set XAI_API_KEY
+uv run emerging-telemetry-research setup secret-set BRAVE_API_KEY
+uv run emerging-telemetry-research setup secret-set XAI_API_KEY
 ```
 
 The local config receives only `keyring://` references. CI, containers, and orchestrators can use
@@ -34,24 +34,24 @@ Brave covers separately tagged web, security-research, GitHub, Reddit, and TikTo
 provides curated X Search. Direct Reddit OAuth and TikTok Research API collection are optional.
 Review these local files before granting collection:
 
-- `.outcome-radar/config/discovery.yaml`: queries, communities, limits, and promotion caps
-- `.outcome-radar/config/sources.yaml`: enabled source registry
-- `.outcome-radar/config/source-terms.yaml`: legal approval and retention record
-- `.outcome-radar/config/scoring.yaml`: deterministic ranking policy
-- `.outcome-radar/config/models.yaml`: routing, retries, token ceilings, and budgets
+- `.emerging-telemetry-research/config/discovery.yaml`: queries, communities, limits, and promotion caps
+- `.emerging-telemetry-research/config/sources.yaml`: enabled source registry
+- `.emerging-telemetry-research/config/source-terms.yaml`: legal approval and retention record
+- `.emerging-telemetry-research/config/scoring.yaml`: deterministic ranking policy
+- `.emerging-telemetry-research/config/models.yaml`: routing, retries, token ceilings, and budgets
 
 Generate a request bound to the current code, policy, schemas, source plan, and terms; then apply it
 only after review:
 
 ```bash
-uv run outcome-radar setup approval-request --environment-id workstation --json
-uv run outcome-radar setup approval-apply \
-  .outcome-radar/deployment-approval-request.json \
+uv run emerging-telemetry-research setup approval-request --environment-id workstation --json
+uv run emerging-telemetry-research setup approval-apply \
+  .emerging-telemetry-research/deployment-approval-request.json \
   --approved-by "Operator name" \
   --approval-id "ticket-or-change-id" \
   --expires-days 30 \
   --json
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   setup doctor --profile portable --json
 ```
 
@@ -77,7 +77,7 @@ two hours, so refresh it in the host secret workflow rather than inside an agent
 Use the portal mission builder or the CLI before configuring live collection:
 
 ```bash
-uv run outcome-radar mission create \
+uv run emerging-telemetry-research mission create \
   --objective "Find recurring workflow pain that could support a useful product next quarter." \
   --outcome opportunity \
   --json
@@ -93,27 +93,27 @@ writes a hash-checked rollback receipt. Full commands and contract boundaries ar
 No model calls:
 
 ```dotenv
-RADAR_AGENT_MODE=plan
+ETR_AGENT_MODE=plan
 ```
 
 Run reviews without applying them:
 
 ```dotenv
-RADAR_AGENT_MODE=shadow
-RADAR_AGENT_ADAPTER=openclaw
+ETR_AGENT_MODE=shadow
+ETR_AGENT_ADAPTER=openclaw
 ```
 
 Apply bounded review narrative:
 
 ```dotenv
-RADAR_AGENT_MODE=active
-RADAR_AGENT_ADAPTER=openclaw
+ETR_AGENT_MODE=active
+ETR_AGENT_ADAPTER=openclaw
 ```
 
 Valid built-ins are `auto`, `fixture`, `openclaw`, `codex`, `claude`, and `openai-compatible`.
 `auto` follows every configured preference with bounded retries and circuit breaking. Third-party
-providers load only through the `outcome_radar.agent_providers` entry-point group and an explicit
-`RADAR_AGENT_PLUGIN_ALLOWLIST`. See `docs/PORTABILITY.md` for provider configuration.
+providers load only through the `emerging_telemetry_research.agent_providers` entry-point group and an explicit
+`ETR_AGENT_PLUGIN_ALLOWLIST`. See `docs/PORTABILITY.md` for provider configuration.
 
 ## 5. Run
 
@@ -141,23 +141,23 @@ and refuses a mismatch. SMTP must use implicit TLS or STARTTLS.
 Set the non-secret connection values and load the password from your platform secret store:
 
 ```dotenv
-RADAR_EMAIL_RECIPIENT=security@example.com
-RADAR_EMAIL_SENDER=threat-radar@example.com
-RADAR_SMTP_HOST=smtp.example.com
-RADAR_SMTP_PORT=587
-RADAR_SMTP_SECURITY=starttls
-RADAR_SMTP_USERNAME=threat-radar@example.com
-RADAR_SMTP_PASSWORD=
+ETR_EMAIL_RECIPIENT=security@example.com
+ETR_EMAIL_SENDER=telemetry-research@example.com
+ETR_SMTP_HOST=smtp.example.com
+ETR_SMTP_PORT=587
+ETR_SMTP_SECURITY=starttls
+ETR_SMTP_USERNAME=telemetry-research@example.com
+ETR_SMTP_PASSWORD=
 ```
 
-`RADAR_EMAIL_RECIPIENT` makes `outcome-radar live run` emit an email delivery plan instead of a
+`ETR_EMAIL_RECIPIENT` makes `emerging-telemetry-research live run` emit an email delivery plan instead of a
 file-only plan. It does not send anything. After an operator reviews the report and plan, enable
 both gates for the delivery process and send that exact plan:
 
 ```bash
 export EXTERNAL_DELIVERY_ENABLED=true
-export RADAR_EMAIL_DELIVERY_ENABLED=true
-uv run outcome-radar report email-send \
+export ETR_EMAIL_DELIVERY_ENABLED=true
+uv run emerging-telemetry-research report email-send \
   reports/generated/<run-id>/<report-id>.delivery.json \
   --report-root reports/generated
 ```
@@ -211,19 +211,19 @@ Generate proposal-only recommendations across coverage, calibration, source reli
 prompt quality, cost, and security telemetry:
 
 ```bash
-uv run outcome-radar improve advise --json
+uv run emerging-telemetry-research improve advise --json
 ```
 
 Advice is immutable and never applies itself. `improve apply` additionally requires an unexpired
 deployment approval with the `self_improvement_apply` capability. Credentials, approval rules,
 delivery boundaries, security policy, and executable tools are protected from automatic change.
 
-Set `RADAR_AGENT_MODE=plan` to stop agent calls without changing evidence or reports. Disable one
+Set `ETR_AGENT_MODE=plan` to stop agent calls without changing evidence or reports. Disable one
 source in the local source and discovery config, generate a new approval, and remove the old local
 approval to isolate collection. Never delete old evidence or rewrite an immutable report; publish
 a corrected version.
 
-For an activated outcome mission, run `outcome-radar mission rollback` with its activation receipt.
+For an activated outcome mission, run `emerging-telemetry-research mission rollback` with its activation receipt.
 This restores the exact pre-activation contract and verifies its base hash before writing it.
 
 See `docs/PRODUCTION.md` for deployment, backup, restore, release, and incident-response gates.

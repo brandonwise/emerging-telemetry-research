@@ -8,7 +8,7 @@ from packages.storage.sqlite import SQLiteRepository
 
 @pytest.mark.asyncio
 async def test_sqlite_repository_is_durable_and_idempotent(tmp_path: Path) -> None:
-    path = tmp_path / "radar.db"
+    path = tmp_path / "research.db"
     first = SQLiteRepository(path)
     record = {"report_id": "rp_test", "status": "verified"}
     stored = await first.put_idempotent(
@@ -37,7 +37,7 @@ async def test_sqlite_repository_is_durable_and_idempotent(tmp_path: Path) -> No
 
 @pytest.mark.asyncio
 async def test_sqlite_repository_rejects_idempotency_conflict(tmp_path: Path) -> None:
-    repository = SQLiteRepository(tmp_path / "radar.db")
+    repository = SQLiteRepository(tmp_path / "research.db")
     await repository.put_idempotent(
         "runs",
         "idem_abcdefghijklmnopqrstuvwxyz012345",

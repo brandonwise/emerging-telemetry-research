@@ -28,7 +28,7 @@ from packages.security_gateway.secrets import resolve_secret
 
 AGENT_MODES = ("plan", "shadow", "active")
 AGENT_ADAPTERS = ("auto", "fixture", "openclaw", "codex", "claude", "openai-compatible")
-AGENT_PROVIDER_ENTRY_POINT_GROUP = "outcome_radar.agent_providers"
+AGENT_PROVIDER_ENTRY_POINT_GROUP = "emerging_telemetry_research.agent_providers"
 MAX_PROVIDER_PREFERENCES = 5
 ROLE_PROMPTS: dict[str, str] = {
     "specialist": (
@@ -63,11 +63,11 @@ ROLE_PROMPTS: dict[str, str] = {
     ),
 }
 OPENCLAW_ROLE_AGENTS = {
-    "specialist": "radar-specialist",
-    "impact": "radar-impact",
-    "skeptic": "radar-skeptic",
-    "citation_verifier": "radar-verifier",
-    "coordinator": "radar-chief",
+    "specialist": "research-specialist",
+    "impact": "research-impact",
+    "skeptic": "research-skeptic",
+    "citation_verifier": "research-verifier",
+    "coordinator": "research-chief",
 }
 
 
@@ -182,7 +182,7 @@ class CommandAgentProvider:
     async def invoke(self, invocation: AgentInvocation) -> AgentProviderResult:
         prompt = _agent_prompt(invocation)
         started = time.monotonic()
-        with tempfile.TemporaryDirectory(prefix="threat-radar-agent-") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="telemetry-research-agent-") as temp_dir:
             temp_root = Path(temp_dir)
             prompt_path = temp_root / "prompt.txt"
             output_path = temp_root / "assessment.json"
@@ -259,7 +259,7 @@ class CommandAgentProvider:
                 str(prompt_path),
                 "--session-key",
                 (
-                    f"agent:{role_agent}:radar-"
+                    f"agent:{role_agent}:research-"
                     f"{invocation.run_id[-12:]}-{invocation.finding_id[-12:]}-"
                     f"{uuid4().hex[:10]}"
                 ),
@@ -360,7 +360,7 @@ class OpenAICompatibleAgentProvider:
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "threat_radar_assessment",
+                    "name": "telemetry_research_assessment",
                     "strict": True,
                     "schema": json.loads(_assessment_schema_path().read_text(encoding="utf-8")),
                 },
@@ -509,34 +509,34 @@ def build_agent_provider(adapter: str) -> AgentProvider:
     if adapter in {"openclaw", "codex", "claude"}:
         return CommandAgentProvider(
             adapter,
-            timeout_seconds=int(os.environ.get("RADAR_AGENT_TIMEOUT_SECONDS", "300")),
-            model_override=os.environ.get("RADAR_AGENT_MODEL") or None,
-            executable=os.environ.get("RADAR_AGENT_EXECUTABLE") or None,
+            timeout_seconds=int(os.environ.get("ETR_AGENT_TIMEOUT_SECONDS", "300")),
+            model_override=os.environ.get("ETR_AGENT_MODEL") or None,
+            executable=os.environ.get("ETR_AGENT_EXECUTABLE") or None,
             input_price_per_million=_configured_price(
-                "RADAR_AGENT_INPUT_PRICE_PER_MILLION"
+                "ETR_AGENT_INPUT_PRICE_PER_MILLION"
             ),
             output_price_per_million=_configured_price(
-                "RADAR_AGENT_OUTPUT_PRICE_PER_MILLION"
+                "ETR_AGENT_OUTPUT_PRICE_PER_MILLION"
             ),
         )
     if adapter == "openai-compatible":
         return OpenAICompatibleAgentProvider(
-            api_key=_required_env("RADAR_AGENT_API_KEY"),
+            api_key=_required_env("ETR_AGENT_API_KEY"),
             base_url=os.environ.get(
-                "RADAR_AGENT_BASE_URL",
+                "ETR_AGENT_BASE_URL",
                 "https://api.openai.com/v1",
             ),
-            model=_required_env("RADAR_AGENT_MODEL"),
+            model=_required_env("ETR_AGENT_MODEL"),
             provider_name=os.environ.get(
-                "RADAR_AGENT_PROVIDER_NAME",
+                "ETR_AGENT_PROVIDER_NAME",
                 "openai-compatible",
             ),
-            timeout_seconds=int(os.environ.get("RADAR_AGENT_TIMEOUT_SECONDS", "180")),
+            timeout_seconds=int(os.environ.get("ETR_AGENT_TIMEOUT_SECONDS", "180")),
             input_price_per_million=_configured_price(
-                "RADAR_AGENT_INPUT_PRICE_PER_MILLION"
+                "ETR_AGENT_INPUT_PRICE_PER_MILLION"
             ),
             output_price_per_million=_configured_price(
-                "RADAR_AGENT_OUTPUT_PRICE_PER_MILLION"
+                "ETR_AGENT_OUTPUT_PRICE_PER_MILLION"
             ),
         )
     allowlist = configured_agent_plugin_allowlist()
@@ -558,7 +558,7 @@ def build_agent_provider(adapter: str) -> AgentProvider:
 
 
 def configured_agent_plugin_allowlist() -> set[str]:
-    raw = os.environ.get("RADAR_AGENT_PLUGIN_ALLOWLIST", "")
+    raw = os.environ.get("ETR_AGENT_PLUGIN_ALLOWLIST", "")
     values = {item.strip() for item in raw.split(",") if item.strip()}
     invalid = sorted(
         item

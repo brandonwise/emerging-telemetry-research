@@ -258,7 +258,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
             context=context,
         )
         self._pinned_address = address
-        self._radar_context = context
+        self._research_context = context
 
     def connect(self) -> None:
         sock = socket.create_connection(
@@ -266,7 +266,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
             self.timeout,
         )
         try:
-            self.sock = self._radar_context.wrap_socket(sock, server_hostname=self.host)
+            self.sock = self._research_context.wrap_socket(sock, server_hostname=self.host)
         except Exception:
             sock.close()
             raise

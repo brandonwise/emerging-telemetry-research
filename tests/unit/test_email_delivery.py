@@ -78,7 +78,7 @@ def _settings(recipient: str = "alerts@example.com") -> SmtpDeliverySettings:
     return SmtpDeliverySettings(
         host="smtp.example.com",
         port=587,
-        sender="threat-radar@example.com",
+        sender="telemetry-research@example.com",
         recipient=recipient,
         security="starttls",
         username="smtp-user",
@@ -92,7 +92,7 @@ def test_email_plan_is_deterministic_and_hides_recipient(tmp_path: Path) -> None
 
     assert plan["destination"].startswith("email:recipient:")
     assert "alerts@example.com" not in json.dumps(plan)
-    assert plan["subject"] == "Threat Radar Morning: 1 verified finding"
+    assert plan["subject"] == "Telemetry Research Morning: 1 verified finding"
     assert plan["html_path"].startswith(str(run_root.resolve()))
 
 
@@ -137,9 +137,9 @@ def test_smtp_sender_is_tls_fixed_recipient_and_retry_safe(
     assert client.ehlo_count == 2
     assert client.login_value == ("smtp-user", "smtp-password")
     message, from_addr, to_addrs = client.sent[0]
-    assert from_addr == "threat-radar@example.com"
+    assert from_addr == "telemetry-research@example.com"
     assert to_addrs == ["alerts@example.com"]
-    assert message["X-Threat-Radar-Report-ID"]
+    assert message["X-Threat-Research-Report-ID"]
     assert any(
         part.get_filename() and part.get_filename().endswith(".html")
         for part in message.walk()

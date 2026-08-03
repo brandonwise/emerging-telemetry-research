@@ -1,6 +1,6 @@
 schema_version: '1.0'
-mission_id: ms_developer-product-opportunity-radar
-name: Developer Product Opportunity Radar
+mission_id: ms_developer-product-opportunity-research
+name: Developer Product Opportunity Research
 objective: >-
   Identify recurring developer pain and newly changing workflows that could support a
   useful product, integration, or automation within the next quarter.
@@ -8,7 +8,7 @@ description: Researches opportunities that directly support the stated objective
 vocabulary:
   singular: opportunity
   plural: opportunities
-  collection: Opportunity radar
+  collection: Opportunity research
   empty_result: No opportunities met the evidence and priority thresholds.
 scope:
   include_terms:
@@ -29,7 +29,7 @@ scope:
   languages: [en]
   geographies: []
 sources:
-  - source_id: developer-product-opportunity-radar-web
+  - source_id: developer-product-opportunity-research-web
     surface: web
     adapter: brave_surface_search
     enabled: true
@@ -37,7 +37,7 @@ sources:
     freshness: week
     approval: {status: draft, approval_id: null}
     retention_days: 1
-  - source_id: developer-product-opportunity-radar-news
+  - source_id: developer-product-opportunity-research-news
     surface: news
     adapter: brave_surface_search
     enabled: true
@@ -45,7 +45,7 @@ sources:
     freshness: week
     approval: {status: draft, approval_id: null}
     retention_days: 1
-  - source_id: developer-product-opportunity-radar-github
+  - source_id: developer-product-opportunity-research-github
     surface: github
     adapter: brave_surface_search
     enabled: true
@@ -53,7 +53,7 @@ sources:
     freshness: week
     approval: {status: draft, approval_id: null}
     retention_days: 1
-  - source_id: developer-product-opportunity-radar-reddit
+  - source_id: developer-product-opportunity-research-reddit
     surface: reddit
     adapter: brave_surface_search
     enabled: true

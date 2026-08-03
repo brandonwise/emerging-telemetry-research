@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://threat-radar.invalid/schemas/delivery.v1.json",
-  "title": "Threat Radar Delivery Plan",
+  "$id": "https://telemetry-research.invalid/schemas/delivery.v1.json",
+  "title": "Telemetry Research Delivery Plan",
   "type": "object",
   "additionalProperties": false,
   "required": [

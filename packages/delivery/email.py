@@ -39,22 +39,22 @@ class SmtpDeliverySettings:
 
     @classmethod
     def from_env(cls) -> SmtpDeliverySettings:
-        security = os.environ.get("RADAR_SMTP_SECURITY", "starttls").lower()
+        security = os.environ.get("ETR_SMTP_SECURITY", "starttls").lower()
         if security not in {"ssl", "starttls"}:
-            raise ValueError("RADAR_SMTP_SECURITY must be ssl or starttls")
+            raise ValueError("ETR_SMTP_SECURITY must be ssl or starttls")
         try:
-            port = int(os.environ.get("RADAR_SMTP_PORT", "587"))
-            timeout_seconds = float(os.environ.get("RADAR_SMTP_TIMEOUT_SECONDS", "30"))
+            port = int(os.environ.get("ETR_SMTP_PORT", "587"))
+            timeout_seconds = float(os.environ.get("ETR_SMTP_TIMEOUT_SECONDS", "30"))
         except ValueError as exc:
             raise ValueError("SMTP port and timeout must be numeric") from exc
         return cls(
-            host=_required_env("RADAR_SMTP_HOST"),
+            host=_required_env("ETR_SMTP_HOST"),
             port=port,
-            sender=_required_env("RADAR_EMAIL_SENDER"),
-            recipient=_required_env("RADAR_EMAIL_RECIPIENT"),
+            sender=_required_env("ETR_EMAIL_SENDER"),
+            recipient=_required_env("ETR_EMAIL_RECIPIENT"),
             security=cast(Literal["ssl", "starttls"], security),
-            username=os.environ.get("RADAR_SMTP_USERNAME") or None,
-            password=resolve_secret("RADAR_SMTP_PASSWORD", required=False),
+            username=os.environ.get("ETR_SMTP_USERNAME") or None,
+            password=resolve_secret("ETR_SMTP_PASSWORD", required=False),
             timeout_seconds=timeout_seconds,
         )
 
@@ -94,7 +94,7 @@ def build_email_delivery_plan(
     report_id = str(report["report_id"])
     edition = str(report.get("edition", "report")).replace("_", " ").title()
     finding_label = "finding" if len(findings) == 1 else "findings"
-    subject = f"Threat Radar {edition}: {len(findings)} verified {finding_label}"
+    subject = f"Telemetry Research {edition}: {len(findings)} verified {finding_label}"
     plan = {
         "schema_version": "1.0",
         "delivery_id": stable_id("dl", report_id, destination),
@@ -172,14 +172,14 @@ def send_email_delivery_plan(
         _validate_existing_receipt(raced, plan)
         return {**raced, "duplicate": True}
 
-    message_id = f"<{plan['idempotency_key']}@threat-radar.invalid>"
+    message_id = f"<{plan['idempotency_key']}@telemetry-research.invalid>"
     message = EmailMessage()
     message["Subject"] = str(plan["subject"])
     message["From"] = _normalize_email_address(settings.sender)
     message["To"] = _normalize_email_address(settings.recipient)
     message["Date"] = format_datetime(datetime.now(UTC))
     message["Message-ID"] = message_id
-    message["X-Threat-Radar-Report-ID"] = str(plan["report_id"])
+    message["X-Threat-Research-Report-ID"] = str(plan["report_id"])
     message.set_content(str(plan["summary"]))
     message.add_attachment(
         html_path.read_bytes(),

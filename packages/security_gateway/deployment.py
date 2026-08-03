@@ -40,9 +40,9 @@ class DeploymentControlPaths:
 
 def default_control_paths() -> DeploymentControlPaths:
     return DeploymentControlPaths(
-        discovery=configured_path("RADAR_DISCOVERY_CONFIG", "config/discovery.yaml"),
-        sources=configured_path("RADAR_SOURCES_CONFIG", "config/sources.yaml"),
-        source_terms=configured_path("RADAR_SOURCE_TERMS_CONFIG", "config/source-terms.yaml"),
+        discovery=configured_path("ETR_DISCOVERY_CONFIG", "config/discovery.yaml"),
+        sources=configured_path("ETR_SOURCES_CONFIG", "config/sources.yaml"),
+        source_terms=configured_path("ETR_SOURCE_TERMS_CONFIG", "config/source-terms.yaml"),
     )
 
 
@@ -118,8 +118,8 @@ def require_deployment_approval(
     controls = paths or default_control_paths()
     path = approval_path or Path(
         os.environ.get(
-            "RADAR_DEPLOYMENT_APPROVAL",
-            ".outcome-radar/deployment-approval.yaml",
+            "ETR_DEPLOYMENT_APPROVAL",
+            ".emerging-telemetry-research/deployment-approval.yaml",
         )
     )
     approval = _load_object(path, "deployment approval")

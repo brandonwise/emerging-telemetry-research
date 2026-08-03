@@ -12,44 +12,44 @@ ALLOWED_STATUSES = {"ok", "degraded", "failed", "blocked", "disabled"}
 ALLOWED_RISKS = {"low", "medium", "high", "critical"}
 
 
-class RadarTelemetry:
+class ResearchTelemetry:
     """Telemetry facade that cannot accept source content, URIs, prompts, or credentials."""
 
     def __init__(self, tracer: Tracer, meter: Meter) -> None:
         self._tracer = tracer
         self._workflow_runs: Counter = meter.create_counter(
-            "radar.workflow.runs",
-            description="Threat Radar workflow outcomes",
+            "research.workflow.runs",
+            description="Telemetry Research workflow outcomes",
         )
         self._source_fetches: Counter = meter.create_counter(
-            "radar.source.fetches",
+            "research.source.fetches",
             description="Safe-fetch outcomes by registered source",
         )
         self._model_requests: Counter = meter.create_counter(
-            "radar.model.requests",
+            "research.model.requests",
             description="Model requests by provider, model, agent, and stage",
         )
         self._model_cost: Counter = meter.create_counter(
-            "radar.model.estimated_cost",
+            "research.model.estimated_cost",
             unit="USD",
             description="Estimated model cost",
         )
         self._delivery_attempts: Counter = meter.create_counter(
-            "radar.delivery.attempts",
+            "research.delivery.attempts",
             description="Delivery outcomes by configured channel",
         )
         self._security_events: Counter = meter.create_counter(
-            "radar.security.events",
+            "research.security.events",
             description="Content and policy security events",
         )
         self._stage_latency: Histogram = meter.create_histogram(
-            "radar.stage.duration",
+            "research.stage.duration",
             unit="ms",
             description="Stage latency",
         )
 
     @classmethod
-    def current(cls, service_name: str) -> RadarTelemetry:
+    def current(cls, service_name: str) -> ResearchTelemetry:
         return cls(
             trace.get_tracer(service_name),
             metrics.get_meter(service_name),
@@ -64,19 +64,19 @@ class RadarTelemetry:
     ) -> AbstractContextManager[Span]:
         attributes = _compact(
             {
-                "radar.run_id": run_id,
-                "radar.stage": stage,
+                "research.run_id": run_id,
+                "research.stage": stage,
             }
         )
         return self._tracer.start_as_current_span(name, attributes=attributes)
 
     def workflow_run(self, *, mode: str, status: str) -> None:
-        self._workflow_runs.add(1, {"radar.mode": mode, "radar.status": _status(status)})
+        self._workflow_runs.add(1, {"research.mode": mode, "research.status": _status(status)})
 
     def source_fetch(self, *, source_id: str, status: str) -> None:
         self._source_fetches.add(
             1,
-            {"radar.source_id": source_id, "radar.status": _status(status)},
+            {"research.source_id": source_id, "research.status": _status(status)},
         )
 
     def model_request(
@@ -92,9 +92,9 @@ class RadarTelemetry:
         attributes = {
             "gen_ai.system": provider,
             "gen_ai.request.model": model,
-            "radar.agent_id": agent_id,
-            "radar.stage": stage,
-            "radar.status": _status(status),
+            "research.agent_id": agent_id,
+            "research.stage": stage,
+            "research.status": _status(status),
         }
         self._model_requests.add(1, attributes)
         self._model_cost.add(max(0, estimated_cost), attributes)
@@ -102,7 +102,7 @@ class RadarTelemetry:
     def delivery(self, *, channel: str, status: str) -> None:
         self._delivery_attempts.add(
             1,
-            {"radar.channel": channel, "radar.status": _status(status)},
+            {"research.channel": channel, "research.status": _status(status)},
         )
 
     def security_event(self, *, category: str, risk: str, disposition: str) -> None:
@@ -111,23 +111,23 @@ class RadarTelemetry:
         self._security_events.add(
             1,
             {
-                "radar.category": category,
-                "radar.risk": risk,
-                "radar.disposition": disposition,
+                "research.category": category,
+                "research.risk": risk,
+                "research.disposition": disposition,
             },
         )
 
     def stage_latency(self, *, stage: str, status: str, milliseconds: float) -> None:
         self._stage_latency.record(
             max(0, milliseconds),
-            {"radar.stage": stage, "radar.status": _status(status)},
+            {"research.stage": stage, "research.status": _status(status)},
         )
 
 
-def configure_from_environment(service_name: str) -> RadarTelemetry:
+def configure_from_environment(service_name: str) -> ResearchTelemetry:
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
     if not endpoint:
-        return RadarTelemetry.current(service_name)
+        return ResearchTelemetry.current(service_name)
 
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -140,7 +140,7 @@ def configure_from_environment(service_name: str) -> RadarTelemetry:
     resource = Resource.create(
         {
             "service.name": service_name,
-            "deployment.environment.name": os.getenv("RADAR_ENVIRONMENT", "development"),
+            "deployment.environment.name": os.getenv("ETR_ENVIRONMENT", "development"),
         }
     )
     insecure = endpoint.lower().startswith("http://")
@@ -158,7 +158,7 @@ def configure_from_environment(service_name: str) -> RadarTelemetry:
     )
     trace.set_tracer_provider(tracer_provider)
     metrics.set_meter_provider(meter_provider)
-    return RadarTelemetry(
+    return ResearchTelemetry(
         tracer_provider.get_tracer(service_name),
         meter_provider.get_meter(service_name),
     )

@@ -1,10 +1,10 @@
 import pytest
 
-from packages.telemetry.runtime import RadarTelemetry
+from packages.telemetry.runtime import ResearchTelemetry
 
 
 def test_telemetry_rejects_unbounded_status_and_risk_labels() -> None:
-    telemetry = RadarTelemetry.current("radar-test")
+    telemetry = ResearchTelemetry.current("research-test")
     with pytest.raises(ValueError, match="status"):
         telemetry.workflow_run(mode="fixture", status="secret-bearing-arbitrary-value")
     with pytest.raises(ValueError, match="risk"):
@@ -12,7 +12,7 @@ def test_telemetry_rejects_unbounded_status_and_risk_labels() -> None:
 
 
 def test_noop_telemetry_records_bounded_events() -> None:
-    telemetry = RadarTelemetry.current("radar-test")
+    telemetry = ResearchTelemetry.current("research-test")
     telemetry.workflow_run(mode="fixture", status="ok")
     telemetry.source_fetch(source_id="cisa-kev", status="degraded")
     telemetry.model_request(

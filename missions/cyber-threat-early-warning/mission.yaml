@@ -8,7 +8,7 @@ description: The original security workflow expressed as a reusable mission pack
 vocabulary:
   singular: threat
   plural: threats
-  collection: Threat radar
+  collection: Threat research
   empty_result: No threats met the evidence and priority thresholds.
 scope:
   include_terms: [cybersecurity, vulnerability, exploitation, malware, campaign, defender]

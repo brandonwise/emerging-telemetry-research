@@ -2,7 +2,7 @@
 
 ## The durable boundary
 
-`outcome-radar` owns collection, evidence, scoring, verification, reports, and state. Agent
+`emerging-telemetry-research` owns collection, evidence, scoring, verification, reports, and state. Agent
 platforms are replaceable adapters around its CLI and versioned JSON contracts.
 
 ```text
@@ -29,18 +29,18 @@ Requirements:
 
 ```bash
 uv sync --frozen --extra dev
-uv run outcome-radar setup init --profile portable --json
-uv run outcome-radar setup secret-set BRAVE_API_KEY
-uv run outcome-radar setup secret-set XAI_API_KEY
-uv run outcome-radar setup approval-request --environment-id workstation --json
+uv run emerging-telemetry-research setup init --profile portable --json
+uv run emerging-telemetry-research setup secret-set BRAVE_API_KEY
+uv run emerging-telemetry-research setup secret-set XAI_API_KEY
+uv run emerging-telemetry-research setup approval-request --environment-id workstation --json
 # Review the request, then apply it with a named operator and change/ticket ID.
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   setup doctor --profile portable --json
 ```
 
 Portable output:
 
-- `state/radar.db`: immutable API records, analytics, trends, source health, and bounded telemetry
+- `state/research.db`: immutable API records, analytics, trends, source health, and bounded telemetry
 - `state/objects`: content-addressed source objects and metadata
 - `reports/generated`: verified JSON, self-contained HTML, reviews, evals, and local delivery plans
 
@@ -69,8 +69,8 @@ make openclaw-agents-install
 ```
 
 ```dotenv
-RADAR_AGENT_MODE=shadow
-RADAR_AGENT_ADAPTER=openclaw
+ETR_AGENT_MODE=shadow
+ETR_AGENT_ADAPTER=openclaw
 ```
 
 ### Codex
@@ -79,8 +79,8 @@ The command adapter runs ephemeral, read-only `codex exec` sessions with the ass
 Schema:
 
 ```dotenv
-RADAR_AGENT_MODE=shadow
-RADAR_AGENT_ADAPTER=codex
+ETR_AGENT_MODE=shadow
+ETR_AGENT_ADAPTER=codex
 ```
 
 ### Claude Code
@@ -88,21 +88,21 @@ RADAR_AGENT_ADAPTER=codex
 The command adapter disables tools and session persistence and requires structured JSON:
 
 ```dotenv
-RADAR_AGENT_MODE=shadow
-RADAR_AGENT_ADAPTER=claude
+ETR_AGENT_MODE=shadow
+ETR_AGENT_ADAPTER=claude
 ```
 
 ### Perplexity or another OpenAI-compatible API
 
 ```dotenv
-RADAR_AGENT_MODE=shadow
-RADAR_AGENT_ADAPTER=openai-compatible
-RADAR_AGENT_PROVIDER_NAME=perplexity
-RADAR_AGENT_BASE_URL=https://api.perplexity.ai
-RADAR_AGENT_MODEL=your-approved-model
-RADAR_AGENT_API_KEY_REF=keyring://outcome-radar/RADAR_AGENT_API_KEY
-RADAR_AGENT_INPUT_PRICE_PER_MILLION=your-current-input-price
-RADAR_AGENT_OUTPUT_PRICE_PER_MILLION=your-current-output-price
+ETR_AGENT_MODE=shadow
+ETR_AGENT_ADAPTER=openai-compatible
+ETR_AGENT_PROVIDER_NAME=perplexity
+ETR_AGENT_BASE_URL=https://api.perplexity.ai
+ETR_AGENT_MODEL=your-approved-model
+ETR_AGENT_API_KEY_REF=keyring://emerging-telemetry-research/ETR_AGENT_API_KEY
+ETR_AGENT_INPUT_PRICE_PER_MILLION=your-current-input-price
+ETR_AGENT_OUTPUT_PRICE_PER_MILLION=your-current-output-price
 ```
 
 Prices are explicit deployment configuration because provider/model pricing changes. They are
@@ -118,20 +118,20 @@ returned object locally.
 
 ### Deterministic fixture
 
-`RADAR_AGENT_ADAPTER=fixture` runs without a model. Use it for CI, contract tests, and stable
+`ETR_AGENT_ADAPTER=fixture` runs without a model. Use it for CI, contract tests, and stable
 workflow replay—not for production analysis.
 
 ## Generate platform setup
 
 ```bash
-uv run outcome-radar setup generate --platform codex --json
+uv run emerging-telemetry-research setup generate --platform codex --json
 ```
 
 Supported values:
 
 - `openclaw`: reviewed Lobster orchestration
-- `claude-code`: project `CLAUDE.md` and a Threat Radar skill
-- `codex`: project `AGENTS.md` and a Threat Radar skill
+- `claude-code`: project `CLAUDE.md` and a Telemetry Research skill
+- `codex`: project `AGENTS.md` and a Telemetry Research skill
 - `perplexity`: OpenAI-compatible environment and operating guide
 - `generic`: shell runner and scheduler-neutral guide
 
@@ -168,7 +168,7 @@ silently falling back. See the
 Any scheduler that can run a command can operate the portable profile:
 
 ```bash
-./run-radar.sh --agent-mode shadow --agent-adapter openai-compatible
+./run-research.sh --agent-mode shadow --agent-adapter openai-compatible
 ```
 
 OpenClaw, cron, systemd, launchd, CI, Codex, and Claude all call the same CLI. Conversation history
@@ -180,6 +180,6 @@ completed nodes only when their input and node-revision hashes still match.
 
 ## Delivery
 
-Portable runs produce `destination: file:local`. Email, Discord, Slack, ticketing, and other
-delivery adapters may consume a verified delivery plan only after destination and credential
-approval. Collection credentials never share the delivery boundary.
+Portable runs produce `destination: file:local`. External notification or ticketing adapters may
+consume a verified delivery plan only after destination and credential approval. Collection
+credentials never share the delivery boundary.

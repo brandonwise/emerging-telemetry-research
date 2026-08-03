@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-The production radar needs to improve from analyst outcomes without allowing an optimizer to weaken
+The production research needs to improve from analyst outcomes without allowing an optimizer to weaken
 the evidence, security, source-terms, egress, or delivery controls that define a trustworthy result.
 A single optimizing loop is vulnerable to metric gaming, stale labels, blind threshold changes, and
 self-review.

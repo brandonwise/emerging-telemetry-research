@@ -5,31 +5,31 @@ ARG UV_VERSION=0.12.1
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:${PATH}" \
-    RADAR_API_REPORT_ROOT="/var/lib/threat-radar/reports"
+    ETR_API_REPORT_ROOT="/var/lib/telemetry-research/reports"
 
 RUN apt-get update \
     && apt-get upgrade --yes \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --no-cache-dir --disable-pip-version-check "uv==${UV_VERSION}" \
-    && groupadd --system --gid 65532 radar \
-    && useradd --system --uid 65532 --gid 65532 --home-dir /nonexistent radar \
-    && mkdir -p /app /var/lib/threat-radar/reports \
-    && chown -R radar:radar /app /var/lib/threat-radar
+    && groupadd --system --gid 65532 research \
+    && useradd --system --uid 65532 --gid 65532 --home-dir /nonexistent research \
+    && mkdir -p /app /var/lib/telemetry-research/reports \
+    && chown -R research:research /app /var/lib/telemetry-research
 
 WORKDIR /app
 
-COPY --chown=radar:radar pyproject.toml uv.lock README.md SECURITY.md THREAT_MODEL.md THREAT_MODEL_APPROVAL.md LICENSE ./
-COPY --chown=radar:radar apps ./apps
-COPY --chown=radar:radar packages ./packages
-COPY --chown=radar:radar schemas ./schemas
-COPY --chown=radar:radar config ./config
-COPY --chown=radar:radar integrations ./integrations
-COPY --chown=radar:radar migrations ./migrations
-COPY --chown=radar:radar missions ./missions
-COPY --chown=radar:radar openapi ./openapi
-COPY --chown=radar:radar openclaw ./openclaw
-COPY --chown=radar:radar policies ./policies
-COPY --chown=radar:radar docs ./docs
+COPY --chown=research:research pyproject.toml uv.lock README.md SECURITY.md THREAT_MODEL.md THREAT_MODEL_APPROVAL.md LICENSE ./
+COPY --chown=research:research apps ./apps
+COPY --chown=research:research packages ./packages
+COPY --chown=research:research schemas ./schemas
+COPY --chown=research:research config ./config
+COPY --chown=research:research integrations ./integrations
+COPY --chown=research:research migrations ./migrations
+COPY --chown=research:research missions ./missions
+COPY --chown=research:research openapi ./openapi
+COPY --chown=research:research openclaw ./openclaw
+COPY --chown=research:research policies ./policies
+COPY --chown=research:research docs ./docs
 
 RUN uv sync --frozen --no-dev
 

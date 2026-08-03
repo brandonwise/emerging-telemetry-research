@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ORG="${1:-}"
-REPO_NAME="${2:-outcome-radar}"
+REPO_NAME="${2:-emerging-telemetry-research}"
 
 if [[ -z "$ORG" ]]; then
   echo "Usage: $0 <github-org-or-user> [repo-name]" >&2
@@ -23,7 +23,7 @@ fi
 
 git add .
 if ! git diff --cached --quiet; then
-  git commit -m "Release Outcome Radar 1.0"
+  git commit -m "Release Emerging Telemetry Research 1.0"
 fi
 
 gh repo create "$ORG/$REPO_NAME" \
@@ -31,7 +31,7 @@ gh repo create "$ORG/$REPO_NAME" \
   --source=. \
   --remote=origin \
   --push \
-  --description "Mission-driven, evidence-backed outcome research with bounded agent workflows"
+  --description "AI-native emerging telemetry research with bounded agent workflows"
 
 echo "Created private repository: $ORG/$REPO_NAME"
 echo "Next: configure branch protection, environments, CODEOWNERS teams, and required checks."

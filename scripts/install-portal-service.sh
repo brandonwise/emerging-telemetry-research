@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-radar_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-radar_label="ai.openclaw.threat-radar-portal"
-radar_port="${RADAR_PORTAL_PORT:-8088}"
-radar_uid="$(id -u)"
-radar_launch_agents="${HOME}/Library/LaunchAgents"
-radar_plist="${radar_launch_agents}/${radar_label}.plist"
-radar_logs="${HOME}/.openclaw/logs"
-radar_stdout="${radar_logs}/threat-radar-portal.log"
-radar_stderr="${radar_logs}/threat-radar-portal.error.log"
-radar_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
-radar_tmp_plist="$(mktemp)"
-radar_auth_mode="${RADAR_PORTAL_AUTH_MODE:-required}"
+research_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+research_label="ai.openclaw.telemetry-research-portal"
+research_port="${ETR_PORTAL_PORT:-8088}"
+research_uid="$(id -u)"
+research_launch_agents="${HOME}/Library/LaunchAgents"
+research_plist="${research_launch_agents}/${research_label}.plist"
+research_logs="${HOME}/.openclaw/logs"
+research_stdout="${research_logs}/telemetry-research-portal.log"
+research_stderr="${research_logs}/telemetry-research-portal.error.log"
+research_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
+research_tmp_plist="$(mktemp)"
+research_auth_mode="${ETR_PORTAL_AUTH_MODE:-required}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --auth)
-      radar_auth_mode="${2:?--auth requires required or disabled}"
+      research_auth_mode="${2:?--auth requires required or disabled}"
       shift 2
       ;;
     --no-auth)
-      radar_auth_mode="disabled"
+      research_auth_mode="disabled"
       shift
       ;;
     *)
@@ -32,89 +32,89 @@ while [[ $# -gt 0 ]]; do
 done
 
 cleanup() {
-  rm -f "${radar_tmp_plist}"
+  rm -f "${research_tmp_plist}"
 }
 trap cleanup EXIT
 
-if [[ ! "${radar_port}" =~ ^[0-9]+$ ]] || (( radar_port < 1024 || radar_port > 65535 )); then
-  echo "RADAR_PORTAL_PORT must be an integer from 1024 to 65535" >&2
+if [[ ! "${research_port}" =~ ^[0-9]+$ ]] || (( research_port < 1024 || research_port > 65535 )); then
+  echo "ETR_PORTAL_PORT must be an integer from 1024 to 65535" >&2
   exit 2
 fi
-if [[ "${radar_auth_mode}" != "required" && "${radar_auth_mode}" != "disabled" ]]; then
+if [[ "${research_auth_mode}" != "required" && "${research_auth_mode}" != "disabled" ]]; then
   echo "Portal authentication must be required or disabled" >&2
   exit 2
 fi
 
-mkdir -p "${radar_launch_agents}" "${radar_logs}" "${radar_repo_root}/state"
+mkdir -p "${research_launch_agents}" "${research_logs}" "${research_repo_root}/state"
 
-if [[ "${radar_auth_mode}" == "required" ]]; then
-  if [[ ! -x "${radar_keychain_helper}" ]]; then
+if [[ "${research_auth_mode}" == "required" ]]; then
+  if [[ ! -x "${research_keychain_helper}" ]]; then
     echo "OpenClaw Keychain helper is unavailable" >&2
     exit 1
   fi
   if ! /usr/bin/security find-generic-password \
     -a "clawdbot" \
-    -s "RADAR_PORTAL_ACCESS_TOKEN" >/dev/null 2>&1; then
-    radar_token="$(/usr/bin/openssl rand -hex 32)"
+    -s "ETR_PORTAL_ACCESS_TOKEN" >/dev/null 2>&1; then
+    research_token="$(/usr/bin/openssl rand -hex 32)"
     /usr/bin/security add-generic-password \
       -a "clawdbot" \
-      -s "RADAR_PORTAL_ACCESS_TOKEN" \
-      -w "${radar_token}" >/dev/null
-    unset radar_token
+      -s "ETR_PORTAL_ACCESS_TOKEN" \
+      -w "${research_token}" >/dev/null
+    unset research_token
   fi
 fi
 
-/usr/bin/plutil -create xml1 "${radar_tmp_plist}"
-/usr/bin/plutil -insert Label -string "${radar_label}" "${radar_tmp_plist}"
+/usr/bin/plutil -create xml1 "${research_tmp_plist}"
+/usr/bin/plutil -insert Label -string "${research_label}" "${research_tmp_plist}"
 /usr/bin/plutil -insert ProgramArguments -json \
-  "[\"/bin/bash\",\"${radar_repo_root}/scripts/run-portal.sh\",\"--lan\",\"--port\",\"${radar_port}\"]" \
-  "${radar_tmp_plist}"
-/usr/bin/plutil -insert WorkingDirectory -string "${radar_repo_root}" "${radar_tmp_plist}"
+  "[\"/bin/bash\",\"${research_repo_root}/scripts/run-portal.sh\",\"--lan\",\"--port\",\"${research_port}\"]" \
+  "${research_tmp_plist}"
+/usr/bin/plutil -insert WorkingDirectory -string "${research_repo_root}" "${research_tmp_plist}"
 /usr/bin/plutil -insert EnvironmentVariables -json \
-  "{\"HOME\":\"${HOME}\",\"PATH\":\"/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin\",\"RADAR_PORTAL_AUTH_MODE\":\"${radar_auth_mode}\"}" \
-  "${radar_tmp_plist}"
-/usr/bin/plutil -insert RunAtLoad -bool true "${radar_tmp_plist}"
-/usr/bin/plutil -insert KeepAlive -bool true "${radar_tmp_plist}"
-/usr/bin/plutil -insert ProcessType -string "Background" "${radar_tmp_plist}"
-/usr/bin/plutil -insert ThrottleInterval -integer 15 "${radar_tmp_plist}"
-/usr/bin/plutil -insert StandardOutPath -string "${radar_stdout}" "${radar_tmp_plist}"
-/usr/bin/plutil -insert StandardErrorPath -string "${radar_stderr}" "${radar_tmp_plist}"
-/usr/bin/plutil -lint "${radar_tmp_plist}" >/dev/null
-/usr/bin/install -m 600 "${radar_tmp_plist}" "${radar_plist}"
+  "{\"HOME\":\"${HOME}\",\"PATH\":\"/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin\",\"ETR_PORTAL_AUTH_MODE\":\"${research_auth_mode}\"}" \
+  "${research_tmp_plist}"
+/usr/bin/plutil -insert RunAtLoad -bool true "${research_tmp_plist}"
+/usr/bin/plutil -insert KeepAlive -bool true "${research_tmp_plist}"
+/usr/bin/plutil -insert ProcessType -string "Background" "${research_tmp_plist}"
+/usr/bin/plutil -insert ThrottleInterval -integer 15 "${research_tmp_plist}"
+/usr/bin/plutil -insert StandardOutPath -string "${research_stdout}" "${research_tmp_plist}"
+/usr/bin/plutil -insert StandardErrorPath -string "${research_stderr}" "${research_tmp_plist}"
+/usr/bin/plutil -lint "${research_tmp_plist}" >/dev/null
+/usr/bin/install -m 600 "${research_tmp_plist}" "${research_plist}"
 
-/bin/launchctl bootout "gui/${radar_uid}/${radar_label}" >/dev/null 2>&1 || true
-radar_bootstrapped="false"
-for _radar_attempt in $(seq 1 8); do
-  if /bin/launchctl bootstrap "gui/${radar_uid}" "${radar_plist}" >/dev/null 2>&1; then
-    radar_bootstrapped="true"
+/bin/launchctl bootout "gui/${research_uid}/${research_label}" >/dev/null 2>&1 || true
+research_bootstrapped="false"
+for _research_attempt in $(seq 1 8); do
+  if /bin/launchctl bootstrap "gui/${research_uid}" "${research_plist}" >/dev/null 2>&1; then
+    research_bootstrapped="true"
     break
   fi
   sleep 0.25
 done
-if [[ "${radar_bootstrapped}" != "true" ]]; then
-  echo "Threat Radar portal could not be loaded by launchd" >&2
-  /bin/launchctl bootstrap "gui/${radar_uid}" "${radar_plist}"
+if [[ "${research_bootstrapped}" != "true" ]]; then
+  echo "Telemetry Research portal could not be loaded by launchd" >&2
+  /bin/launchctl bootstrap "gui/${research_uid}" "${research_plist}"
   exit 1
 fi
 
-radar_status=""
-for _radar_attempt in $(seq 1 30); do
-  radar_status="$(curl -sS -o /dev/null -w "%{http_code}" \
-    "http://127.0.0.1:${radar_port}/health" 2>/dev/null || true)"
-  [[ "${radar_status}" == "200" ]] && break
+research_status=""
+for _research_attempt in $(seq 1 30); do
+  research_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+    "http://127.0.0.1:${research_port}/health" 2>/dev/null || true)"
+  [[ "${research_status}" == "200" ]] && break
   sleep 0.25
 done
-if [[ "${radar_status}" != "200" ]]; then
-  echo "Threat Radar portal failed its health check" >&2
-  tail -40 "${radar_stderr}" >&2 2>/dev/null || true
+if [[ "${research_status}" != "200" ]]; then
+  echo "Telemetry Research portal failed its health check" >&2
+  tail -40 "${research_stderr}" >&2 2>/dev/null || true
   exit 1
 fi
 
-cd "${radar_repo_root}"
-uv run outcome-radar analytics event \
+cd "${research_repo_root}"
+uv run emerging-telemetry-research analytics event \
   portal.service.enabled 1 service \
-  --dimensions-json "{\"mode\":\"private_lan\",\"auth\":\"${radar_auth_mode}\",\"port\":\"${radar_port}\"}" \
-  --database "${radar_repo_root}/state/radar.db" \
+  --dimensions-json "{\"mode\":\"private_lan\",\"auth\":\"${research_auth_mode}\",\"port\":\"${research_port}\"}" \
+  --database "${research_repo_root}/state/research.db" \
   --json >/dev/null
 
-RADAR_PORTAL_AUTH_MODE="${radar_auth_mode}" "${radar_repo_root}/scripts/portal-status.sh"
+ETR_PORTAL_AUTH_MODE="${research_auth_mode}" "${research_repo_root}/scripts/portal-status.sh"

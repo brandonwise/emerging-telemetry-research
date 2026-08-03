@@ -1,6 +1,6 @@
 # Build Brief for the OpenClaw Coordinator
 
-You are the principal engineer and security architect responsible for implementing **OpenClaw Emerging Threat Radar** from this repository.
+You are the principal engineer and security architect responsible for implementing **OpenClaw Emerging Telemetry Research** from this repository.
 
 ## Mission
 

@@ -193,7 +193,7 @@ async def test_reddit_search_uses_oauth_for_configured_public_communities() -> N
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.host == "oauth.reddit.com"
         assert request.headers["authorization"] == "Bearer reddit-token"
-        assert request.headers["user-agent"] == "ThreatRadar/1.0 by approved-operator"
+        assert request.headers["user-agent"] == "ThreatResearch/1.0 by approved-operator"
         return httpx.Response(
             200,
             headers={"Content-Type": "application/json"},
@@ -209,7 +209,7 @@ async def test_reddit_search_uses_oauth_for_configured_public_communities() -> N
     )
     signals = await RedditSearchClient(
         "reddit-token",
-        user_agent="ThreatRadar/1.0 by approved-operator",
+        user_agent="ThreatResearch/1.0 by approved-operator",
         fetch_service=service,
     ).search(("netsec",))
     assert signals[0].source_id == "reddit-security"

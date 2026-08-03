@@ -210,7 +210,7 @@ def check_contracts(failures: list[str]) -> None:
                 if (
                     isinstance(operation, dict)
                     and "operationId" in operation
-                    and not operation.get("x-radar-roles")
+                    and not operation.get("x-research-roles")
                 ):
                     failures.append(
                         f"OpenAPI operation {operation['operationId']} has no role boundary"
@@ -307,7 +307,7 @@ def check_secret_material(failures: list[str]) -> None:
             failures.append(f"Dockerfile base image is not version pinned: {image}")
 
     plugin_manifest = json.loads(
-        (ROOT / "openclaw/plugins/threat-radar-boundary/openclaw.plugin.json").read_text(
+        (ROOT / "openclaw/plugins/telemetry-research-boundary/openclaw.plugin.json").read_text(
             encoding="utf-8"
         )
     )
@@ -320,7 +320,7 @@ def check_secret_material(failures: list[str]) -> None:
     node = shutil.which("node")
     if node:
         result = subprocess.run(  # noqa: S603
-            [node, "--check", str(ROOT / "openclaw/plugins/threat-radar-boundary/index.js")],
+            [node, "--check", str(ROOT / "openclaw/plugins/telemetry-research-boundary/index.js")],
             check=False,
             capture_output=True,
             text=True,
@@ -485,7 +485,7 @@ def check_mission_packs(failures: list[str]) -> None:
     paths = sorted((ROOT / "missions").glob("*/mission.yaml"))
     expected = {
         "ms_cyber-threat-early-warning",
-        "ms_developer-product-opportunity-radar",
+        "ms_developer-product-opportunity-research",
     }
     found: set[str] = set()
     for path in paths:
@@ -521,7 +521,7 @@ def check_mission_packs(failures: list[str]) -> None:
 
 def check_motion_architecture(failures: list[str]) -> None:
     path = ROOT / "docs/architecture-motion.html"
-    gif_path = ROOT / "docs/assets/threat-radar-architecture-motion.gif"
+    gif_path = ROOT / "docs/assets/telemetry-research-architecture-motion.gif"
     parser = ArchitectureVisualParser()
     try:
         text = path.read_text(encoding="utf-8")
@@ -554,7 +554,7 @@ def check_motion_architecture(failures: list[str]) -> None:
         'id="motion"': "an accessible motion toggle",
         "@media (prefers-reduced-motion: reduce)": "reduced-motion behavior",
         "architecture-visual.html": "a link to the complete architecture",
-        'download="threat-radar-architecture-motion.gif"': "an animated GIF download",
+        'download="telemetry-research-architecture-motion.gif"': "an animated GIF download",
     }
     for fragment, description in required_fragments.items():
         if fragment not in text:
@@ -615,7 +615,7 @@ def main() -> None:
         "docs/EXTENDING.md",
         "docs/MISSIONS.md",
         "docs/architecture-motion.html",
-        "docs/assets/threat-radar-architecture-motion.gif",
+        "docs/assets/telemetry-research-architecture-motion.gif",
         "docs/index.html",
         "docs/sample-daily-brief.html",
         "docs/universal-agent-runtime.html",
@@ -625,7 +625,7 @@ def main() -> None:
         "missions/developer-product-opportunities/fixture-signals.json",
         "openapi/openapi.yaml",
         "scripts/setup_openclaw_agents.py",
-        "openclaw/plugins/threat-radar-boundary/openclaw.plugin.json",
+        "openclaw/plugins/telemetry-research-boundary/openclaw.plugin.json",
         "openclaw/workflows/frozen-acceptance.lobster",
     ]
     for relative in required:

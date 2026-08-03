@@ -5,14 +5,14 @@ from pathlib import Path
 
 
 def test_boundary_plugin_manifest_and_javascript_are_valid() -> None:
-    root = Path("openclaw/plugins/threat-radar-boundary")
+    root = Path("openclaw/plugins/telemetry-research-boundary")
     manifest = json.loads((root / "openclaw.plugin.json").read_text(encoding="utf-8"))
-    assert manifest["id"] == "threat-radar-boundary"
+    assert manifest["id"] == "telemetry-research-boundary"
     assert manifest["enabledByDefault"] is False
     assert manifest["contracts"]["tools"] == [
-        "radar_flow_start",
-        "radar_flow_finish",
-        "radar_delivery_send",
+        "research_flow_start",
+        "research_flow_finish",
+        "research_delivery_send",
     ]
     node = shutil.which("node")
     assert node
@@ -26,7 +26,9 @@ def test_boundary_plugin_manifest_and_javascript_are_valid() -> None:
 
 
 def test_delivery_tool_has_no_destination_parameter() -> None:
-    source = Path("openclaw/plugins/threat-radar-boundary/index.js").read_text(encoding="utf-8")
+    source = Path("openclaw/plugins/telemetry-research-boundary/index.js").read_text(
+        encoding="utf-8"
+    )
     assert 'from "openclaw/plugin-sdk/plugin-entry"' in source
     assert 'from "openclaw/plugin-sdk/tool-results"' in source
     delivery_block = source.split("const DELIVERY_PARAMETERS", 1)[1].split(

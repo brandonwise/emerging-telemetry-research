@@ -61,7 +61,7 @@ class SQLiteRepository:
             existing_idempotency = connection.execute(
                 """
                 SELECT request_hash
-                FROM radar_idempotency
+                FROM research_idempotency
                 WHERE scope = ? AND idempotency_key = ?
                 """,
                 (collection, idempotency_key),
@@ -72,7 +72,7 @@ class SQLiteRepository:
                 replay = connection.execute(
                     """
                     SELECT payload
-                    FROM radar_records
+                    FROM research_records
                     WHERE collection = ? AND idempotency_key = ?
                     """,
                     (collection, idempotency_key),
@@ -85,7 +85,7 @@ class SQLiteRepository:
             existing_record = connection.execute(
                 """
                 SELECT payload_hash, payload
-                FROM radar_records
+                FROM research_records
                 WHERE collection = ? AND record_key = ?
                 """,
                 (collection, record_key),
@@ -95,7 +95,7 @@ class SQLiteRepository:
                     raise IdempotencyConflict(f"immutable record conflict in {collection}")
                 connection.execute(
                     """
-                    INSERT INTO radar_idempotency (
+                    INSERT INTO research_idempotency (
                       scope, idempotency_key, request_hash
                     ) VALUES (?, ?, ?)
                     """,
@@ -106,7 +106,7 @@ class SQLiteRepository:
 
             connection.execute(
                 """
-                INSERT INTO radar_idempotency (
+                INSERT INTO research_idempotency (
                   scope, idempotency_key, request_hash
                 ) VALUES (?, ?, ?)
                 """,
@@ -114,7 +114,7 @@ class SQLiteRepository:
             )
             connection.execute(
                 """
-                INSERT INTO radar_records (
+                INSERT INTO research_records (
                   collection, record_key, payload, payload_hash, idempotency_key
                 ) VALUES (?, ?, ?, ?, ?)
                 """,
@@ -129,7 +129,7 @@ class SQLiteRepository:
             row = connection.execute(
                 """
                 SELECT payload
-                FROM radar_records
+                FROM research_records
                 WHERE collection = ? AND record_key = ?
                 """,
                 (collection, key),
@@ -139,7 +139,7 @@ class SQLiteRepository:
     async def evidence_ids(self) -> set[str]:
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT record_key FROM radar_records WHERE collection = 'evidence'"
+                "SELECT record_key FROM research_records WHERE collection = 'evidence'"
             ).fetchall()
         return {str(row["record_key"]) for row in rows}
 
@@ -148,7 +148,7 @@ class SQLiteRepository:
             rows = connection.execute(
                 """
                 SELECT payload
-                FROM radar_records
+                FROM research_records
                 WHERE collection = 'reports'
                 ORDER BY created_at DESC
                 LIMIT 100
@@ -166,7 +166,7 @@ class SQLiteRepository:
             row = connection.execute(
                 """
                 SELECT payload
-                FROM radar_records
+                FROM research_records
                 WHERE collection = 'runs' AND record_key = ?
                 """,
                 (run_id,),
@@ -181,20 +181,20 @@ class SQLiteRepository:
         with self._connection() as connection:
             connection.executescript(
                 """
-                CREATE TABLE IF NOT EXISTS radar_meta (
+                CREATE TABLE IF NOT EXISTS research_meta (
                   key TEXT PRIMARY KEY,
                   value TEXT NOT NULL
                 );
-                INSERT OR IGNORE INTO radar_meta (key, value)
+                INSERT OR IGNORE INTO research_meta (key, value)
                   VALUES ('schema_version', '1');
-                CREATE TABLE IF NOT EXISTS radar_idempotency (
+                CREATE TABLE IF NOT EXISTS research_idempotency (
                   scope TEXT NOT NULL,
                   idempotency_key TEXT NOT NULL,
                   request_hash TEXT NOT NULL,
                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   PRIMARY KEY (scope, idempotency_key)
                 );
-                CREATE TABLE IF NOT EXISTS radar_records (
+                CREATE TABLE IF NOT EXISTS research_records (
                   collection TEXT NOT NULL,
                   record_key TEXT NOT NULL,
                   payload TEXT NOT NULL,
@@ -204,12 +204,12 @@ class SQLiteRepository:
                   PRIMARY KEY (collection, record_key),
                   UNIQUE (collection, idempotency_key)
                 );
-                CREATE INDEX IF NOT EXISTS radar_records_created_idx
-                  ON radar_records (collection, created_at DESC);
+                CREATE INDEX IF NOT EXISTS research_records_created_idx
+                  ON research_records (collection, created_at DESC);
                 """
             )
             version = connection.execute(
-                "SELECT value FROM radar_meta WHERE key = 'schema_version'"
+                "SELECT value FROM research_meta WHERE key = 'schema_version'"
             ).fetchone()
             if version is None or str(version["value"]) != "1":
                 raise RepositoryUnavailable("unsupported SQLite repository schema")

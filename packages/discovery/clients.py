@@ -351,7 +351,7 @@ class XaiXSearchClient:
             "text": {
                 "format": {
                     "type": "json_schema",
-                    "name": "threat_radar_x_signals",
+                    "name": "telemetry_research_x_signals",
                     "strict": True,
                     "schema": _x_signal_schema(),
                 }

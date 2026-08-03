@@ -1,6 +1,6 @@
 # Contributing
 
-Outcome Radar is currently private. Contributors need repository access and must keep source,
+Emerging Telemetry Research is currently private. Contributors need repository access and must keep source,
 issues, artifacts, and operational details inside approved private systems.
 
 ## Development workflow

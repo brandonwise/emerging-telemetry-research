@@ -1,4 +1,4 @@
-name: threat-radar
+name: telemetry-research
 args:
   mode:
     default: "structured-ingest"
@@ -7,7 +7,7 @@ args:
 steps:
   - id: validate_mode
     command: >-
-      uv run outcome-radar run create
+      uv run emerging-telemetry-research run create
       "$LOBSTER_ARG_MODE"
       --edition "$LOBSTER_ARG_EDITION"
       --json

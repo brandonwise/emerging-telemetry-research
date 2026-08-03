@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.outcome-radar.local/improvement-advice.schema.json",
+  "$id": "https://schemas.emerging-telemetry-research.local/improvement-advice.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "cycle_id", "generated_at", "status", "metrics", "proposals", "automatic_apply", "protected_boundaries"],

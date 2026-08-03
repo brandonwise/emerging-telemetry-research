@@ -19,7 +19,7 @@ from packages.security_gateway.deployment import (
 
 
 def _controls(root: Path) -> DeploymentControlPaths:
-    config = root / ".outcome-radar/config"
+    config = root / ".emerging-telemetry-research/config"
     return DeploymentControlPaths(
         discovery=config / "discovery.yaml",
         sources=config / "sources.yaml",
@@ -30,7 +30,7 @@ def _controls(root: Path) -> DeploymentControlPaths:
 def test_portable_init_prepares_sources_without_granting_authority(tmp_path: Path) -> None:
     initialize_workspace(tmp_path, profile="portable")
     sources = yaml.safe_load(
-        (tmp_path / ".outcome-radar/config/sources.yaml").read_text(encoding="utf-8")
+        (tmp_path / ".emerging-telemetry-research/config/sources.yaml").read_text(encoding="utf-8")
     )
     enabled = {
         str(item["id"])
@@ -39,7 +39,7 @@ def test_portable_init_prepares_sources_without_granting_authority(tmp_path: Pat
     }
 
     assert enabled == PORTABLE_SOURCE_IDS
-    assert not (tmp_path / ".outcome-radar/deployment-approval.yaml").exists()
+    assert not (tmp_path / ".emerging-telemetry-research/deployment-approval.yaml").exists()
 
 
 def test_approval_is_expiring_capability_and_control_bound(tmp_path: Path) -> None:
@@ -60,7 +60,7 @@ def test_approval_is_expiring_capability_and_control_bound(tmp_path: Path) -> No
         now=approved_at,
     )
     approval_path = write_private_yaml(
-        tmp_path / ".outcome-radar/deployment-approval.yaml",
+        tmp_path / ".emerging-telemetry-research/deployment-approval.yaml",
         approval,
     )
 

@@ -26,7 +26,7 @@ from packages.pipeline.live import (
     _prioritized_candidates,
     _select_report_findings,
     _web_queries,
-    run_live_radar,
+    run_live_research,
 )
 from packages.storage.object_store import LocalImmutableObjectStore
 from packages.storage.repository import MemoryRepository
@@ -308,7 +308,7 @@ async def test_live_pipeline_publishes_pre_cve_source_native_signal(
             )
 
     repository = MemoryRepository()
-    result = await run_live_radar(
+    result = await run_live_research(
         LiveRunSettings(
             output_root=tmp_path / "reports",
             edition="afternoon_delta",

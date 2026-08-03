@@ -44,15 +44,27 @@ DENIED_TOOLS = [
 def expected_agents(repo_root: Path) -> tuple[RoleAgent, ...]:
     return (
         RoleAgent(
-            "radar-specialist",
+            "research-specialist",
             str(repo_root / "openclaw/agents/specialist"),
             "openai/gpt-5.4",
         ),
-        RoleAgent("radar-impact", str(repo_root / "openclaw/agents/impact"), "openai/gpt-5.4"),
-        RoleAgent("radar-skeptic", str(repo_root / "openclaw/agents/skeptic"), "openai/gpt-5.4"),
-        RoleAgent("radar-verifier", str(repo_root / "openclaw/agents/verifier"), "openai/gpt-5.4"),
         RoleAgent(
-            "radar-chief",
+            "research-impact",
+            str(repo_root / "openclaw/agents/impact"),
+            "openai/gpt-5.4",
+        ),
+        RoleAgent(
+            "research-skeptic",
+            str(repo_root / "openclaw/agents/skeptic"),
+            "openai/gpt-5.4",
+        ),
+        RoleAgent(
+            "research-verifier",
+            str(repo_root / "openclaw/agents/verifier"),
+            "openai/gpt-5.4",
+        ),
+        RoleAgent(
+            "research-chief",
             str(repo_root / "openclaw/agents/coordinator"),
             "openai/gpt-5.6-sol",
         ),
@@ -188,7 +200,7 @@ def _install(repo_root: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Check or install Threat Radar's isolated OpenClaw role agents."
+        description="Check or install Telemetry Research's isolated OpenClaw role agents."
     )
     parser.add_argument(
         "--apply",

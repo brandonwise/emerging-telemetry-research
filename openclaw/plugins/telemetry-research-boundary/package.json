@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/threat-radar-boundary",
+  "name": "@openclaw/telemetry-research-boundary",
   "version": "0.1.0",
   "private": true,
   "type": "module",

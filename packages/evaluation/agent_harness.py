@@ -62,7 +62,7 @@ async def run_agent_evaluation(
     total_estimated_currency = 0.0
     signatures: dict[str, list[str]] = {}
 
-    with TemporaryDirectory(prefix="threat-radar-agent-eval-") as temporary:
+    with TemporaryDirectory(prefix="telemetry-research-agent-eval-") as temporary:
         baseline_root = Path(temporary)
         for manifest in manifests:
             baseline = run_frozen_fixture(

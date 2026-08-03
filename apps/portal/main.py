@@ -42,8 +42,8 @@ DOCUMENTS_ROOT = PORTAL_ROOT.parents[1] / "docs"
 ARCHITECTURE_MOTION_PATH = DOCUMENTS_ROOT / "architecture-motion.html"
 ARCHITECTURE_BLUEPRINT_PATH = DOCUMENTS_ROOT / "architecture-visual.html"
 MISSION_ENGINE_PATH = DOCUMENTS_ROOT / "mission-engine.html"
-ARCHITECTURE_GIF_PATH = DOCUMENTS_ROOT / "assets" / "threat-radar-architecture-motion.gif"
-SESSION_COOKIE = "radar_session"
+ARCHITECTURE_GIF_PATH = DOCUMENTS_ROOT / "assets" / "telemetry-research-architecture-motion.gif"
+SESSION_COOKIE = "research_session"
 SESSION_SECONDS = 12 * 60 * 60
 CSV_FIELDS = (
     "report_id",
@@ -81,9 +81,9 @@ def _inline_style_hash(document: str) -> str:
 
 
 class PortalSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="RADAR_PORTAL_", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="ETR_PORTAL_", extra="ignore")
 
-    analytics_db: Path = Path("state/radar.db")
+    analytics_db: Path = Path("state/research.db")
     reports_root: Path = Path("reports/generated")
     missions_root: Path = BUILTIN_MISSIONS_ROOT
     mission_reports_root: Path = Path("reports/missions")
@@ -92,7 +92,7 @@ class PortalSettings(BaseSettings):
     access_token: str | None = None
     secure_cookie: bool = False
     allowed_networks: str = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
-    title: str = Field(default="Outcome Radar", min_length=1, max_length=80)
+    title: str = Field(default="Emerging Telemetry Research", min_length=1, max_length=80)
 
     @model_validator(mode="after")
     def validate_lan_auth(self) -> PortalSettings:
@@ -101,14 +101,14 @@ class PortalSettings(BaseSettings):
         )
         if authentication_required and (self.access_token is None or len(self.access_token) < 20):
             raise ValueError(
-                "This authentication mode requires RADAR_PORTAL_ACCESS_TOKEN with 20+ characters"
+                "This authentication mode requires ETR_PORTAL_ACCESS_TOKEN with 20+ characters"
             )
         if (
             self.auth_mode != "disabled"
             and self.access_token is not None
             and len(self.access_token) < 20
         ):
-            raise ValueError("RADAR_PORTAL_ACCESS_TOKEN must have 20+ characters")
+            raise ValueError("ETR_PORTAL_ACCESS_TOKEN must have 20+ characters")
         return self
 
     @property
@@ -522,7 +522,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
             'href="/architecture/blueprint"',
         )
         document = document.replace(
-            'href="assets/threat-radar-architecture-motion.gif"',
+            'href="assets/telemetry-research-architecture-motion.gif"',
             'href="/exports/architecture.gif"',
         )
         return HTMLResponse(document)
@@ -555,7 +555,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return FileResponse(
             ARCHITECTURE_GIF_PATH,
             media_type="image/gif",
-            filename="threat-radar-architecture-motion.gif",
+            filename="telemetry-research-architecture-motion.gif",
         )
 
     @application.get("/exports/reports.csv")
@@ -568,7 +568,9 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             output.getvalue(),
             media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": 'attachment; filename="threat-radar-reports.csv"'},
+            headers={
+                "Content-Disposition": 'attachment; filename="telemetry-research-reports.csv"'
+            },
         )
 
     @application.get("/exports/reports.json")
@@ -576,7 +578,9 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             json.dumps(store.export_rows(), indent=2, sort_keys=True),
             media_type="application/json",
-            headers={"Content-Disposition": 'attachment; filename="threat-radar-reports.json"'},
+            headers={
+                "Content-Disposition": 'attachment; filename="telemetry-research-reports.json"'
+            },
         )
 
     @application.get("/exports/findings.csv")
@@ -596,7 +600,9 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             output.getvalue(),
             media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": 'attachment; filename="threat-radar-findings.csv"'},
+            headers={
+                "Content-Disposition": 'attachment; filename="telemetry-research-findings.csv"'
+            },
         )
 
     @application.get("/exports/findings.json")
@@ -604,7 +610,9 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
         return Response(
             json.dumps(store.export_finding_rows(), indent=2, sort_keys=True),
             media_type="application/json",
-            headers={"Content-Disposition": 'attachment; filename="threat-radar-findings.json"'},
+            headers={
+                "Content-Disposition": 'attachment; filename="telemetry-research-findings.json"'
+            },
         )
 
     @application.get("/exports/reports/{report_id}.json")

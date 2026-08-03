@@ -35,7 +35,7 @@ from packages.scoring.engine import (
 from packages.scoring.features import ClusterSignals, compute_score
 from packages.security_gateway.gateway import ContentSecurityGateway
 from packages.storage.object_store import ImmutableObjectStore, LocalImmutableObjectStore
-from packages.telemetry.runtime import RadarTelemetry
+from packages.telemetry.runtime import ResearchTelemetry
 from packages.verification.claims import verify_report_claims
 
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
@@ -69,7 +69,7 @@ def run_frozen_fixture(
     generated_at = parse_timestamp(str(manifest["generated_at"]))
     generated_text = format_timestamp(generated_at)
     ledger = AuditLedger(run_id=run_id, timestamp=generated_text)
-    telemetry = RadarTelemetry.current("threat-radar-frozen-pipeline")
+    telemetry = ResearchTelemetry.current("telemetry-research-frozen-pipeline")
     store = object_store or LocalImmutableObjectStore(object_store_root or output_root / "objects")
     gateway = content_gateway or ContentSecurityGateway()
     observations: list[dict[str, Any]] = []

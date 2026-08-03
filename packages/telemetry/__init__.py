@@ -1,5 +1,5 @@
-"""Low-cardinality, content-free telemetry for Threat Radar."""
+"""Low-cardinality, content-free telemetry for Telemetry Research."""
 
-from packages.telemetry.runtime import RadarTelemetry, configure_from_environment
+from packages.telemetry.runtime import ResearchTelemetry, configure_from_environment
 
-__all__ = ["RadarTelemetry", "configure_from_environment"]
+__all__ = ["ResearchTelemetry", "configure_from_environment"]

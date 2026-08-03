@@ -11,12 +11,12 @@ from packages.storage.repository import IdempotencyConflict, PostgresRepository
 @pytest.mark.postgres
 @pytest.mark.asyncio
 async def test_migrations_and_atomic_idempotency_against_postgres() -> None:
-    database_url = os.getenv("RADAR_TEST_DATABASE_URL")
+    database_url = os.getenv("ETR_TEST_DATABASE_URL")
     if not database_url:
-        pytest.skip("RADAR_TEST_DATABASE_URL is not configured")
+        pytest.skip("ETR_TEST_DATABASE_URL is not configured")
     database_name = urlsplit(database_url).path.removeprefix("/")
     if not database_name.endswith("_test"):
-        pytest.fail("RADAR_TEST_DATABASE_URL must target a database ending in _test")
+        pytest.fail("ETR_TEST_DATABASE_URL must target a database ending in _test")
 
     with psycopg.connect(database_url, autocommit=True) as connection:
         for migration in sorted(Path("migrations").glob("*.sql")):

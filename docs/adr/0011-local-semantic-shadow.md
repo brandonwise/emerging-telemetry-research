@@ -12,7 +12,7 @@ on the host.
 
 The installed `qwen3:0.6b` generative model is not approved for classification or prioritization.
 In a synthetic critical-signal test it mislabeled an actively exploited, unauthenticated,
-pre-authentication VPN RCE as medium severity. It remains outside the radar decision path.
+pre-authentication VPN RCE as medium severity. It remains outside the research decision path.
 
 ## Decision
 
@@ -29,7 +29,7 @@ pre-authentication VPN RCE as medium severity. It remains outside the radar deci
 7. Keep the integration in `shadow` mode. It cannot mutate clusters, scores, claims, verification,
    report selection, publication class, or delivery.
 8. Treat local-inference absence, timeout, or malformed output as a shadow degradation. The
-   deterministic radar continues unchanged.
+   deterministic research continues unchanged.
 9. Display the newest shadow observation under Settings, away from the operational overview.
 
 ## Data flow

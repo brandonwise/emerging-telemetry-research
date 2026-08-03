@@ -1,6 +1,6 @@
 .env
-.outcome-radar/
-radar.env
+.emerging-telemetry-research/
+research.env
 .venv/
 __pycache__/
 *.py[cod]

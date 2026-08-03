@@ -71,7 +71,7 @@ from packages.onboarding.workspace import (
     run_doctor,
 )
 from packages.pipeline.frozen import run_frozen_fixture
-from packages.pipeline.live import LiveRunSettings, run_live_radar
+from packages.pipeline.live import LiveRunSettings, run_live_research
 from packages.security_gateway.deployment import (
     DeploymentApprovalError,
     DeploymentControlPaths,
@@ -93,24 +93,24 @@ from packages.storage.runtime import (
 )
 from packages.storage.sqlite import SQLiteRepository
 
-DEFAULT_ANALYTICS_DB = Path(os.environ.get("RADAR_ANALYTICS_DB", "state/radar.db"))
-DEFAULT_OBJECT_ROOT = Path(os.environ.get("RADAR_OBJECT_ROOT", "state/objects"))
-DEFAULT_REPORT_ROOT = Path(os.environ.get("RADAR_REPORT_ROOT", "reports/generated"))
+DEFAULT_ANALYTICS_DB = Path(os.environ.get("ETR_ANALYTICS_DB", "state/research.db"))
+DEFAULT_OBJECT_ROOT = Path(os.environ.get("ETR_OBJECT_ROOT", "state/objects"))
+DEFAULT_REPORT_ROOT = Path(os.environ.get("ETR_REPORT_ROOT", "reports/generated"))
 DEFAULT_MISSION_FEEDBACK_ROOT = Path(
-    os.environ.get("RADAR_MISSION_FEEDBACK_ROOT", "reports/mission-feedback")
+    os.environ.get("ETR_MISSION_FEEDBACK_ROOT", "reports/mission-feedback")
 )
 DEFAULT_EMBEDDINGS_CONFIG = Path(
-    configured_path("RADAR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
+    configured_path("ETR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
 )
-DEFAULT_DISCOVERY_CONFIG = configured_path("RADAR_DISCOVERY_CONFIG", "config/discovery.yaml")
-DEFAULT_SCORING_CONFIG = configured_path("RADAR_SCORING_CONFIG", "config/scoring.yaml")
-DEFAULT_MODELS_CONFIG = configured_path("RADAR_MODELS_CONFIG", "config/models.yaml")
-DEFAULT_SOURCES_CONFIG = configured_path("RADAR_SOURCES_CONFIG", "config/sources.yaml")
+DEFAULT_DISCOVERY_CONFIG = configured_path("ETR_DISCOVERY_CONFIG", "config/discovery.yaml")
+DEFAULT_SCORING_CONFIG = configured_path("ETR_SCORING_CONFIG", "config/scoring.yaml")
+DEFAULT_MODELS_CONFIG = configured_path("ETR_MODELS_CONFIG", "config/models.yaml")
+DEFAULT_SOURCES_CONFIG = configured_path("ETR_SOURCES_CONFIG", "config/sources.yaml")
 DEFAULT_SOURCE_TERMS_CONFIG = configured_path(
-    "RADAR_SOURCE_TERMS_CONFIG", "config/source-terms.yaml"
+    "ETR_SOURCE_TERMS_CONFIG", "config/source-terms.yaml"
 )
-DEFAULT_IMPROVEMENT_CONFIG = configured_path("RADAR_IMPROVEMENT_CONFIG", "config/improvement.yaml")
-DEFAULT_MIGRATIONS_ROOT = configured_path("RADAR_MIGRATIONS_ROOT", "migrations")
+DEFAULT_IMPROVEMENT_CONFIG = configured_path("ETR_IMPROVEMENT_CONFIG", "config/improvement.yaml")
+DEFAULT_MIGRATIONS_ROOT = configured_path("ETR_MIGRATIONS_ROOT", "migrations")
 
 app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
@@ -141,7 +141,7 @@ app.add_typer(mission_app, name="mission")
 def configure_cli(
     env_file: Annotated[Path | None, typer.Option("--env-file")] = None,
 ) -> None:
-    """Operate Outcome Radar with an optional non-executable environment file."""
+    """Operate Emerging Telemetry Research with an optional non-executable environment file."""
     if env_file is not None:
         try:
             load_environment_file(env_file)
@@ -225,13 +225,13 @@ def live_run(
     edition: Annotated[str, typer.Option("--edition")] = "morning",
     analytics_db: Annotated[Path, typer.Option("--analytics-db")] = DEFAULT_ANALYTICS_DB,
     email_recipient: Annotated[str | None, typer.Option("--email-recipient")] = (
-        os.environ.get("RADAR_EMAIL_RECIPIENT") or None
+        os.environ.get("ETR_EMAIL_RECIPIENT") or None
     ),
     agent_mode: Annotated[str, typer.Option("--agent-mode")] = os.environ.get(
-        "RADAR_AGENT_MODE", "plan"
+        "ETR_AGENT_MODE", "plan"
     ),
     agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = os.environ.get(
-        "RADAR_AGENT_ADAPTER", "openclaw"
+        "ETR_AGENT_ADAPTER", "openclaw"
     ),
     agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
     discovery_config: Annotated[Path, typer.Option("--discovery-config")] = (
@@ -249,12 +249,12 @@ def live_run(
     )
     stores = initialize_production_stores(
         ProductionStoreSettings(
-            database_url=_required_env("RADAR_DATABASE_URL"),
-            s3_endpoint_url=_required_env("RADAR_S3_ENDPOINT_URL"),
-            s3_access_key_id=_required_env("RADAR_S3_ACCESS_KEY_ID"),
-            s3_secret_access_key=_required_env("RADAR_S3_SECRET_ACCESS_KEY"),
-            s3_bucket=_required_env("RADAR_S3_BUCKET"),
-            s3_region=os.environ.get("RADAR_S3_REGION", "us-east-1"),
+            database_url=_required_env("ETR_DATABASE_URL"),
+            s3_endpoint_url=_required_env("ETR_S3_ENDPOINT_URL"),
+            s3_access_key_id=_required_env("ETR_S3_ACCESS_KEY_ID"),
+            s3_secret_access_key=_required_env("ETR_S3_SECRET_ACCESS_KEY"),
+            s3_bucket=_required_env("ETR_S3_BUCKET"),
+            s3_region=os.environ.get("ETR_S3_REGION", "us-east-1"),
             server_side_encryption=_s3_encryption_mode(),
         ),
         migrations_root=DEFAULT_MIGRATIONS_ROOT,
@@ -264,7 +264,7 @@ def live_run(
         str(AnalyticsStore(analytics_db).cost_breakdown(days=1)["estimated_cost"])
     )
     result = asyncio.run(
-        run_live_radar(
+        run_live_research(
             LiveRunSettings(
                 output_root=output,
                 discord_channel_id=None,
@@ -321,10 +321,10 @@ def portable_run(
     objects: Annotated[Path, typer.Option("--objects")] = DEFAULT_OBJECT_ROOT,
     edition: Annotated[str, typer.Option("--edition")] = "morning",
     agent_mode: Annotated[str, typer.Option("--agent-mode")] = os.environ.get(
-        "RADAR_AGENT_MODE", "plan"
+        "ETR_AGENT_MODE", "plan"
     ),
     agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = os.environ.get(
-        "RADAR_AGENT_ADAPTER", "codex"
+        "ETR_AGENT_ADAPTER", "codex"
     ),
     agent_concurrency: Annotated[int, typer.Option("--agent-concurrency", min=1, max=8)] = 3,
     discovery_config: Annotated[Path, typer.Option("--discovery-config")] = (
@@ -346,7 +346,7 @@ def portable_run(
         str(AnalyticsStore(database).cost_breakdown(days=1)["estimated_cost"])
     )
     result = asyncio.run(
-        run_live_radar(
+        run_live_research(
             LiveRunSettings(
                 output_root=output,
                 discord_channel_id=None,
@@ -494,9 +494,9 @@ def setup_generate(
             "output_root": str(result.output_root),
             "files": [str(path) for path in result.files],
             "next": [
-                "copy radar.env.example to radar.env",
+                "copy research.env.example to research.env",
                 "configure BRAVE_API_KEY and XAI_API_KEY in a secret store",
-                "run ./run-radar.sh",
+                "run ./run-research.sh",
             ],
         },
         pretty=not json_output,
@@ -516,12 +516,12 @@ def setup_init(
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     result["next"] = [
-        "outcome-radar setup secret-set BRAVE_API_KEY",
-        "outcome-radar setup secret-set XAI_API_KEY",
-        "outcome-radar setup approval-request",
+        "emerging-telemetry-research setup secret-set BRAVE_API_KEY",
+        "emerging-telemetry-research setup secret-set XAI_API_KEY",
+        "emerging-telemetry-research setup approval-request",
         "review and apply the deployment approval request",
-        "outcome-radar setup doctor --profile portable",
-        "outcome-radar portable run --json",
+        "emerging-telemetry-research setup doctor --profile portable",
+        "emerging-telemetry-research portable run --json",
     ]
     emit(result, pretty=not json_output)
 
@@ -529,8 +529,10 @@ def setup_init(
 @setup_app.command("secret-set")
 def setup_secret_set(
     name: Annotated[str, typer.Argument()],
-    config: Annotated[Path, typer.Option("--config")] = Path(".outcome-radar/config.env"),
-    service: Annotated[str, typer.Option("--service")] = "outcome-radar",
+    config: Annotated[Path, typer.Option("--config")] = Path(
+        ".emerging-telemetry-research/config.env"
+    ),
+    service: Annotated[str, typer.Option("--service")] = "emerging-telemetry-research",
     stdin: Annotated[bool, typer.Option("--stdin")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
@@ -577,7 +579,7 @@ def setup_doctor(
 def setup_approval_request(
     environment_id: Annotated[str, typer.Option("--environment-id")] = "local",
     output: Annotated[Path, typer.Option("--output")] = Path(
-        ".outcome-radar/deployment-approval-request.json"
+        ".emerging-telemetry-research/deployment-approval-request.json"
     ),
     allow_external_delivery: Annotated[
         bool, typer.Option("--allow-external-delivery")
@@ -601,7 +603,10 @@ def setup_approval_request(
         {
             **request,
             "request_path": str(written.resolve()),
-            "next": "review, then run `outcome-radar setup approval-apply REQUEST ...`",
+            "next": (
+                "review, then run `emerging-telemetry-research "
+                "setup approval-apply REQUEST ...`"
+            ),
         },
         pretty=not json_output,
     )
@@ -617,7 +622,7 @@ def setup_approval_apply(
     approval_id: Annotated[str, typer.Option("--approval-id")],
     expires_days: Annotated[int, typer.Option("--expires-days", min=1, max=365)] = 30,
     output: Annotated[Path, typer.Option("--output")] = Path(
-        ".outcome-radar/deployment-approval.yaml"
+        ".emerging-telemetry-research/deployment-approval.yaml"
     ),
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
@@ -681,8 +686,8 @@ def mission_create(
             "query_count": len(compiled.queries),
             "collection_authorized": False,
             "next": [
-                f"radar mission plan {written}",
-                f"radar mission activate {written} --approved-by NAME --approval-id ID",
+                f"research mission plan {written}",
+                f"research mission activate {written} --approved-by NAME --approval-id ID",
             ],
         },
         pretty=not json_output,
@@ -760,7 +765,7 @@ def mission_activate(
             "collection_authorized": compiled.collection_authorized,
             "mission_path": str(mission_written),
             "receipt_path": str(receipt_written),
-            "rollback": f"radar mission rollback {receipt_written}",
+            "rollback": f"research mission rollback {receipt_written}",
         },
         pretty=not json_output,
     )
@@ -909,7 +914,7 @@ def mission_feedback(
             **payload,
             "feedback_path": str(path),
             "next": (
-                f"radar mission evaluate {mission_path} --report {report} "
+                f"research mission evaluate {mission_path} --report {report} "
                 f"--feedback-root {output}"
             ),
         },
@@ -945,12 +950,12 @@ def mission_list(
 
 
 def _s3_encryption_mode() -> str | None:
-    value = os.environ.get("RADAR_S3_SERVER_SIDE_ENCRYPTION", "AES256")
+    value = os.environ.get("ETR_S3_SERVER_SIDE_ENCRYPTION", "AES256")
     if value == "AES256":
         return value
     if value == "none":
         return None
-    raise typer.BadParameter("RADAR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none")
+    raise typer.BadParameter("ETR_S3_SERVER_SIDE_ENCRYPTION must be AES256 or none")
 
 
 def _agent_runtime(mode: str, adapter: str) -> AgentProvider | None:
@@ -1008,7 +1013,7 @@ def email_delivery_plan(
         typer.Option("--html", exists=True, dir_okay=False, readable=True),
     ],
     recipient: Annotated[str | None, typer.Option("--recipient")] = (
-        os.environ.get("RADAR_EMAIL_RECIPIENT") or None
+        os.environ.get("ETR_EMAIL_RECIPIENT") or None
     ),
     output: Annotated[Path | None, typer.Option("--output")] = None,
 ) -> None:
@@ -1046,7 +1051,7 @@ def email_send(
 ) -> None:
     if os.environ.get("EXTERNAL_DELIVERY_ENABLED", "").lower() != "true":
         raise typer.BadParameter("external delivery is disabled")
-    if os.environ.get("RADAR_EMAIL_DELIVERY_ENABLED", "").lower() != "true":
+    if os.environ.get("ETR_EMAIL_DELIVERY_ENABLED", "").lower() != "true":
         raise typer.BadParameter("email delivery is disabled")
     _require_deployment_capability("external_delivery")
     try:
@@ -1065,7 +1070,7 @@ def deliver_report() -> None:
     if os.environ.get("EXTERNAL_DELIVERY_ENABLED", "").lower() != "true":
         raise typer.BadParameter("external delivery is disabled")
     raise typer.BadParameter(
-        "direct CLI delivery is forbidden; use the reviewed radar_delivery_send OpenClaw tool"
+        "direct CLI delivery is forbidden; use the reviewed research_delivery_send OpenClaw tool"
     )
 
 
@@ -1102,7 +1107,7 @@ def eval_agents(
         ),
     ] = Path("tests/fixtures/vertical_slice"),
     adapter: Annotated[str, typer.Option("--adapter")] = os.environ.get(
-        "RADAR_AGENT_ADAPTER", "fixture"
+        "ETR_AGENT_ADAPTER", "fixture"
     ),
     case: Annotated[str | None, typer.Option("--case")] = None,
     repeats: Annotated[int, typer.Option("--repeats", min=1, max=10)] = 3,

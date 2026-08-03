@@ -7,7 +7,7 @@ audit log.
 Regenerate in a clean output directory:
 
 ```bash
-uv run threat-radar fixture run \
+uv run telemetry-research fixture run \
   tests/fixtures/vertical_slice/flash-manifest.json \
   --output reports/samples/frozen-flash \
   --json

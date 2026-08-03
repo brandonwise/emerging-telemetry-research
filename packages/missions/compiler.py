@@ -241,7 +241,7 @@ def draft_mission(
         "vocabulary": {
             "singular": noun,
             "plural": plural,
-            "collection": f"{noun.title()} radar",
+            "collection": f"{noun.title()} research",
             "empty_result": f"No {plural} met the evidence and priority thresholds.",
         },
         "scope": {
@@ -573,7 +573,7 @@ def _mission_name(name: str | None, noun: str, keywords: list[str]) -> str:
             raise ValueError("mission name must contain 4-100 characters")
         return value
     subject = " ".join(keywords[:4]).title()
-    return f"{subject} {noun.title()} Radar"[:100]
+    return f"{subject} {noun.title()} Research"[:100]
 
 
 def _slugify(value: str) -> str:

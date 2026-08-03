@@ -16,10 +16,10 @@ def _environment_file(arguments: Sequence[str]) -> Path | None:
             return Path(arguments[index + 1])
         if argument.startswith("--env-file="):
             return Path(argument.split("=", 1)[1])
-    configured = os.environ.get("RADAR_ENV_FILE")
+    configured = os.environ.get("ETR_ENV_FILE")
     if configured:
         return Path(configured)
-    default = Path(".outcome-radar/config.env")
+    default = Path(".emerging-telemetry-research/config.env")
     return default if default.is_file() else None
 
 

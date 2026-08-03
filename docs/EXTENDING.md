@@ -1,8 +1,8 @@
-# Extending Outcome Radar
+# Extending Emerging Telemetry Research
 
 ## Add a mission pack
 
-Start with `outcome-radar mission create`, then edit only the generated contract. A mission pack may
+Start with `emerging-telemetry-research mission create`, then edit only the generated contract. A mission pack may
 change its objective, vocabulary, approved source adapters, query templates, evidence floor,
 scorecard, role briefs, cadence, output limits, and evaluation targets. It may not change the
 five-role dependency graph, disable citations, enable external delivery, move ranking into a
@@ -25,8 +25,8 @@ code-owned ranking. Run the fixture before asking for live source approval.
 7. Run a live `plan` collection and `make eval-coverage`.
 
 Reusable live collectors implement `MissionCollector` and register an entry point in the
-`outcome_radar.mission_collectors` group. Installation alone grants no authority: the adapter ID
-must also appear in `RADAR_COLLECTOR_PLUGIN_ALLOWLIST`, the mission must name it, and the mission
+`emerging_telemetry_research.mission_collectors` group. Installation alone grants no authority: the adapter ID
+must also appear in `ETR_COLLECTOR_PLUGIN_ALLOWLIST`, the mission must name it, and the mission
 and deployment source plans must both be approved. Keep the plugin package version pinned and
 include contract, timeout, hostile-input, duplicate, and unavailable-provider tests.
 
@@ -59,8 +59,8 @@ The adapter must:
 - let local schema validation reject unknown fields or evidence IDs.
 
 First-party adapters belong in `AGENT_ADAPTERS`. External packages register an entry point in
-`outcome_radar.agent_providers`; they load only when their exact ID is present in
-`RADAR_AGENT_PLUGIN_ALLOWLIST`. Expose only secret references in local config, add mocked transport,
+`emerging_telemetry_research.agent_providers`; they load only when their exact ID is present in
+`ETR_AGENT_PLUGIN_ALLOWLIST`. Expose only secret references in local config, add mocked transport,
 fallback, retry, timeout, circuit-breaker, usage, and schema-failure tests, and run the real-provider
 eval before documenting support. A provider plugin never receives collector or delivery secrets.
 

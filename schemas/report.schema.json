@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/schemas/report.v1.json",
-  "title": "Threat Radar Report",
+  "title": "Telemetry Research Report",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "report_id", "edition", "generated_at", "window", "findings", "source_health", "usage", "verification"],

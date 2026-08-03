@@ -7,7 +7,7 @@ from typing import Any, Protocol
 from packages.discovery.clients import BraveSearchClient, DiscoverySignal
 from packages.missions.compiler import QueryPlan
 
-COLLECTOR_ENTRY_POINT_GROUP = "outcome_radar.mission_collectors"
+COLLECTOR_ENTRY_POINT_GROUP = "emerging_telemetry_research.mission_collectors"
 
 
 class MissionCollector(Protocol):
@@ -87,7 +87,7 @@ class MissionCollectorRegistry:
 
 
 def configured_plugin_allowlist() -> set[str]:
-    raw = os.environ.get("RADAR_COLLECTOR_PLUGIN_ALLOWLIST", "")
+    raw = os.environ.get("ETR_COLLECTOR_PLUGIN_ALLOWLIST", "")
     values = {item.strip() for item in raw.split(",") if item.strip()}
     invalid = sorted(item for item in values if not _valid_adapter_id(item))
     if invalid:

@@ -16,7 +16,7 @@
     <div class="evidence-list"><h3>Evidence</h3>{% for source in outcome.source_evidence %}
       <a href="{{ source.url }}" rel="noreferrer"><strong>{{ source.title }}</strong><span>{{ source.source_type }} · {{ source.published_at|compact_date }}</span></a>{% endfor %}</div>
     <div class="feedback-command"><span class="eyebrow">Calibrate this mission</span>
-      <code>threat-radar mission feedback &lt;mission.yaml&gt; --report &lt;report.json&gt;
+      <code>telemetry-research mission feedback &lt;mission.yaml&gt; --report &lt;report.json&gt;
         --outcome-id {{ outcome.outcome_id }} --label useful --reason "..." --submitted-by NAME</code></div>
   </article>{% else %}<div class="empty-state"><strong>No qualified outcomes.</strong>
     <span>{{ report.vocabulary.empty_result }}</span></div>{% endfor %}

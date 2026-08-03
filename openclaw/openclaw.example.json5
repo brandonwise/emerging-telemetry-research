@@ -1,4 +1,4 @@
-// Illustrative OpenClaw configuration for the Threat Radar.
+// Illustrative OpenClaw configuration for the Telemetry Research.
 // Before applying, validate every path against the installed version:
 //   openclaw config schema
 //   openclaw config schema lookup agents
@@ -35,20 +35,20 @@
       // This map is also the agent model allowlist in OpenClaw 2026.7.x.
       models: {
         "openai/gpt-5.6-sol": {
-          alias: "radar-chief",
+          alias: "research-chief",
           agentRuntime: { id: "codex" },
           params: { cacheRetention: "long" },
         },
-        "openai/gpt-5.6-luna": { alias: "radar-utility" },
-        "openai/gpt-5.4": { alias: "radar-balanced" },
-        "anthropic/claude-haiku-4-5": { alias: "radar-cheap" },
+        "openai/gpt-5.6-luna": { alias: "research-utility" },
+        "openai/gpt-5.4": { alias: "research-balanced" },
+        "anthropic/claude-haiku-4-5": { alias: "research-cheap" },
       },
       sandbox: {
         mode: "all",
         backend: "docker",
         scope: "agent",
         workspaceAccess: "none",
-        workspaceRoot: "~/.openclaw/sandboxes/threat-radar",
+        workspaceRoot: "~/.openclaw/sandboxes/telemetry-research",
         docker: {
           image: "openclaw-sandbox:bookworm-slim",
           readOnlyRoot: true,
@@ -73,10 +73,10 @@
 
     list: [
       {
-        id: "radar-orchestrator",
+        id: "research-orchestrator",
         default: true,
-        name: "Threat Radar Orchestrator",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/orchestrator",
+        name: "Telemetry Research Orchestrator",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/orchestrator",
         // Embedded Lobster is disabled in sandboxed contexts. This agent is therefore
         // unsandboxed but has no general shell/browser/channel tools. It may invoke only
         // reviewed, repository-owned Lobster workflows through the lobster tool.
@@ -86,7 +86,7 @@
         skills: [],
         tools: {
           allow: [
-            "lobster", "radar_flow_start", "radar_flow_finish", "session_status"
+            "lobster", "research_flow_start", "research_flow_finish", "session_status"
           ],
           deny: [
             "exec", "process", "read", "write", "edit", "apply_patch",
@@ -98,9 +98,9 @@
       },
 
       {
-        id: "radar-collection-planner",
+        id: "research-collection-planner",
         name: "Collection Planner",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collection-planner",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/collection-planner",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "low",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -115,9 +115,9 @@
       },
 
       {
-        id: "radar-collector-official",
+        id: "research-collector-official",
         name: "Official Advisory Source Specialist",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collector-official",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/collector-official",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: {
@@ -137,9 +137,9 @@
       },
 
       {
-        id: "radar-collector-web",
+        id: "research-collector-web",
         name: "Web and Research Source Specialist",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/collector-web",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/collector-web",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "low",
         sandbox: {
@@ -165,9 +165,9 @@
       },
 
       {
-        id: "radar-extractor",
+        id: "research-extractor",
         name: "Structured Evidence Extractor",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/extractor",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/extractor",
         model: "anthropic/claude-haiku-4-5",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
@@ -179,9 +179,9 @@
       },
 
       {
-        id: "radar-specialist",
+        id: "research-specialist",
         name: "Threat Intelligence Specialist",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/specialist",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/specialist",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -196,9 +196,9 @@
       },
 
       {
-        id: "radar-impact",
+        id: "research-impact",
         name: "Impact and Relevance Analyst",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/impact",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/impact",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -216,9 +216,9 @@
       },
 
       {
-        id: "radar-skeptic",
+        id: "research-skeptic",
         name: "Adversarial Intelligence Reviewer",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/skeptic",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/skeptic",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -233,9 +233,9 @@
       },
 
       {
-        id: "radar-verifier",
+        id: "research-verifier",
         name: "Claim and Citation Verifier",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/verifier",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/verifier",
         model: {
           primary: "openai/gpt-5.4",
           fallbacks: ["openai/gpt-5.6-luna"]
@@ -250,9 +250,9 @@
       },
 
       {
-        id: "radar-chief",
+        id: "research-chief",
         name: "Chief Emerging Threat Coordinator",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/coordinator",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/coordinator",
         model: { primary: "openai/gpt-5.6-sol", fallbacks: [] },
         // "max" is the current highest documented config enum. Confirm with
         // `openclaw config schema` if this installation exposes another label.
@@ -267,14 +267,14 @@
       },
 
       {
-        id: "radar-publisher",
-        name: "Threat Radar Publisher",
-        workspace: "~/.openclaw/workspace/outcome-radar/openclaw/agents/publisher",
+        id: "research-publisher",
+        name: "Telemetry Research Publisher",
+        workspace: "~/.openclaw/workspace/emerging-telemetry-research/openclaw/agents/publisher",
         model: "openai/gpt-5.6-luna",
         thinkingDefault: "minimal",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
         tools: {
-          allow: ["radar_delivery_send", "session_status"],
+          allow: ["research_delivery_send", "session_status"],
           deny: [
             "browser", "web_search", "web_fetch", "exec", "process", "read",
             "write", "edit", "discord", "message", "cron", "gateway", "nodes"
@@ -288,26 +288,26 @@
   plugins: {
     allow: [
       "openai", "anthropic", "codex", "llm-task", "lobster", "discord",
-      "threat-radar-boundary"
+      "telemetry-research-boundary"
     ],
     load: {
-      paths: ["~/.openclaw/workspace/outcome-radar/openclaw/plugins/threat-radar-boundary"],
+      paths: ["~/.openclaw/workspace/emerging-telemetry-research/openclaw/plugins/telemetry-research-boundary"],
     },
     entries: {
       codex: { enabled: true },
       "llm-task": { enabled: true },
       // Enable the bundled Lobster plugin/tool and keep workflow files reviewed.
       lobster: { enabled: true },
-      "threat-radar-boundary": {
+      "telemetry-research-boundary": {
         enabled: true,
         hooks: {
           allowPromptInjection: false,
           allowConversationAccess: false,
         },
         config: {
-          reportRoot: "/opt/outcome-radar/reports/generated",
+          reportRoot: "/opt/emerging-telemetry-research/reports/generated",
           discordChannelId: "000000000000000000",
-          discordAccountId: "threat-radar-bot",
+          discordAccountId: "telemetry-research-bot",
           externalDeliveryEnabled: false,
         },
       },
@@ -318,10 +318,10 @@
   // Replace placeholders with the configured account, guild, and channel.
   bindings: [
     {
-      agentId: "radar-publisher",
+      agentId: "research-publisher",
       match: {
         channel: "discord",
-        accountId: "threat-radar-bot",
+        accountId: "telemetry-research-bot",
         guildId: "DISCORD_GUILD_ID",
         peer: { kind: "channel", id: "DISCORD_CHANNEL_ID" },
       },

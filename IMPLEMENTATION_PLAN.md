@@ -54,7 +54,7 @@ The experience plane produces Discord embeds, full HTML briefs, email, downloada
 
 ### Telemetry-to-action loop
 
-| Loop stage | Threat Radar capability |
+| Loop stage | Telemetry Research capability |
 |---|---|
 | Detect | Scheduled source polling, burst detection, anomaly rules, source watches |
 | Ingest | Versioned adapters, safe fetch, hashing, immutable capture |
@@ -137,7 +137,7 @@ Use primarily to:
 - Establish a media first-publication baseline
 - Confirm that a story has become broadly known
 - Detect contradictions or corrected facts
-- Measure the radar's lead time
+- Measure the research's lead time
 
 Media saturation should reduce novelty, not increase it.
 
@@ -492,8 +492,8 @@ Each finding must include:
 1. Executive signal summary
 2. Flash and high-priority findings
 3. Watchlist changes since prior report
-4. Supply-chain and malicious-package radar
-5. Vulnerability and exploitation radar
+4. Supply-chain and malicious-package research
+5. Vulnerability and exploitation research
 6. Campaign/infrastructure signals
 7. Corrected or downgraded findings
 8. Source coverage and degraded inputs

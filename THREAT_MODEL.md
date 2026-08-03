@@ -100,7 +100,7 @@
 
 ### TM-11: Compromised CI dependency/action changes policies
 
-**Impact:** supply-chain compromise of the radar itself.
+**Impact:** supply-chain compromise of the research itself.
 
 **Controls:** pinned actions, protected branches, CODEOWNERS, reviews, SBOM, dependency scanning, signed/attested artifacts, minimal workflow permissions.
 

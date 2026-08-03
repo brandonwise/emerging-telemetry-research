@@ -1,6 +1,6 @@
 # Production readiness runbook
 
-Outcome Radar ships fail closed. A clone can validate contracts and run fixtures immediately, but
+Emerging Telemetry Research ships fail closed. A clone can validate contracts and run fixtures immediately, but
 it cannot collect, schedule, deliver externally, or apply self-improvement proposals until a local
 operator approval authorizes those exact capabilities against an unchanged control hash.
 
@@ -17,7 +17,7 @@ acceptance, replay, restore, security, container, and packaging gates run on Lin
 
 ## Promotion checklist
 
-1. Create the private local workspace with `outcome-radar setup init`.
+1. Create the private local workspace with `emerging-telemetry-research setup init`.
 2. Put secrets in an OS keyring, deployment secret file, or managed environment; commit only
    `env://`, `keyring://`, or `file://` references.
 3. Review local discovery, source, source-terms, scoring, model, and embedding configuration.
@@ -33,12 +33,12 @@ acceptance, replay, restore, security, container, and packaging gates run on Lin
 
 ## Secret references
 
-Use one of these forms in `.outcome-radar/config.env`:
+Use one of these forms in `.emerging-telemetry-research/config.env`:
 
 ```dotenv
-BRAVE_API_KEY_REF=keyring://outcome-radar/BRAVE_API_KEY
+BRAVE_API_KEY_REF=keyring://emerging-telemetry-research/BRAVE_API_KEY
 XAI_API_KEY_REF=env://DEPLOYMENT_XAI_API_KEY
-RADAR_DATABASE_URL_REF=file:///run/secrets/radar_database_url
+ETR_DATABASE_URL_REF=file:///run/secrets/research_database_url
 ```
 
 File secrets must be absolute, regular, UTF-8 files no larger than 64 KiB. On POSIX they must be
@@ -47,17 +47,17 @@ and doctor commands report only source and readiness metadata, never values.
 
 ## Deploy and operate
 
-Portable runs use `.outcome-radar/config.env` explicitly:
+Portable runs use `.emerging-telemetry-research/config.env` explicitly:
 
 ```bash
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   portable run --output reports/generated --json
 ```
 
 Production runs additionally require PostgreSQL and object-store references:
 
 ```bash
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   live run --output reports/generated --json
 ```
 
@@ -65,8 +65,8 @@ The hardened API container profile is loopback-only, read-only, non-root, capabi
 receives its database URL through a Compose secret:
 
 ```bash
-export RADAR_API_DATABASE_URL='postgresql://radar:...@postgres:5432/radar'
-docker compose -f infra/docker-compose.yml --profile application up -d radar-api
+export ETR_API_DATABASE_URL='postgresql://research:...@postgres:5432/research'
+docker compose -f infra/docker-compose.yml --profile application up -d research-api
 ```
 
 Do not expose the internal API directly. Put it behind a proxy that validates client certificates,
@@ -86,7 +86,7 @@ ready.
 - S3-compatible objects: retain versioning, Object Lock, encryption, and lifecycle policy.
 - Never rewrite immutable evidence or reports; publish a corrected version with lineage.
 - Verify restores with `make restore-test` before promotion and on a scheduled cadence.
-- Stop model calls immediately with `RADAR_AGENT_MODE=plan`.
+- Stop model calls immediately with `ETR_AGENT_MODE=plan`.
 - Roll back an activated mission with its hash-bound activation receipt.
 - Revoke a deployment capability by removing the local approval or allowing it to expire.
 

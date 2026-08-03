@@ -23,7 +23,7 @@ def _settings(
     lan_mode: bool = False,
 ) -> PortalSettings:
     return PortalSettings(
-        analytics_db=tmp_path / "state" / "radar.db",
+        analytics_db=tmp_path / "state" / "research.db",
         reports_root=tmp_path / "reports",
         auth_mode=auth_mode,
         access_token=token,
@@ -73,7 +73,7 @@ def test_portal_mission_onboarding_and_report_navigation(tmp_path: Path) -> None
     )
 
     assert index.status_code == 200
-    assert "Developer Product Opportunity Radar" in index.text
+    assert "Developer Product Opportunity Research" in index.text
     assert builder.status_code == 200
     assert "Build research plan" in builder.text
     assert "Download mission" in builder.text
@@ -231,7 +231,7 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     json_export = client.get("/exports/reports.json")
     finding_csv_export = client.get("/exports/findings.csv")
     finding_json_export = client.get("/exports/findings.json")
-    favicon = client.get("/static/radar-mark.svg")
+    favicon = client.get("/static/research-mark.svg")
 
     assert dashboard.status_code == 200
     assert "The threat picture," in dashboard.text
@@ -275,19 +275,19 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert "<animateMotion" in architecture.text
     assert 'href="/architecture/blueprint"' in architecture.text
     assert 'href="/exports/architecture.gif"' in architecture.text
-    assert 'download="threat-radar-architecture-motion.gif"' in architecture.text
+    assert 'download="telemetry-research-architecture-motion.gif"' in architecture.text
     assert 'href="/">Return to command center' in architecture.text
     assert "style-src 'sha256-" in architecture.headers["content-security-policy"]
     assert "'unsafe-inline'" not in architecture.headers["content-security-policy"]
     assert architecture.headers["x-frame-options"] == "DENY"
     assert architecture_blueprint.status_code == 200
-    assert "Emerging Threat Radar, end to end" in architecture_blueprint.text
+    assert "Emerging Telemetry Research, end to end" in architecture_blueprint.text
     assert 'href="/architecture"' in architecture_blueprint.text
     assert 'href="/">← Command center' in architecture_blueprint.text
     assert architecture_gif.status_code == 200
     assert architecture_gif.headers["content-type"] == "image/gif"
     assert architecture_gif.headers["content-disposition"].endswith(
-        'filename="threat-radar-architecture-motion.gif"'
+        'filename="telemetry-research-architecture-motion.gif"'
     )
     assert architecture_gif.content.startswith(b"GIF89a")
     assert int.from_bytes(architecture_gif.content[6:8], "little") == 3360
@@ -295,12 +295,12 @@ def test_portal_renders_reports_trends_and_exports(tmp_path: Path) -> None:
     assert architecture_gif.content.count(b"\x21\xf9\x04") >= 48
     assert csv_export.headers["content-type"].startswith("text/csv")
     assert result.report["report_id"] in csv_export.text
-    assert json_export.headers["content-disposition"].endswith('"threat-radar-reports.json"')
+    assert json_export.headers["content-disposition"].endswith('"telemetry-research-reports.json"')
     assert finding_csv_export.status_code == 200
     assert "supply_chain" in finding_csv_export.text
     assert finding_json_export.status_code == 200
     assert finding_json_export.headers["content-disposition"].endswith(
-        '"threat-radar-findings.json"'
+        '"telemetry-research-findings.json"'
     )
     assert dashboard.headers["x-frame-options"] == "DENY"
     assert favicon.status_code == 200
@@ -331,7 +331,7 @@ def test_portal_token_authentication(tmp_path: Path) -> None:
     assert blocked.headers["location"] == "/login"
     assert invalid.status_code == 401
     assert authenticated.status_code == 303
-    assert "radar_session=" in authenticated.headers["set-cookie"]
+    assert "research_session=" in authenticated.headers["set-cookie"]
     assert "HttpOnly" in authenticated.headers["set-cookie"]
     assert "SameSite=strict" in authenticated.headers["set-cookie"]
 

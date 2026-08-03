@@ -10,8 +10,8 @@ uv run python scripts/validate_repo.py
 uv run ruff check .
 uv run mypy apps packages scripts/run_acceptance.py scripts/verify_restore.py
 uv run pytest
-uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
-uv run python scripts/verify_restore.py --output /tmp/radar-restore
+uv run python scripts/run_acceptance.py --output /tmp/research-acceptance
+uv run python scripts/verify_restore.py --output /tmp/research-restore
 ```
 
 Stop if a command fails. Do not enable a source, schedule, model fallback, or delivery channel to
@@ -28,10 +28,10 @@ make package-smoke
 Initialize and validate a target deployment:
 
 ```bash
-uv run outcome-radar setup init --profile production --json
-uv run outcome-radar setup approval-request --environment-id production-host --json
+uv run emerging-telemetry-research setup init --profile production --json
+uv run emerging-telemetry-research setup approval-request --environment-id production-host --json
 # Independently review and apply the request.
-uv run outcome-radar --env-file .outcome-radar/config.env \
+uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   setup doctor --profile production --json
 ```
 
@@ -41,9 +41,9 @@ their orchestrator's protected environment.
 
 Before live collection, confirm all of the following:
 
-- `.outcome-radar/deployment-approval.yaml` is unexpired, owner-only, and valid for the current
+- `.emerging-telemetry-research/deployment-approval.yaml` is unexpired, owner-only, and valid for the current
   protected-content hash, capability, and source set.
-- Every enabled local source has approved terms in `.outcome-radar/config/source-terms.yaml`.
+- Every enabled local source has approved terms in `.emerging-telemetry-research/config/source-terms.yaml`.
 - `scripts/validate_repo.py` passes after the source/config change.
 - Egress allowlists contain only source-specific hostnames.
 - The live text-artifact scanner reports `clean`; binary/document collection is not enabled.
@@ -60,7 +60,7 @@ Before live collection, confirm all of the following:
 Start with one real-provider fixture:
 
 ```bash
-uv run outcome-radar eval agents \
+uv run emerging-telemetry-research eval agents \
   --adapter openclaw \
   --case flash \
   --repeats 1 \
@@ -176,7 +176,7 @@ rollback evidence.
 
 - Confirm the verified report exists in PostgreSQL and `reports/generated`.
 - Re-run analytics sync; it is immutable and idempotent.
-- Verify the portal service can read `state/radar.db`.
+- Verify the portal service can read `state/research.db`.
 - Do not enable Discord or another external transport as a workaround.
 - Alert an operator after the configured retry window.
 
@@ -217,7 +217,7 @@ Restore drill:
 The local immutable-evidence drill is:
 
 ```bash
-uv run python scripts/verify_restore.py --output /tmp/radar-restore
+uv run python scripts/verify_restore.py --output /tmp/research-restore
 ```
 
 It does not replace the production PostgreSQL/object-lock drill.
@@ -232,8 +232,8 @@ It does not replace the production PostgreSQL/object-lock drill.
 
 ## Self-improvement cycle
 
-1. Record analyst feedback with `outcome-radar feedback record`; never edit a prior feedback file.
-2. Run `outcome-radar improve advise` and `outcome-radar improve analyze` or the reviewed
+1. Record analyst feedback with `emerging-telemetry-research feedback record`; never edit a prior feedback file.
+2. Run `emerging-telemetry-research improve advise` and `emerging-telemetry-research improve analyze` or the reviewed
    `openclaw/workflows/self-improvement.lobster` workflow.
 3. If the result is `insufficient_evidence`, collect more labels. Do not lower the sample gates.
 4. If the result is `blocked`, resolve the acceptance, orphan-reference, or security-review reason
@@ -249,7 +249,7 @@ It does not replace the production PostgreSQL/object-lock drill.
 Rollback an applied proposal:
 
 ```bash
-uv run outcome-radar improve rollback \
+uv run emerging-telemetry-research improve rollback \
   reports/generated/improvement/<cycle-id>/apply-receipt.json \
   --repo-root . \
   --approved-by <operator> \
@@ -270,8 +270,8 @@ scripts/portal-status.sh
 ```
 
 The installer creates the portal access token in macOS Keychain if absent, installs
-`ai.openclaw.threat-radar-portal`, verifies `/health`, and records a bounded analytics event. It
-never prints the token. Service logs are `~/.openclaw/logs/threat-radar-portal*.log`.
+`ai.openclaw.telemetry-research-portal`, verifies `/health`, and records a bounded analytics event. It
+never prints the token. Service logs are `~/.openclaw/logs/telemetry-research-portal*.log`.
 
 Authentication is required by default. For a trusted, private network, reinstall the service with
 `scripts/install-portal-service.sh --auth disabled`. The private-CIDR boundary remains active and
@@ -288,7 +288,7 @@ scripts/uninstall-portal-service.sh
 ```
 
 This boots out the service and moves its plist to Trash. It preserves the token unless
-`--purge-token` is explicit. It never deletes `state/radar.db`, reports, evidence, or exports.
+`--purge-token` is explicit. It never deletes `state/research.db`, reports, evidence, or exports.
 
 ## Rollback
 

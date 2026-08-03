@@ -62,7 +62,7 @@ from packages.security_gateway.gateway import (
     TextArtifactMalwareScanner,
 )
 from packages.storage.object_store import ImmutableObjectStore
-from packages.storage.repository import RadarRepository
+from packages.storage.repository import ResearchRepository
 
 PUBLICATION_RANK = {"archive": 0, "daily": 1, "watch": 2, "flash": 3}
 CRITICAL_SIGNAL_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = (
@@ -139,14 +139,14 @@ class LiveRunResult:
     semantic_shadow: dict[str, Any] | None = None
 
 
-async def run_live_radar(
+async def run_live_research(
     settings: LiveRunSettings,
     *,
     brave_client: BraveSearchClient,
     x_search_client: XaiXSearchClient,
     official_client: OfficialSourceClient,
     object_store: ImmutableObjectStore,
-    repository: RadarRepository,
+    repository: ResearchRepository,
     reddit_client: RedditSearchClient | None = None,
     tiktok_client: TikTokResearchClient | None = None,
     semantic_evaluator: SemanticShadowEvaluator | None = None,
@@ -1078,7 +1078,7 @@ def _discovery_telemetry(
 
 async def _persist_run(
     *,
-    repository: RadarRepository,
+    repository: ResearchRepository,
     run_id: str,
     report: dict[str, Any],
     candidate_results: list[FrozenRunResult],
@@ -1144,7 +1144,7 @@ async def _persist_run(
 
 
 async def _put(
-    repository: RadarRepository,
+    repository: ResearchRepository,
     collection: str,
     key: str,
     record: dict[str, Any],
@@ -1163,10 +1163,10 @@ def _discord_summary(report: dict[str, Any]) -> str:
     findings = report["findings"]
     if not findings:
         return (
-            "Threat Radar — no material emerging threats met the verified threshold "
+            "Telemetry Research — no material emerging threats met the verified threshold "
             "in the last 24 hours."
         )
-    lines = ["Threat Radar — verified emerging threats"]
+    lines = ["Telemetry Research — verified emerging threats"]
     for item in findings[:5]:
         lines.append(
             f"• {str(item['publication_class']).upper()} "

@@ -1,16 +1,16 @@
 {
-  "id": "threat-radar-boundary",
+  "id": "telemetry-research-boundary",
   "activation": {
     "onStartup": true
   },
   "enabledByDefault": false,
-  "name": "Threat Radar Boundary",
+  "name": "Telemetry Research Boundary",
   "description": "Narrow TaskFlow lifecycle and verified Discord report delivery.",
   "contracts": {
     "tools": [
-      "radar_flow_start",
-      "radar_flow_finish",
-      "radar_delivery_send"
+      "research_flow_start",
+      "research_flow_finish",
+      "research_delivery_send"
     ]
   },
   "configSchema": {

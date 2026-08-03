@@ -2,7 +2,7 @@
 
 UV ?= uv
 PYTHON := $(UV) run python
-RADAR := $(UV) run outcome-radar
+RESEARCH := $(UV) run emerging-telemetry-research
 REPORT_ROOT ?= reports/generated
 AGENT_ADAPTER ?= fixture
 AGENT_REPEATS ?= 3
@@ -14,7 +14,7 @@ AGENT_REPEATS ?= 3
 	openclaw-agents-check openclaw-agents-install
 
 help: ## Show available targets and common overrides.
-	@awk 'BEGIN {FS = ":.*## "; printf "Outcome Radar workflows\n\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Emerging Telemetry Research workflows\n\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@printf "\nOverrides: REPORT_ROOT=..., AGENT_ADAPTER=fixture|openclaw|codex|claude|openai-compatible, AGENT_REPEATS=1..10\n"
 
 setup: ## Install the project and development dependencies with uv.
@@ -42,16 +42,16 @@ audit: ## Audit the complete locked dependency graph for known vulnerabilities.
 	$(UV) --preview-features audit audit --locked
 
 acceptance: ## Run the frozen end-to-end and hostile-content acceptance suite.
-	$(RADAR) eval acceptance --output $(REPORT_ROOT)/acceptance --json
+	$(RESEARCH) eval acceptance --output $(REPORT_ROOT)/acceptance --json
 
 eval-agents: ## Repeat the bounded-agent DAG eval and emit quality/cost/stability metrics.
-	$(RADAR) eval agents --adapter $(AGENT_ADAPTER) --repeats $(AGENT_REPEATS) --output $(REPORT_ROOT)/agent-evaluation --json
+	$(RESEARCH) eval agents --adapter $(AGENT_ADAPTER) --repeats $(AGENT_REPEATS) --output $(REPORT_ROOT)/agent-evaluation --json
 
 eval-coverage: ## Measure source diversity and X concentration in generated reports.
-	$(RADAR) eval coverage --reports $(REPORT_ROOT) --output $(REPORT_ROOT)/source-evaluation --json
+	$(RESEARCH) eval coverage --reports $(REPORT_ROOT) --output $(REPORT_ROOT)/source-evaluation --json
 
 eval-coverage-fixture: ## Run the source-coverage gates against the frozen multi-surface fixture.
-	$(RADAR) eval coverage --reports tests/fixtures/source_coverage --output $(REPORT_ROOT)/source-evaluation-fixture --json
+	$(RESEARCH) eval coverage --reports tests/fixtures/source_coverage --output $(REPORT_ROOT)/source-evaluation-fixture --json
 
 eval-all: acceptance eval-agents eval-coverage-fixture ## Run deterministic, agent, and source-coverage evaluations.
 
@@ -68,25 +68,25 @@ package-smoke: build ## Install the wheel in a clean environment and run a fixtu
 
 sbom: build ## Generate a CycloneDX JSON software bill of materials for the locked environment.
 	$(UV) --preview-features sbom-export --quiet export --frozen --format cyclonedx1.5 \
-		--no-dev --output-file dist/outcome-radar.cdx.json
+		--no-dev --output-file dist/emerging-telemetry-research.cdx.json
 
 clean-build: ## Remove package build artifacts with uv's build backend.
 	$(UV) build --clear
 
 live: ## Run the production-store workflow using environment configuration.
-	$(RADAR) live run --output $(REPORT_ROOT) --json
+	$(RESEARCH) live run --output $(REPORT_ROOT) --json
 
 portable: ## Run with SQLite and local immutable object storage.
-	$(RADAR) portable run --output $(REPORT_ROOT) --json
+	$(RESEARCH) portable run --output $(REPORT_ROOT) --json
 
 agent-shadow: ## Run portable discovery with bounded agents recorded but not applied.
-	$(RADAR) portable run --output $(REPORT_ROOT) --agent-mode shadow --agent-adapter $(AGENT_ADAPTER) --json
+	$(RESEARCH) portable run --output $(REPORT_ROOT) --agent-mode shadow --agent-adapter $(AGENT_ADAPTER) --json
 
 agent-active: ## Run portable discovery and apply bounded agent analysis to report narrative.
-	$(RADAR) portable run --output $(REPORT_ROOT) --agent-mode active --agent-adapter $(AGENT_ADAPTER) --json
+	$(RESEARCH) portable run --output $(REPORT_ROOT) --agent-mode active --agent-adapter $(AGENT_ADAPTER) --json
 
 analytics: ## Rebuild the local analytics index.
-	$(RADAR) analytics sync --json
+	$(RESEARCH) analytics sync --json
 
 api: ## Start the loopback API.
 	$(UV) run uvicorn apps.api.main:app --host 127.0.0.1 --port 8080

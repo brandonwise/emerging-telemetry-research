@@ -22,8 +22,8 @@ from packages.security_gateway.secrets import resolve_secret
 from packages.storage.repository import (
     IdempotencyConflict,
     PostgresRepository,
-    RadarRepository,
     RepositoryUnavailable,
+    ResearchRepository,
     UnavailableRepository,
 )
 
@@ -32,7 +32,7 @@ IDEMPOTENCY = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
 
 
 class ApiSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="RADAR_API_", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="ETR_API_", extra="ignore")
 
     mtls_identities_json: str = "{}"
     report_root: Path = Path("reports/generated")
@@ -42,10 +42,10 @@ class ApiSettings(BaseSettings):
 
     @model_validator(mode="after")
     def resolve_database_secret_reference(self) -> Self:
-        if os.environ.get("RADAR_API_DATABASE_URL") or os.environ.get(
-            "RADAR_API_DATABASE_URL_REF"
+        if os.environ.get("ETR_API_DATABASE_URL") or os.environ.get(
+            "ETR_API_DATABASE_URL_REF"
         ):
-            self.database_url = resolve_secret("RADAR_API_DATABASE_URL", required=False)
+            self.database_url = resolve_secret("ETR_API_DATABASE_URL", required=False)
         return self
 
     def identity_roles(self) -> dict[str, str]:
@@ -93,16 +93,16 @@ class ArtifactSubmission(ClosedModel):
 def create_app(
     *,
     settings: ApiSettings | None = None,
-    repository: RadarRepository | None = None,
+    repository: ResearchRepository | None = None,
 ) -> FastAPI:
     api_settings = settings or ApiSettings()
-    repo: RadarRepository = repository or (
+    repo: ResearchRepository = repository or (
         PostgresRepository(api_settings.database_url)
         if api_settings.database_url
         else UnavailableRepository()
     )
     application = FastAPI(
-        title="Outcome Radar internal API",
+        title="Emerging Telemetry Research internal API",
         version="1.0.0",
         docs_url=None,
         redoc_url=None,

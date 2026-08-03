@@ -1,6 +1,6 @@
 # Delivery Manifest
 
-This package contains the security-first OpenClaw Emerging Threat Radar implementation. The
+This package contains the security-first OpenClaw Emerging Telemetry Research implementation. The
 approved local deployment performs live Brave and X discovery, authoritative corroboration, and
 DB/private-website publication with no routine Discord delivery; unapproved source classes remain
 fail-closed.
@@ -40,8 +40,8 @@ Run:
 ```bash
 uv run python scripts/validate_repo.py
 uv run pytest
-uv run python scripts/run_acceptance.py --output /tmp/radar-acceptance
-uv run python scripts/verify_restore.py --output /tmp/radar-restore
+uv run python scripts/run_acceptance.py --output /tmp/research-acceptance
+uv run python scripts/verify_restore.py --output /tmp/research-restore
 ```
 
 Before applying the example OpenClaw configuration, validate every field against the installed version:

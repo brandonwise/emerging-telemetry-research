@@ -18,7 +18,7 @@ These items require separate scope approvals:
   terms and source-specific controls are approved.
 - The internal API remains loopback-only. Exposing it requires a deployed mTLS-terminating proxy;
   only that proxy may inject `X-Client-Cert-SHA256`, and its source IP must be configured in
-  `RADAR_API_TRUSTED_PROXY_IPS_JSON`.
+  `ETR_API_TRUSTED_PROXY_IPS_JSON`.
 - Flash-class autonomous delivery remains disabled pending the shadow-evaluation window in
   `EVALS.md`.
 - Organization inventory, automated defensive action, browser-based collection, malware

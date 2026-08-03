@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>Threat Radar — {{ report.edition | replace('_', ' ') | title }}</title>
+  <title>Telemetry Research — {{ report.edition | replace('_', ' ') | title }}</title>
   <style>
     :root { color-scheme: light; --ink:#14202b; --muted:#56616c; --line:#d8dee4; --panel:#f5f7f9; --accent:#174f7a; --warn:#8a3b12; --ok:#216e39; }
     * { box-sizing:border-box; }
@@ -52,7 +52,7 @@
 <body>
 <main>
   <header>
-    <div class="eyebrow">Emerging Threat Radar</div>
+    <div class="eyebrow">Emerging Telemetry Research</div>
     <h1>{{ report.edition | replace('_', ' ') | title }}</h1>
     <p class="meta">{{ report.window.start }} through {{ report.window.end }} · {{ report.window.timezone }}</p>
   </header>

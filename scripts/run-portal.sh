@@ -1,39 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-radar_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-radar_host="127.0.0.1"
-radar_port="${RADAR_PORTAL_PORT:-8088}"
-radar_lan="false"
-radar_certfile=""
-radar_keyfile=""
-radar_auth_mode="${RADAR_PORTAL_AUTH_MODE:-auto}"
+research_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+research_host="127.0.0.1"
+research_port="${ETR_PORTAL_PORT:-8088}"
+research_lan="false"
+research_certfile=""
+research_keyfile=""
+research_auth_mode="${ETR_PORTAL_AUTH_MODE:-auto}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --lan)
-      radar_host="0.0.0.0"
-      radar_lan="true"
+      research_host="0.0.0.0"
+      research_lan="true"
       shift
       ;;
     --port)
-      radar_port="${2:?--port requires a value}"
+      research_port="${2:?--port requires a value}"
       shift 2
       ;;
     --certfile)
-      radar_certfile="${2:?--certfile requires a value}"
+      research_certfile="${2:?--certfile requires a value}"
       shift 2
       ;;
     --keyfile)
-      radar_keyfile="${2:?--keyfile requires a value}"
+      research_keyfile="${2:?--keyfile requires a value}"
       shift 2
       ;;
     --auth)
-      radar_auth_mode="${2:?--auth requires required or disabled}"
+      research_auth_mode="${2:?--auth requires required or disabled}"
       shift 2
       ;;
     --no-auth)
-      radar_auth_mode="disabled"
+      research_auth_mode="disabled"
       shift
       ;;
     *)
@@ -43,90 +43,90 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "${radar_auth_mode}" != "auto" \
-  && "${radar_auth_mode}" != "required" \
-  && "${radar_auth_mode}" != "disabled" ]]; then
+if [[ "${research_auth_mode}" != "auto" \
+  && "${research_auth_mode}" != "required" \
+  && "${research_auth_mode}" != "disabled" ]]; then
   echo "Portal authentication must be auto, required, or disabled" >&2
   exit 2
 fi
 
-if [[ ! "${radar_port}" =~ ^[0-9]+$ ]] || (( radar_port < 1024 || radar_port > 65535 )); then
+if [[ ! "${research_port}" =~ ^[0-9]+$ ]] || (( research_port < 1024 || research_port > 65535 )); then
   echo "Portal port must be an integer from 1024 to 65535" >&2
   exit 2
 fi
 
-if [[ -n "${radar_certfile}" || -n "${radar_keyfile}" ]]; then
-  if [[ ! -f "${radar_certfile}" || ! -f "${radar_keyfile}" ]]; then
+if [[ -n "${research_certfile}" || -n "${research_keyfile}" ]]; then
+  if [[ ! -f "${research_certfile}" || ! -f "${research_keyfile}" ]]; then
     echo "Both --certfile and --keyfile must reference readable files" >&2
     exit 2
   fi
-  export RADAR_PORTAL_SECURE_COOKIE="true"
+  export ETR_PORTAL_SECURE_COOKIE="true"
 fi
 
-if [[ "${radar_lan}" == "true" ]]; then
-  export RADAR_PORTAL_LAN_MODE="true"
+if [[ "${research_lan}" == "true" ]]; then
+  export ETR_PORTAL_LAN_MODE="true"
 fi
-export RADAR_PORTAL_AUTH_MODE="${radar_auth_mode}"
+export ETR_PORTAL_AUTH_MODE="${research_auth_mode}"
 
-radar_token_required="false"
-if [[ "${radar_auth_mode}" == "required" \
-  || ( "${radar_auth_mode}" == "auto" && "${radar_lan}" == "true" ) ]]; then
-  radar_token_required="true"
+research_token_required="false"
+if [[ "${research_auth_mode}" == "required" \
+  || ( "${research_auth_mode}" == "auto" && "${research_lan}" == "true" ) ]]; then
+  research_token_required="true"
 fi
-if [[ "${radar_auth_mode}" == "disabled" ]]; then
-  unset RADAR_PORTAL_ACCESS_TOKEN
-elif [[ "${radar_token_required}" == "true" ]]; then
-  radar_portal_token="${RADAR_PORTAL_ACCESS_TOKEN:-}"
-  if [[ -z "${radar_portal_token}" ]]; then
-    radar_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
-    if [[ -x "${radar_keychain_helper}" ]]; then
-      radar_portal_token="$("${radar_keychain_helper}" RADAR_PORTAL_ACCESS_TOKEN 2>/dev/null || true)"
+if [[ "${research_auth_mode}" == "disabled" ]]; then
+  unset ETR_PORTAL_ACCESS_TOKEN
+elif [[ "${research_token_required}" == "true" ]]; then
+  research_portal_token="${ETR_PORTAL_ACCESS_TOKEN:-}"
+  if [[ -z "${research_portal_token}" ]]; then
+    research_keychain_helper="${HOME}/.openclaw/bin/keychain-secret.sh"
+    if [[ -x "${research_keychain_helper}" ]]; then
+      research_portal_token="$("${research_keychain_helper}" ETR_PORTAL_ACCESS_TOKEN 2>/dev/null || true)"
     fi
   fi
-  if [[ ${#radar_portal_token} -lt 20 ]]; then
-    echo "Portal authentication requires RADAR_PORTAL_ACCESS_TOKEN with at least 20 characters" >&2
+  if [[ ${#research_portal_token} -lt 20 ]]; then
+    echo "Portal authentication requires ETR_PORTAL_ACCESS_TOKEN with at least 20 characters" >&2
     exit 2
   fi
-  export RADAR_PORTAL_ACCESS_TOKEN="${radar_portal_token}"
+  export ETR_PORTAL_ACCESS_TOKEN="${research_portal_token}"
 fi
 
-export RADAR_PORTAL_ANALYTICS_DB="${RADAR_PORTAL_ANALYTICS_DB:-${radar_repo_root}/state/radar.db}"
-export RADAR_PORTAL_REPORTS_ROOT="${RADAR_PORTAL_REPORTS_ROOT:-${radar_repo_root}/reports/generated}"
-export RADAR_PORTAL_MISSIONS_ROOT="${RADAR_PORTAL_MISSIONS_ROOT:-${radar_repo_root}/missions}"
-export RADAR_PORTAL_MISSION_REPORTS_ROOT="${RADAR_PORTAL_MISSION_REPORTS_ROOT:-${radar_repo_root}/reports/missions}"
+export ETR_PORTAL_ANALYTICS_DB="${ETR_PORTAL_ANALYTICS_DB:-${research_repo_root}/state/research.db}"
+export ETR_PORTAL_REPORTS_ROOT="${ETR_PORTAL_REPORTS_ROOT:-${research_repo_root}/reports/generated}"
+export ETR_PORTAL_MISSIONS_ROOT="${ETR_PORTAL_MISSIONS_ROOT:-${research_repo_root}/missions}"
+export ETR_PORTAL_MISSION_REPORTS_ROOT="${ETR_PORTAL_MISSION_REPORTS_ROOT:-${research_repo_root}/reports/missions}"
 
-radar_protocol="http"
-radar_tls_args=()
-if [[ -n "${radar_certfile}" ]]; then
-  radar_protocol="https"
-  radar_tls_args=(--ssl-certfile "${radar_certfile}" --ssl-keyfile "${radar_keyfile}")
+research_protocol="http"
+research_tls_args=()
+if [[ -n "${research_certfile}" ]]; then
+  research_protocol="https"
+  research_tls_args=(--ssl-certfile "${research_certfile}" --ssl-keyfile "${research_keyfile}")
 fi
 
-if [[ "${radar_lan}" == "true" ]]; then
-  radar_ip=""
+if [[ "${research_lan}" == "true" ]]; then
+  research_ip=""
   if command -v ipconfig >/dev/null 2>&1; then
-    for radar_interface in en0 en1 en2 en3; do
-      radar_ip="$(ipconfig getifaddr "${radar_interface}" 2>/dev/null || true)"
-      [[ -n "${radar_ip}" ]] && break
+    for research_interface in en0 en1 en2 en3; do
+      research_ip="$(ipconfig getifaddr "${research_interface}" 2>/dev/null || true)"
+      [[ -n "${research_ip}" ]] && break
     done
   elif command -v hostname >/dev/null 2>&1; then
-    radar_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    research_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
   fi
-  radar_ip="${radar_ip:-<private-ip>}"
-  echo "Outcome Radar portal: ${radar_protocol}://${radar_ip}:${radar_port}" >&2
+  research_ip="${research_ip:-<private-ip>}"
+  echo "Emerging Telemetry Research portal: ${research_protocol}://${research_ip}:${research_port}" >&2
 else
-  echo "Outcome Radar portal: ${radar_protocol}://127.0.0.1:${radar_port}" >&2
+  echo "Emerging Telemetry Research portal: ${research_protocol}://127.0.0.1:${research_port}" >&2
 fi
 
-cd "${radar_repo_root}"
-if [[ -n "${radar_certfile}" ]]; then
+cd "${research_repo_root}"
+if [[ -n "${research_certfile}" ]]; then
   exec uv run uvicorn apps.portal.main:app \
-    --host "${radar_host}" \
-    --port "${radar_port}" \
+    --host "${research_host}" \
+    --port "${research_port}" \
     --no-server-header \
-    "${radar_tls_args[@]}"
+    "${research_tls_args[@]}"
 fi
 exec uv run uvicorn apps.portal.main:app \
-  --host "${radar_host}" \
-  --port "${radar_port}" \
+  --host "${research_host}" \
+  --port "${research_port}" \
   --no-server-header

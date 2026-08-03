@@ -19,35 +19,36 @@ from packages.security_gateway.secrets import (
 )
 
 RESOURCE_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_DIRECTORY = ".outcome-radar"
-DEFAULT_CONFIG = """# Outcome Radar local configuration. This directory is ignored by Git.
-# Store credentials with `outcome-radar setup secret-set NAME`; only keyring references appear here.
-RADAR_AGENT_MODE=plan
-RADAR_AGENT_ADAPTER=auto
-RADAR_AGENT_API_KEY_REF=
-RADAR_AGENT_INPUT_PRICE_PER_MILLION=
-RADAR_AGENT_OUTPUT_PRICE_PER_MILLION=
-RADAR_AGENT_PLUGIN_ALLOWLIST=
-RADAR_COLLECTOR_PLUGIN_ALLOWLIST=
+CONFIG_DIRECTORY = ".emerging-telemetry-research"
+DEFAULT_CONFIG = """# Emerging Telemetry Research local configuration.
+# This private directory is ignored by Git.
+# Store credentials with setup secret-set; only keyring references appear here.
+ETR_AGENT_MODE=plan
+ETR_AGENT_ADAPTER=auto
+ETR_AGENT_API_KEY_REF=
+ETR_AGENT_INPUT_PRICE_PER_MILLION=
+ETR_AGENT_OUTPUT_PRICE_PER_MILLION=
+ETR_AGENT_PLUGIN_ALLOWLIST=
+ETR_COLLECTOR_PLUGIN_ALLOWLIST=
 BRAVE_API_KEY_REF=
 XAI_API_KEY_REF=
-RADAR_DATABASE_URL_REF=
-RADAR_S3_ENDPOINT_URL=http://127.0.0.1:19000
-RADAR_S3_ACCESS_KEY_ID_REF=
-RADAR_S3_SECRET_ACCESS_KEY_REF=
-RADAR_S3_BUCKET=outcome-radar-evidence
-RADAR_S3_REGION=us-east-1
-RADAR_ANALYTICS_DB=state/radar.db
-RADAR_OBJECT_ROOT=state/objects
-RADAR_REPORT_ROOT=reports/generated
-RADAR_DISCOVERY_CONFIG=.outcome-radar/config/discovery.yaml
-RADAR_SOURCES_CONFIG=.outcome-radar/config/sources.yaml
-RADAR_SOURCE_TERMS_CONFIG=.outcome-radar/config/source-terms.yaml
-RADAR_SCORING_CONFIG=.outcome-radar/config/scoring.yaml
-RADAR_MODELS_CONFIG=.outcome-radar/config/models.yaml
-RADAR_EMBEDDINGS_CONFIG=.outcome-radar/config/embeddings.yaml
+ETR_DATABASE_URL_REF=
+ETR_S3_ENDPOINT_URL=http://127.0.0.1:19000
+ETR_S3_ACCESS_KEY_ID_REF=
+ETR_S3_SECRET_ACCESS_KEY_REF=
+ETR_S3_BUCKET=emerging-telemetry-research-evidence
+ETR_S3_REGION=us-east-1
+ETR_ANALYTICS_DB=state/research.db
+ETR_OBJECT_ROOT=state/objects
+ETR_REPORT_ROOT=reports/generated
+ETR_DISCOVERY_CONFIG=.emerging-telemetry-research/config/discovery.yaml
+ETR_SOURCES_CONFIG=.emerging-telemetry-research/config/sources.yaml
+ETR_SOURCE_TERMS_CONFIG=.emerging-telemetry-research/config/source-terms.yaml
+ETR_SCORING_CONFIG=.emerging-telemetry-research/config/scoring.yaml
+ETR_MODELS_CONFIG=.emerging-telemetry-research/config/models.yaml
+ETR_EMBEDDINGS_CONFIG=.emerging-telemetry-research/config/embeddings.yaml
 EXTERNAL_DELIVERY_ENABLED=false
-RADAR_EMAIL_DELIVERY_ENABLED=false
+ETR_EMAIL_DELIVERY_ENABLED=false
 """
 PRIVATE_IGNORE = "*\n!.gitignore\n"
 SECRET_GROUPS = {
@@ -55,9 +56,9 @@ SECRET_GROUPS = {
     "production": (
         "BRAVE_API_KEY",
         "XAI_API_KEY",
-        "RADAR_DATABASE_URL",
-        "RADAR_S3_ACCESS_KEY_ID",
-        "RADAR_S3_SECRET_ACCESS_KEY",
+        "ETR_DATABASE_URL",
+        "ETR_S3_ACCESS_KEY_ID",
+        "ETR_S3_SECRET_ACCESS_KEY",
     ),
 }
 PORTABLE_SOURCE_IDS = {
@@ -146,7 +147,7 @@ def configure_keyring_credential(
     value: str,
     *,
     config_path: Path,
-    service: str = "outcome-radar",
+    service: str = "emerging-telemetry-research",
 ) -> None:
     reference = keyring_reference(name, service=service)
     store_keyring_secret(name, value, service=service)
@@ -180,7 +181,7 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
         "config/models.yaml",
         "schemas/mission.schema.json",
         "missions/developer-product-opportunities/mission.yaml",
-        "integrations/templates/common/radar.env.example",
+        "integrations/templates/common/research.env.example",
     )
     missing = [item for item in resources if not (RESOURCE_ROOT / item).is_file()]
     checks.append(
@@ -209,7 +210,7 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
             DoctorCheck(
                 "local-config",
                 "warn",
-                "run `outcome-radar setup init` to create local defaults",
+                "run `emerging-telemetry-research setup init` to create local defaults",
                 False,
             )
         )
@@ -225,7 +226,7 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
             )
         )
     if profile == "production":
-        endpoint = os.environ.get("RADAR_S3_ENDPOINT_URL", "").strip()
+        endpoint = os.environ.get("ETR_S3_ENDPOINT_URL", "").strip()
         parsed_endpoint = urlsplit(endpoint)
         local_endpoint = parsed_endpoint.hostname in {"127.0.0.1", "::1", "localhost"}
         endpoint_valid = bool(
@@ -247,7 +248,7 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
                 True,
             )
         )
-        bucket = os.environ.get("RADAR_S3_BUCKET", "").strip()
+        bucket = os.environ.get("ETR_S3_BUCKET", "").strip()
         bucket_valid = 3 <= len(bucket) <= 63 and all(
             character.islower() or character.isdigit() or character in ".-"
             for character in bucket
@@ -283,11 +284,11 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
                     True,
                 )
             )
-    adapter = os.environ.get("RADAR_AGENT_ADAPTER", "codex")
-    mode = os.environ.get("RADAR_AGENT_MODE", "plan")
+    adapter = os.environ.get("ETR_AGENT_ADAPTER", "codex")
+    mode = os.environ.get("ETR_AGENT_MODE", "plan")
     if mode != "plan":
         if adapter in {"openclaw", "codex", "claude"}:
-            executable = os.environ.get("RADAR_AGENT_EXECUTABLE", adapter)
+            executable = os.environ.get("ETR_AGENT_EXECUTABLE", adapter)
             available = shutil.which(executable) is not None
             checks.append(
                 DoctorCheck(
@@ -298,8 +299,8 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
                 )
             )
         elif adapter == "openai-compatible":
-            status = inspect_secret("RADAR_AGENT_API_KEY")
-            model = os.environ.get("RADAR_AGENT_MODEL", "").strip()
+            status = inspect_secret("ETR_AGENT_API_KEY")
+            model = os.environ.get("ETR_AGENT_MODEL", "").strip()
             configured = status.configured and bool(model)
             checks.append(
                 DoctorCheck(
@@ -313,8 +314,8 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
             checks.append(DoctorCheck("agent-runtime", "fail", "unsupported adapter", True))
         if adapter != "fixture":
             pricing = (
-                os.environ.get("RADAR_AGENT_INPUT_PRICE_PER_MILLION", "").strip(),
-                os.environ.get("RADAR_AGENT_OUTPUT_PRICE_PER_MILLION", "").strip(),
+                os.environ.get("ETR_AGENT_INPUT_PRICE_PER_MILLION", "").strip(),
+                os.environ.get("ETR_AGENT_OUTPUT_PRICE_PER_MILLION", "").strip(),
             )
             checks.append(
                 DoctorCheck(

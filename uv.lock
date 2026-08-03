@@ -923,7 +923,7 @@ wheels = [
 ]
 
 [[package]]
-name = "outcome-radar"
+name = "emerging-telemetry-research"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

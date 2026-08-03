@@ -1,1 +1,1 @@
-"""Read-only Outcome Radar operations portal."""
+"""Read-only Emerging Telemetry Research operations portal."""

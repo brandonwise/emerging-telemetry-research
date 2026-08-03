@@ -1,1 +1,1 @@
-"""Replayable deterministic threat-radar pipeline."""
+"""Replayable deterministic telemetry-research pipeline."""

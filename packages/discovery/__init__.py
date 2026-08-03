@@ -1,1 +1,1 @@
-"""Bounded discovery clients for live Threat Radar runs."""
+"""Bounded discovery clients for live Telemetry Research runs."""

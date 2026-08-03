@@ -30,7 +30,7 @@ class MemoryKeyring:
 
 def test_secret_resolution_supports_direct_environment_and_indirection() -> None:
     keyring = MemoryKeyring()
-    keyring.values[("outcome-radar", "BRAVE_API_KEY")] = "stored-brave-value"
+    keyring.values[("emerging-telemetry-research", "BRAVE_API_KEY")] = "stored-brave-value"
 
     assert resolve_secret("BRAVE_API_KEY", environ={"BRAVE_API_KEY": "direct"}) == "direct"
     assert (
@@ -46,7 +46,7 @@ def test_secret_resolution_supports_direct_environment_and_indirection() -> None
     assert (
         resolve_secret(
             "BRAVE_API_KEY",
-            environ={"BRAVE_API_KEY_REF": "keyring://outcome-radar/BRAVE_API_KEY"},
+            environ={"BRAVE_API_KEY_REF": "keyring://emerging-telemetry-research/BRAVE_API_KEY"},
             keyring_backend=keyring,
         )
         == "stored-brave-value"
@@ -98,7 +98,7 @@ def test_keyring_storage_is_separate_from_non_secret_reference() -> None:
     reference = keyring_reference("XAI_API_KEY")
 
     assert result is None
-    assert reference == "keyring://outcome-radar/XAI_API_KEY"
+    assert reference == "keyring://emerging-telemetry-research/XAI_API_KEY"
     assert "never-print-this" not in reference
     assert inspect_secret(
         "XAI_API_KEY",
@@ -108,22 +108,22 @@ def test_keyring_storage_is_separate_from_non_secret_reference() -> None:
 
 
 def test_environment_file_is_data_not_shell(tmp_path: Path) -> None:
-    path = tmp_path / "radar.env"
+    path = tmp_path / "research.env"
     path.write_text(
-        "RADAR_AGENT_MODE=plan\nPRIVATE_BRAVE_KEY=$(touch should-not-run)\n",
+        "ETR_AGENT_MODE=plan\nPRIVATE_BRAVE_KEY=$(touch should-not-run)\n",
         encoding="utf-8",
     )
     target: dict[str, str] = {}
 
     loaded = load_environment_file(path, environ=target)
 
-    assert loaded == ("RADAR_AGENT_MODE", "PRIVATE_BRAVE_KEY")
+    assert loaded == ("ETR_AGENT_MODE", "PRIVATE_BRAVE_KEY")
     assert target["PRIVATE_BRAVE_KEY"] == "$(touch should-not-run)"
     assert not (tmp_path / "should-not-run").exists()
 
 
 def test_environment_file_rejects_duplicates(tmp_path: Path) -> None:
-    path = tmp_path / "radar.env"
+    path = tmp_path / "research.env"
     path.write_text("BRAVE_API_KEY=one\nBRAVE_API_KEY=two\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="repeats BRAVE_API_KEY"):
@@ -133,7 +133,7 @@ def test_environment_file_rejects_duplicates(tmp_path: Path) -> None:
 def test_workspace_init_is_private_and_idempotent(tmp_path: Path) -> None:
     first = initialize_workspace(tmp_path)
     second = initialize_workspace(tmp_path)
-    config = tmp_path / ".outcome-radar/config.env"
+    config = tmp_path / ".emerging-telemetry-research/config.env"
 
     assert config.is_file()
     if os.name != "nt":
@@ -147,7 +147,7 @@ def test_configure_keyring_secret_writes_only_reference(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config = tmp_path / ".outcome-radar/config.env"
+    config = tmp_path / ".emerging-telemetry-research/config.env"
     initialize_workspace(tmp_path)
     monkeypatch.setattr(
         onboarding_workspace,
@@ -167,7 +167,7 @@ def test_configure_keyring_secret_writes_only_reference(
 
 
 def test_core_doctor_reports_runtime_readiness(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("RADAR_AGENT_MODE", "plan")
+    monkeypatch.setenv("ETR_AGENT_MODE", "plan")
 
     result = run_doctor(profile="core")
 

@@ -90,7 +90,7 @@ def _document(report: dict[str, Any]) -> str:
 <body>
 <main>
   <header>
-    <div class="eyebrow">Outcome intelligence · evidence locked</div>
+    <div class="eyebrow">Emerging telemetry research · evidence locked</div>
     <h1>{_escape(report['mission_name'])}</h1>
     <p class="objective">{_escape(report['objective'])}</p>
   </header>

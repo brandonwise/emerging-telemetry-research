@@ -1,4 +1,4 @@
-"""Deterministic Threat Radar scoring.
+"""Deterministic Telemetry Research scoring.
 
 Models may recommend feature values, but production values must be produced or
 accepted by deterministic policy code before publication.

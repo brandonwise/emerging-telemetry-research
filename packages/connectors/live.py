@@ -46,7 +46,7 @@ class OfficialSourceClient:
                         "application/json,text/csv;q=0.9,text/plain;q=0.8,"
                         "application/vnd.github+json;q=0.8"
                     ),
-                    "User-Agent": "OpenClaw-Threat-Radar/1.0",
+                    "User-Agent": "OpenClaw-Threat-Research/1.0",
                 },
                 max_response_bytes=spec.maximum_bytes,
                 max_redirects=3,

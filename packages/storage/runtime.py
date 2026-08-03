@@ -74,7 +74,7 @@ def _apply_migrations(database_url: str, migrations_root: Path) -> None:
     with psycopg.connect(database_url, autocommit=True) as connection:
         connection.execute(
             """
-            CREATE TABLE IF NOT EXISTS radar_schema_migrations (
+            CREATE TABLE IF NOT EXISTS research_schema_migrations (
               migration_name text PRIMARY KEY,
               content_hash text NOT NULL,
               applied_at timestamptz NOT NULL DEFAULT now()
@@ -87,7 +87,7 @@ def _apply_migrations(database_url: str, migrations_root: Path) -> None:
             existing = connection.execute(
                 """
                 SELECT content_hash
-                FROM radar_schema_migrations
+                FROM research_schema_migrations
                 WHERE migration_name = %s
                 """,
                 (path.name,),
@@ -99,7 +99,7 @@ def _apply_migrations(database_url: str, migrations_root: Path) -> None:
             connection.execute(content)
             connection.execute(
                 """
-                INSERT INTO radar_schema_migrations (migration_name, content_hash)
+                INSERT INTO research_schema_migrations (migration_name, content_hash)
                 VALUES (%s, %s)
                 """,
                 (path.name, digest),

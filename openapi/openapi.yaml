@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: OpenClaw Emerging Threat Radar internal API
+  title: OpenClaw Emerging Telemetry Research internal API
   version: 1.0.0
   description: Narrow service contracts. Unknown fields and routes fail closed.
 servers:
-  - url: https://radar-api.internal/v1
+  - url: https://research-api.internal/v1
 security:
   - mutualTLS: []
-x-radar-identity-forwarding:
+x-research-identity-forwarding:
   trustedHeader: X-Client-Cert-SHA256
   requirement: >-
     A configured trusted proxy must verify mutual TLS, strip caller-supplied identity headers,
@@ -16,7 +16,7 @@ paths:
   /health:
     get:
       operationId: getHealth
-      x-radar-roles: [operator, orchestrator]
+      x-research-roles: [operator, orchestrator]
       responses:
         "200":
           description: Service health and external-action gates
@@ -25,7 +25,7 @@ paths:
   /runs:
     post:
       operationId: createRun
-      x-radar-roles: [orchestrator]
+      x-research-roles: [orchestrator]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -48,7 +48,7 @@ paths:
   /artifacts:
     post:
       operationId: submitArtifact
-      x-radar-roles: [collector]
+      x-research-roles: [collector]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -67,7 +67,7 @@ paths:
   /observations:
     post:
       operationId: submitObservation
-      x-radar-roles: [extractor]
+      x-research-roles: [extractor]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -86,7 +86,7 @@ paths:
   /assessments:
     post:
       operationId: submitAssessment
-      x-radar-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
+      x-research-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -105,7 +105,7 @@ paths:
   /evidence/{evidenceId}:
     get:
       operationId: getEvidence
-      x-radar-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
+      x-research-roles: [specialist, impact, skeptic, citation_verifier, coordinator]
       parameters:
         - name: evidenceId
           in: path
@@ -123,7 +123,7 @@ paths:
   /reports/render:
     post:
       operationId: renderReport
-      x-radar-roles: [publisher]
+      x-research-roles: [publisher]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -144,7 +144,7 @@ paths:
   /deliveries:
     post:
       operationId: submitDelivery
-      x-radar-roles: [publisher]
+      x-research-roles: [publisher]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -161,14 +161,14 @@ paths:
   /source-health:
     get:
       operationId: getSourceHealth
-      x-radar-roles: [orchestrator, operator]
+      x-research-roles: [orchestrator, operator]
       responses:
         "200":
           description: Current source health
   /runs/{runId}/usage:
     get:
       operationId: getRunUsage
-      x-radar-roles: [orchestrator, operator]
+      x-research-roles: [orchestrator, operator]
       parameters:
         - name: runId
           in: path

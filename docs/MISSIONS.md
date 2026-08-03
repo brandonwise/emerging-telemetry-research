@@ -13,10 +13,10 @@ giving a prompt permission to write or run a scraper.
 Use the portal at `/missions/new`, or create a draft from the CLI:
 
 ```bash
-uv run outcome-radar mission create \
+uv run emerging-telemetry-research mission create \
   --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
   --outcome opportunity \
-  --name "Developer Product Opportunity Radar" \
+  --name "Developer Product Opportunity Research" \
   --window-hours 336 \
   --cadence weekly \
   --json
@@ -34,8 +34,8 @@ scorecard, and applies the proven five-role challenge graph. It does not execute
 ## Review the plan
 
 ```bash
-uv run outcome-radar mission validate missions/my-mission/mission.yaml --json
-uv run outcome-radar mission plan missions/my-mission/mission.yaml --json
+uv run emerging-telemetry-research mission validate missions/my-mission/mission.yaml --json
+uv run emerging-telemetry-research mission plan missions/my-mission/mission.yaml --json
 ```
 
 The plan shows every query, source surface, result limit, evidence rule, score dimension, role
@@ -47,7 +47,7 @@ or a changed review graph fail validation.
 Plan-mode missions can run against a checked-in signal set without network access:
 
 ```bash
-uv run outcome-radar mission run \
+uv run emerging-telemetry-research mission run \
   missions/developer-product-opportunities/mission.yaml \
   --signals missions/developer-product-opportunities/fixture-signals.json \
   --output reports/missions \
@@ -62,7 +62,7 @@ External delivery remains disabled.
 Evaluate the result against the mission's own success gates:
 
 ```bash
-uv run outcome-radar mission evaluate \
+uv run emerging-telemetry-research mission evaluate \
   missions/developer-product-opportunities/mission.yaml \
   --report reports/missions/<mission-id>/<report-id>/report.json \
   --json
@@ -72,7 +72,7 @@ Record whether an outcome was genuinely useful. Feedback is stored as an immutab
 latest label for each outcome replaces the priority proxy in usefulness evaluation:
 
 ```bash
-uv run outcome-radar mission feedback \
+uv run emerging-telemetry-research mission feedback \
   missions/developer-product-opportunities/mission.yaml \
   --report reports/missions/<mission-id>/<report-id>/report.json \
   --outcome-id <outcome-id> \
@@ -90,7 +90,7 @@ silently rewrites source approval, score weights, or collection policy.
 Activation is a deliberate approval, not a button hidden inside onboarding:
 
 ```bash
-uv run outcome-radar mission activate \
+uv run emerging-telemetry-research mission activate \
   missions/my-mission/mission.yaml \
   --approved-by "Research owner" \
   --approval-id "change-1234" \
@@ -104,13 +104,13 @@ source. Any edit after approval invalidates the seal. Only that contract may run
 
 ```bash
 export BRAVE_API_KEY="from-your-secret-store"
-uv run outcome-radar mission run missions/my-mission/mission.active.yaml --live --json
+uv run emerging-telemetry-research mission run missions/my-mission/mission.active.yaml --live --json
 ```
 
 Restore the exact pre-activation draft with its hash-checked receipt:
 
 ```bash
-uv run outcome-radar mission rollback activation-receipt.json \
+uv run emerging-telemetry-research mission rollback activation-receipt.json \
   --output mission.rolled-back.yaml \
   --json
 ```

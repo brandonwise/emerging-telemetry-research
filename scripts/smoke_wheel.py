@@ -35,7 +35,7 @@ def _json_output(result: subprocess.CompletedProcess[str]) -> dict[str, Any]:
 
 
 def smoke(wheel: Path) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="outcome-radar-wheel-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="emerging-telemetry-research-wheel-") as temporary:
         root = Path(temporary)
         environment = root / "venv"
         venv.EnvBuilder(with_pip=True, clear=True).create(environment)
@@ -64,11 +64,11 @@ def smoke(wheel: Path) -> dict[str, Any]:
         mission = package_root / "missions/developer-product-opportunities/mission.yaml"
         signals = package_root / "missions/developer-product-opportunities/fixture-signals.json"
         report_root = root / "reports"
-        primary = _executable(environment, "outcome-radar")
-        legacy = _executable(environment, "threat-radar")
+        primary = _executable(environment, "emerging-telemetry-research")
+        short_alias = _executable(environment, "telemetry-research")
 
         _run([str(primary), "--help"], cwd=root)
-        _run([str(legacy), "--help"], cwd=root)
+        _run([str(short_alias), "--help"], cwd=root)
         validation = _json_output(
             _run([str(primary), "mission", "validate", str(mission), "--json"], cwd=root)
         )
@@ -96,18 +96,18 @@ def smoke(wheel: Path) -> dict[str, Any]:
             "wheel": wheel.name,
             "mission_id": validation["mission_id"],
             "report_id": execution["report_id"],
-            "legacy_alias": True,
+            "short_alias": True,
         }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Smoke-test an Outcome Radar wheel")
+    parser = argparse.ArgumentParser(description="Smoke-test an Emerging Telemetry Research wheel")
     parser.add_argument("--wheel", type=Path)
     arguments = parser.parse_args()
-    wheels = sorted(Path("dist").glob("outcome_radar-*.whl"))
+    wheels = sorted(Path("dist").glob("emerging_telemetry_research-*.whl"))
     wheel = arguments.wheel or (wheels[-1] if wheels else None)
     if wheel is None or not wheel.is_file():
-        raise SystemExit("build an outcome_radar wheel first or pass --wheel")
+        raise SystemExit("build an emerging_telemetry_research wheel first or pass --wheel")
     print(json.dumps(smoke(wheel), sort_keys=True))
 
 

@@ -21,7 +21,7 @@ class RepositoryUnavailable(RuntimeError):
     pass
 
 
-class RadarRepository(Protocol):
+class ResearchRepository(Protocol):
     async def available(self) -> bool: ...
 
     async def close(self) -> None: ...

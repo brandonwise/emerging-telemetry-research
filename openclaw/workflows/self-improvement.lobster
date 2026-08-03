@@ -1,4 +1,4 @@
-name: threat-radar-self-improvement
+name: telemetry-research-self-improvement
 args:
   reports_root:
     default: "reports/generated"
@@ -11,7 +11,7 @@ args:
 steps:
   - id: advise
     command: >-
-      uv run outcome-radar improve advise
+      uv run emerging-telemetry-research improve advise
       --reports "$LOBSTER_ARG_REPORTS_ROOT"
       --feedback "$LOBSTER_ARG_FEEDBACK_ROOT"
       --mission-feedback "$LOBSTER_ARG_MISSION_FEEDBACK_ROOT"
@@ -21,7 +21,7 @@ steps:
 
   - id: analyze
     command: >-
-      uv run outcome-radar improve analyze
+      uv run emerging-telemetry-research improve analyze
       --reports "$LOBSTER_ARG_REPORTS_ROOT"
       --feedback "$LOBSTER_ARG_FEEDBACK_ROOT"
       --output "$LOBSTER_ARG_OUTPUT_ROOT"
@@ -32,7 +32,7 @@ steps:
 
   - id: apply_bounded_challenger
     command: >-
-      uv run outcome-radar improve apply-stdin
+      uv run emerging-telemetry-research improve apply-stdin
       --repo-root .
       --approved-by lobster-human-gate
       --approval-id lobster_weekly_gate

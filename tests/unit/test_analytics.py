@@ -81,7 +81,7 @@ def test_report_index_builds_overview_trends_and_bounded_events(tmp_path: Path) 
     _mark_operational(report)
     finding_category = report["findings"][0]["category"]
     result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
-    store = AnalyticsStore(tmp_path / "state" / "radar.db")
+    store = AnalyticsStore(tmp_path / "state" / "research.db")
 
     indexed = store.index_path(result.report_json_path)
     replay = store.index_path(result.report_json_path)
@@ -167,7 +167,7 @@ def test_analytics_rejects_mutated_report_and_unbounded_dimensions(tmp_path: Pat
         Path("tests/fixtures/vertical_slice/early-manifest.json"),
         tmp_path / "reports" / "run_fixture_early",
     )
-    store = AnalyticsStore(tmp_path / "radar.db")
+    store = AnalyticsStore(tmp_path / "research.db")
     store.index_path(result.report_json_path)
     mutated = json.loads(result.report_json_path.read_text(encoding="utf-8"))
     mutated["executive_summary"] = "A different immutable report."
@@ -200,7 +200,7 @@ def test_sync_skips_candidate_reports(tmp_path: Path) -> None:
     _mark_operational(report)
     result.report_json_path.write_text(json.dumps(report), encoding="utf-8")
 
-    synced = AnalyticsStore(tmp_path / "radar.db").sync_reports(report_root)
+    synced = AnalyticsStore(tmp_path / "research.db").sync_reports(report_root)
 
     assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1, "excluded": 0}
 
@@ -223,13 +223,13 @@ def test_sync_skips_auxiliary_evaluation_reports(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    synced = AnalyticsStore(tmp_path / "radar.db").sync_reports(report_root)
+    synced = AnalyticsStore(tmp_path / "research.db").sync_reports(report_root)
 
     assert synced == {"inserted": 1, "unchanged": 0, "skipped": 1, "excluded": 0}
 
 
 def test_analytics_migrates_v1_to_usage_schema(tmp_path: Path) -> None:
-    database = tmp_path / "radar.db"
+    database = tmp_path / "research.db"
     with closing(sqlite3.connect(database)) as connection:
         connection.execute(
             "CREATE TABLE analytics_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
@@ -285,7 +285,7 @@ def test_operational_metrics_dedupe_recurring_findings_and_exclude_fixtures(
     fixture["generated_at"] = "2026-07-24T13:30:00Z"
     fixture["findings"][0]["priority_score"] = 99
     fixture["findings"][0]["tags"] = ["fixture-only"]
-    store = AnalyticsStore(tmp_path / "radar.db")
+    store = AnalyticsStore(tmp_path / "research.db")
 
     first_result = store.index_report(
         first,
