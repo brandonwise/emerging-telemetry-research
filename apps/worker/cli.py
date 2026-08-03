@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import secrets
+import shlex
 import sys
 import threading
 import time
@@ -833,9 +834,9 @@ def mission_create(
             "query_count": len(compiled.queries),
             "collection_authorized": False,
             "next": [
-                f"{CLI_COMMAND} mission plan {written}",
+                f"{CLI_COMMAND} mission plan {shlex.quote(str(written))}",
                 (
-                    f"{CLI_COMMAND} mission activate {written} "
+                    f"{CLI_COMMAND} mission activate {shlex.quote(str(written))} "
                     "--approved-by NAME --approval-id ID"
                 ),
             ],
@@ -899,7 +900,7 @@ def mission_source_add(
             "mission_path": str(written),
             "query_count": len(compiled.queries),
             "collection_authorized": False,
-            "next": f"{CLI_COMMAND} mission plan {written}",
+            "next": f"{CLI_COMMAND} mission plan {shlex.quote(str(written))}",
         },
         pretty=not json_output,
     )
@@ -1099,8 +1100,9 @@ def mission_feedback(
             **payload,
             "feedback_path": str(path),
             "next": (
-                f"{CLI_COMMAND} mission evaluate {mission_path} --report {report} "
-                f"--feedback-root {output}"
+                f"{CLI_COMMAND} mission evaluate {shlex.quote(str(mission_path))} "
+                f"--report {shlex.quote(str(report))} "
+                f"--feedback-root {shlex.quote(str(output))}"
             ),
         },
         pretty=not json_output,

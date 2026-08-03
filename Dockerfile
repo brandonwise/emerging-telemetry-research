@@ -30,6 +30,7 @@ COPY --chown=research:research openapi ./openapi
 COPY --chown=research:research openclaw ./openclaw
 COPY --chown=research:research policies ./policies
 COPY --chown=research:research docs ./docs
+COPY --chown=research:research tests/fixtures/vertical_slice ./tests/fixtures/vertical_slice
 
 RUN uv sync --frozen --no-dev
 
