@@ -166,7 +166,8 @@ def _read_secret_file(name: str, path: Path) -> str:
         if os.name != "nt":
             if metadata.st_mode & 0o077:
                 raise SecretResolutionError(f"secret file for {name} must be owner-only")
-            if metadata.st_uid != os.getuid():
+            getuid = getattr(os, "getuid", None)
+            if getuid is None or metadata.st_uid != getuid():
                 raise SecretResolutionError(f"secret file for {name} has an unexpected owner")
         with os.fdopen(descriptor, "rb", closefd=False) as stream:
             raw = stream.read(65_537)

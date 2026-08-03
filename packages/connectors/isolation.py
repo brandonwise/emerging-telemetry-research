@@ -129,9 +129,14 @@ def _apply_resource_limits(maximum_memory_bytes: int) -> None:
     try:
         import resource
 
-        resource.setrlimit(resource.RLIMIT_CPU, (10, 10))
-        resource.setrlimit(
-            resource.RLIMIT_AS,
+        setrlimit = getattr(resource, "setrlimit", None)
+        cpu_limit = getattr(resource, "RLIMIT_CPU", None)
+        address_space_limit = getattr(resource, "RLIMIT_AS", None)
+        if not callable(setrlimit) or cpu_limit is None or address_space_limit is None:
+            return
+        setrlimit(cpu_limit, (10, 10))
+        setrlimit(
+            address_space_limit,
             (maximum_memory_bytes, maximum_memory_bytes),
         )
     except (ImportError, OSError, ValueError):
