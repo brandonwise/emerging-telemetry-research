@@ -35,8 +35,8 @@ lint: ## Run Ruff.
 typecheck: ## Run strict mypy across application and package code.
 	$(UV) run mypy apps packages
 
-test: ## Run the complete pytest suite.
-	$(UV) run pytest -W error
+test: ## Run the complete pytest suite with the GA coverage floor.
+	$(UV) run pytest -W error --cov=apps --cov=packages --cov-report=term-missing --cov-fail-under=75
 
 audit: ## Audit the complete locked dependency graph for known vulnerabilities.
 	$(UV) --preview-features audit audit --locked

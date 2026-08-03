@@ -143,6 +143,41 @@ def test_workspace_init_is_private_and_idempotent(tmp_path: Path) -> None:
     assert second["skipped"]
 
 
+def test_workspace_init_adds_new_defaults_without_overwriting_user_values(
+    tmp_path: Path,
+) -> None:
+    config = tmp_path / ".emerging-telemetry-research/config.env"
+    config.parent.mkdir(parents=True)
+    config.write_text("ETR_AGENT_MODE=active\n", encoding="utf-8")
+
+    result = initialize_workspace(tmp_path)
+    content = config.read_text(encoding="utf-8")
+
+    assert "ETR_AGENT_MODE=active" in content
+    assert "ETR_CONFIG_SCHEMA_VERSION=1" in content
+    assert "ETR_PROFILE=portable" in content
+    assert "ETR_MISSION_ROOT=.emerging-telemetry-research/missions" in content
+    assert str(config) in result["updated"]
+
+
+def test_initialize_updates_the_explicit_profile_without_overwriting_values(
+    tmp_path: Path,
+) -> None:
+    initialize_workspace(tmp_path, profile="portable")
+    config = tmp_path / ".emerging-telemetry-research/config.env"
+    content = config.read_text(encoding="utf-8").replace(
+        "ETR_AGENT_MODE=plan",
+        "ETR_AGENT_MODE=active",
+    )
+    config.write_text(content, encoding="utf-8")
+
+    initialize_workspace(tmp_path, profile="core")
+    updated = config.read_text(encoding="utf-8")
+
+    assert "ETR_PROFILE=core" in updated
+    assert "ETR_AGENT_MODE=active" in updated
+
+
 def test_configure_keyring_secret_writes_only_reference(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

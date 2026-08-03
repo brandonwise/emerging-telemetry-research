@@ -4,6 +4,10 @@ Emerging Telemetry Research ships fail closed. A clone can validate contracts an
 it cannot collect, schedule, deliver externally, or apply self-improvement proposals until a local
 operator approval authorizes those exact capabilities against an unchanged control hash.
 
+`1.1.0rc1` is a release candidate, not a GA declaration. Promote it to `1.1.0` only after the
+target-environment harness canary, backup/restore, alert, chaos, rollback, and signed private
+release evidence in this runbook are complete.
+
 ## Supported deployment targets
 
 - Python 3.12–3.14 on Linux, macOS, and Windows
@@ -17,7 +21,7 @@ acceptance, replay, restore, security, container, and packaging gates run on Lin
 
 ## Promotion checklist
 
-1. Create the private local workspace with `emerging-telemetry-research setup init`.
+1. Create the private local workspace with `emerging-telemetry-research onboard` or `setup init`.
 2. Put secrets in an OS keyring, deployment secret file, or managed environment; commit only
    `env://`, `keyring://`, or `file://` references.
 3. Review local discovery, source, source-terms, scoring, model, and embedding configuration.
@@ -25,8 +29,10 @@ acceptance, replay, restore, security, container, and packaging gates run on Lin
 5. Generate an approval request and independently review its source list, capabilities, terms,
    and control hash.
 6. Apply the approval with a named operator, ticket/change ID, and short expiration.
-7. Run `setup doctor` for the intended profile.
-8. Start in agent `plan`, then `shadow`; promote to `active` only after reviewing stored evals.
+7. Run `setup doctor` for the intended profile and certify the selected real harness with
+   `setup harness-test --acknowledge-cost`.
+8. Start in agent `plan`, then `shadow`; promote to `active` only after reviewing stored evals and
+   the harness receipt.
 9. Keep external delivery disabled until destination, recipient, and credential boundaries have
    their own review.
 10. Protect `main`, require CI/Security/CodeQL and CODEOWNERS review, and retain private releases.
@@ -78,6 +84,10 @@ Monitor source degradation, workflow failures/retries, parser isolation failures
 events, model/provider latency and token use, estimated cost, delivery receipts, and approval
 expiration. Alert before an approval expires and fail the scheduled run if `setup doctor` is not
 ready.
+
+Use `schedule serve` for a vendor-neutral long-running worker, or invoke `schedule run-due` from an
+existing service manager. The durable database prevents duplicate concurrent claims and recovers
+an abandoned lease. Back up `.emerging-telemetry-research/schedules.db` with other SQLite state.
 
 ## Backup, restore, and rollback
 

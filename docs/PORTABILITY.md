@@ -28,14 +28,8 @@ Requirements:
 - one optional agent provider
 
 ```bash
-uv sync --frozen --extra dev
-uv run emerging-telemetry-research setup init --profile portable --json
-uv run emerging-telemetry-research setup secret-set BRAVE_API_KEY
-uv run emerging-telemetry-research setup secret-set XAI_API_KEY
-uv run emerging-telemetry-research setup approval-request --environment-id workstation --json
-# Review the request, then apply it with a named operator and change/ticket ID.
-uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
-  setup doctor --profile portable --json
+uv sync --frozen
+uv run emerging-telemetry-research onboard
 ```
 
 Portable output:
@@ -53,6 +47,9 @@ Portable output:
 
 All providers receive the same sanitized evidence packet. They get no tools, memory, raw
 artifacts, collection secrets, delivery secrets, or publication authority.
+
+`setup harnesses` discovers local adapters without model calls. Shadow and active readiness also
+requires a current `setup harness-test --acknowledge-cost` receipt for the selected real adapter.
 
 ## Provider adapters
 
@@ -165,14 +162,17 @@ silently falling back. See the
 
 ## Scheduling
 
-Any scheduler that can run a command can operate the portable profile:
+Use the built-in durable scheduler with any harness:
 
 ```bash
-./run-research.sh --agent-mode shadow --agent-adapter openai-compatible
+uv run emerging-telemetry-research schedule add mission.active.yaml --run-now --json
+uv run emerging-telemetry-research schedule serve \
+  --agent-mode shadow --agent-adapter openai-compatible
 ```
 
-OpenClaw, cron, systemd, launchd, CI, Codex, and Claude all call the same CLI. Conversation history
-is never workflow state.
+Alternatively, have OpenClaw, cron, systemd, launchd, CI, Codex, or Claude invoke `schedule
+run-due`. Conversation history is never workflow state. The SQLite schedule store leases each due
+mission atomically, recovers abandoned leases, and persists success/error state.
 
 The generated package includes both POSIX shell and PowerShell runners. Env files are parsed as
 data and are never sourced as shell code. Durable SQLite workflow checkpoints make restarts resume

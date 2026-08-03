@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
 from packages.common.canonical import canonical_json_bytes, format_timestamp, sha256_hex, stable_id
 from packages.contracts.validation import validate_payload
 from packages.security_gateway.canonicalize import canonicalize_text
+from packages.security_gateway.url_policy import canonicalize_url
 from packages.workflow.graph import plan_graph
 
 MISSION_SCHEMA = "mission.schema.json"
@@ -73,9 +75,10 @@ class QueryPlan:
     query: str
     freshness: str
     maximum_results: int
+    target_url: str | None = None
 
     def to_contract(self) -> dict[str, Any]:
-        return {
+        contract: dict[str, Any] = {
             "source_id": self.source_id,
             "surface": self.surface,
             "adapter": self.adapter,
@@ -83,6 +86,9 @@ class QueryPlan:
             "freshness": self.freshness,
             "maximum_results": self.maximum_results,
         }
+        if self.target_url is not None:
+            contract["target_url"] = self.target_url
+        return contract
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,6 +179,9 @@ def compile_mission(mission: MissionDefinition) -> CompiledMission:
                     query=query,
                     freshness=_freshness_code(str(source["freshness"])),
                     maximum_results=maximum_results,
+                    target_url=(
+                        str(source["url"]) if isinstance(source.get("url"), str) else None
+                    ),
                 )
             )
     if len(queries) > maximum_queries:
@@ -217,6 +226,7 @@ def draft_mission(
     outcome_noun: str | None = None,
     window_hours: int = 168,
     cadence: str = "daily",
+    workflow_template: str = "balanced",
 ) -> MissionDefinition:
     normalized = canonicalize_text(objective.strip()).text
     if not 12 <= len(normalized) <= 1200:
@@ -225,6 +235,28 @@ def draft_mission(
         raise ValueError("window hours must be between 1 and 2160")
     if cadence not in {"manual", "hourly", "daily", "weekly"}:
         raise ValueError("cadence must be manual, hourly, daily, or weekly")
+    if workflow_template not in {"fast_scan", "balanced", "deep_research"}:
+        raise ValueError("workflow template must be fast_scan, balanced, or deep_research")
+    template = {
+        "fast_scan": {
+            "minimum_sources": 2,
+            "maximum_queries": 8,
+            "maximum_results": 10,
+            "maximum_outcomes": 10,
+        },
+        "balanced": {
+            "minimum_sources": 2,
+            "maximum_queries": 12,
+            "maximum_results": 20,
+            "maximum_outcomes": 20,
+        },
+        "deep_research": {
+            "minimum_sources": 3,
+            "maximum_queries": 20,
+            "maximum_results": 20,
+            "maximum_outcomes": 30,
+        },
+    }[workflow_template]
     keywords = _keywords(normalized)
     noun = _normalize_noun(outcome_noun or _infer_noun(normalized))
     plural = _pluralize(noun)
@@ -278,7 +310,7 @@ def draft_mission(
             ),
         ],
         "evidence": {
-            "minimum_independent_sources": 2,
+            "minimum_independent_sources": template["minimum_sources"],
             "require_citations": True,
             "maximum_evidence_age_hours": window_hours,
         },
@@ -293,21 +325,22 @@ def draft_mission(
             "thresholds": {"urgent": 82, "high": 68, "standard": 45},
         },
         "workflow": {
+            "template": workflow_template,
             "roles": _draft_roles(normalized, noun),
             "maximum_parallel_roles": 3,
         },
         "output": {
             "cadence": cadence,
             "formats": ["json", "html"],
-            "maximum_outcomes": 20,
+            "maximum_outcomes": template["maximum_outcomes"],
             "delivery": "local_only",
         },
         "governance": {
             "collection_mode": "plan",
             "human_approval_required": True,
             "external_delivery_enabled": False,
-            "maximum_queries_per_run": 12,
-            "maximum_results_per_query": 20,
+            "maximum_queries_per_run": template["maximum_queries"],
+            "maximum_results_per_query": template["maximum_results"],
         },
         "evaluation": {
             "success_metric": f"useful_{slug}_rate",
@@ -315,6 +348,56 @@ def draft_mission(
             "minimum_source_diversity": 3,
         },
     }
+    return mission_from_payload(payload)
+
+
+def add_web_source(
+    mission: MissionDefinition,
+    url: str,
+    *,
+    kind: str = "search",
+    freshness: str = "week",
+) -> MissionDefinition:
+    """Add one bounded, reviewable website, page, or feed source to a draft mission."""
+    if kind not in {"search", "page", "rss"}:
+        raise ValueError("source kind must be search, page, or rss")
+    if freshness not in {"day", "week", "month"}:
+        raise ValueError("source freshness must be day, week, or month")
+    payload = mission.to_contract()
+    governance = _mapping(payload, "governance")
+    if str(governance["collection_mode"]) != "plan":
+        raise ValueError("sources can only be changed on a draft mission")
+    canonical_url = canonicalize_url(url.strip())
+    parsed = urlsplit(canonical_url)
+    assert parsed.hostname is not None
+    site = parsed.hostname + (parsed.path.rstrip("/") if parsed.path != "/" else "")
+    source_prefix = _slugify(site)[:72]
+    source_id = f"{source_prefix}-{kind}"
+    sources = _object_list(payload, "sources")
+    if any(str(item.get("url", "")) == canonical_url for item in sources):
+        raise ValueError("mission already contains this source URL")
+    if any(str(item["source_id"]) == source_id for item in sources):
+        raise ValueError("mission already contains this source host and kind")
+    adapter = {
+        "search": "brave_surface_search",
+        "page": "website_page",
+        "rss": "rss_feed",
+    }[kind]
+    surface = "web" if kind == "search" else "website" if kind == "page" else "rss"
+    query = f"site:{site} {{objective}}" if kind == "search" else "{objective}"
+    sources.append(
+        {
+            "source_id": source_id,
+            "surface": surface,
+            "adapter": adapter,
+            "enabled": True,
+            "url": canonical_url,
+            "query_templates": [query],
+            "freshness": freshness,
+            "approval": {"status": "draft", "approval_id": None},
+            "retention_days": 1,
+        }
+    )
     return mission_from_payload(payload)
 
 

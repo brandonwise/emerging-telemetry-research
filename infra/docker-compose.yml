@@ -1,6 +1,6 @@
 services:
   research-api:
-    image: emerging-telemetry-research:1.0.0
+    image: emerging-telemetry-research:${ETR_IMAGE_TAG:-1.1.0rc1}
     build:
       context: ..
       dockerfile: Dockerfile

@@ -15,6 +15,10 @@ while (-not (Test-Path (Join-Path $ProjectRoot "pyproject.toml"))) {
 }
 
 $CommandArguments = @("run", "emerging-telemetry-research")
+$PrivateEnvironmentFile = Join-Path $ProjectRoot ".emerging-telemetry-research/config.env"
+if (Test-Path $PrivateEnvironmentFile) {
+    $CommandArguments += @("--env-file", $PrivateEnvironmentFile)
+}
 $EnvironmentFile = Join-Path $ConfigRoot "research.env"
 if (Test-Path $EnvironmentFile) {
     $CommandArguments += @("--env-file", $EnvironmentFile)

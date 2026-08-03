@@ -8,25 +8,33 @@ from pathlib import Path
 from packages.onboarding.environment import load_environment_file
 
 
-def _environment_file(arguments: Sequence[str]) -> Path | None:
+def _environment_files(arguments: Sequence[str]) -> tuple[Path, ...]:
+    explicit: list[Path] = []
     for index, argument in enumerate(arguments):
         if argument == "--env-file":
             if index + 1 >= len(arguments):
                 raise SystemExit("--env-file requires a path")
-            return Path(arguments[index + 1])
+            explicit.append(Path(arguments[index + 1]))
         if argument.startswith("--env-file="):
-            return Path(argument.split("=", 1)[1])
+            explicit.append(Path(argument.split("=", 1)[1]))
+    files: list[Path] = []
+    default = Path(".emerging-telemetry-research/config.env")
+    if default.is_file():
+        files.append(default)
     configured = os.environ.get("ETR_ENV_FILE")
     if configured:
-        return Path(configured)
-    default = Path(".emerging-telemetry-research/config.env")
-    return default if default.is_file() else None
+        files.append(Path(configured))
+    files.extend(explicit)
+    unique: list[Path] = []
+    for path in files:
+        if path not in unique:
+            unique.append(path)
+    return tuple(unique)
 
 
 def main() -> None:
-    environment_file = _environment_file(sys.argv[1:])
-    if environment_file is not None:
-        load_environment_file(environment_file)
+    for index, environment_file in enumerate(_environment_files(sys.argv[1:])):
+        load_environment_file(environment_file, override=index > 0)
     from apps.worker.cli import app
 
     app()

@@ -14,6 +14,19 @@ Python 3.12–3.14 is supported on Linux, macOS, and Windows. `setup init` creat
 owner-only `.emerging-telemetry-research/` workspace containing editable config, state, and report paths. It
 never changes the tracked fail-closed defaults. `make help` lists every supported workflow.
 
+For a non-technical local setup, replace the last two commands with:
+
+```bash
+uv sync --frozen
+uv run emerging-telemetry-research onboard
+```
+
+The local control plane uses a fresh one-time token, a one-hour HttpOnly strict session cookie,
+CSRF protection, loopback client and Host checks, restrictive browser policy, and no secret
+rendering. It also shows the protected control hash and base source list before collecting a
+hash-bound approval; external delivery and self-improvement remain disabled. Stop it with Ctrl+C
+when setup is complete.
+
 ## 2. Configure secrets
 
 Use the OS credential store for an interactive workstation:
@@ -54,6 +67,9 @@ uv run emerging-telemetry-research setup approval-apply \
 uv run emerging-telemetry-research --env-file .emerging-telemetry-research/config.env \
   setup doctor --profile portable --json
 ```
+
+The onboarding control plane performs these same request/apply steps only after the local operator
+expands the protected-source preview and provides an approver identity and approval reference.
 
 Copying another machine's approval does not grant authority: protected-content drift, a changed
 source set, capability mismatch, or expiration fails closed. The tracked
@@ -115,6 +131,21 @@ Valid built-ins are `auto`, `fixture`, `openclaw`, `codex`, `claude`, and `opena
 providers load only through the `emerging_telemetry_research.agent_providers` entry-point group and an explicit
 `ETR_AGENT_PLUGIN_ALLOWLIST`. See `docs/PORTABILITY.md` for provider configuration.
 
+Discover harnesses without spending provider quota, then certify the selected harness before
+shadow or active use:
+
+```bash
+uv run emerging-telemetry-research setup harnesses --json
+uv run emerging-telemetry-research setup harness-test \
+  --adapter codex --acknowledge-cost --json
+```
+
+Certification executes the complete five-role structured-output graph and writes a 30-day receipt
+bound to the harness version, executable, endpoint, and model. Changing those values invalidates
+the receipt. Command adapters use their existing authenticated session; compatible HTTP endpoints
+use only the configured secret reference. The onboarding control plane exposes the same test with
+an explicit provider-quota acknowledgement, so it does not require terminal work.
+
 ## 5. Run
 
 Zero-infrastructure local state:
@@ -131,6 +162,18 @@ make live
 ```
 
 The default output root is `reports/generated`. External delivery stays disabled.
+
+Schedule an activated mission portably on Windows, macOS, or Linux:
+
+```bash
+uv run emerging-telemetry-research schedule add \
+  .emerging-telemetry-research/missions/<mission-id>/mission.active.yaml --run-now --json
+uv run emerging-telemetry-research schedule serve
+```
+
+The durable SQLite scheduler claims due runs with leases, prevents concurrent duplicate claims,
+retries a failed run after five minutes, and preserves the last bounded error. Its worker still
+requires the deployment collection approval, so a schedule cannot bypass governance.
 
 ### Email delivery
 

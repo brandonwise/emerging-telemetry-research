@@ -3,7 +3,7 @@
 All notable changes to Emerging Telemetry Research are recorded here. The project follows Semantic Versioning
 for release identifiers while it remains private.
 
-## [Unreleased]
+## [1.1.0rc1] - 2026-08-03
 
 ### Changed
 
@@ -11,6 +11,26 @@ for release identifiers while it remains private.
   missions, and research objectives.
 - Added `--result-type` as the primary mission-authoring option while retaining `--outcome` as a
   backward-compatible alias.
+- Replaced command-line-only onboarding with an authenticated loopback control plane covering
+  private initialization, harness selection, keyring secrets, mission creation, source review,
+  hash-bound deployment approval, activation, scheduling, and corrective feedback.
+- Generated adapters now layer the private workspace before optional platform overrides and
+  preserve the operator's OpenClaw model unless one is explicitly selected.
+
+### Added
+
+- Harness discovery and expiring real-provider contract-test receipts from either the CLI or setup
+  control plane, with explicit provider-quota acknowledgement.
+- Governed site-search, safe HTTPS page, and same-site RSS/Atom mission sources.
+- Fast-scan, balanced, and deep-research workflow templates.
+- A cross-platform durable scheduler with atomic leases, recovery, bounded retry, and pause/resume.
+- Additive private-config upgrades and installed-wheel fixture certification.
+
+### Security
+
+- One-time setup login tokens, HttpOnly strict cookies, CSRF, loopback/Host enforcement, restrictive
+  browser policy, bounded forms, no rendered credential values, and disposable resource-bounded
+  parsing for untrusted page and feed content.
 
 ## [1.0.0] - 2026-08-03
 

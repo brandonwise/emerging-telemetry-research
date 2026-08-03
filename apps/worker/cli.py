@@ -3,7 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 import sys
+import threading
+import time
+import webbrowser
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -46,9 +50,12 @@ from packages.improvement.controller import (
     run_improvement_cycle,
 )
 from packages.inference.semantic import build_semantic_shadow_evaluator
+from packages.missions.collectors import MissionCollectorRegistry
 from packages.missions.compiler import (
     BUILTIN_MISSIONS_ROOT,
+    CompiledMission,
     activate_mission,
+    add_web_source,
     compile_mission,
     draft_mission,
     load_mission,
@@ -65,6 +72,11 @@ from packages.onboarding.generator import (
     SUPPORTED_PLATFORMS,
     generate_setup,
 )
+from packages.onboarding.harnesses import (
+    harness_status,
+    inspect_harnesses,
+    write_harness_test_receipt,
+)
 from packages.onboarding.workspace import (
     configure_keyring_credential,
     initialize_workspace,
@@ -72,6 +84,7 @@ from packages.onboarding.workspace import (
 )
 from packages.pipeline.frozen import run_frozen_fixture
 from packages.pipeline.live import LiveRunSettings, run_live_research
+from packages.scheduler.runtime import MissionScheduleStore, ScheduledMission
 from packages.security_gateway.deployment import (
     DeploymentApprovalError,
     DeploymentControlPaths,
@@ -99,6 +112,12 @@ DEFAULT_REPORT_ROOT = Path(os.environ.get("ETR_REPORT_ROOT", "reports/generated"
 DEFAULT_MISSION_FEEDBACK_ROOT = Path(
     os.environ.get("ETR_MISSION_FEEDBACK_ROOT", "reports/mission-feedback")
 )
+DEFAULT_MISSION_REPORT_ROOT = Path(
+    os.environ.get("ETR_MISSION_REPORT_ROOT", "reports/missions")
+)
+DEFAULT_SCHEDULE_DB = Path(
+    os.environ.get("ETR_SCHEDULE_DB", ".emerging-telemetry-research/schedules.db")
+)
 DEFAULT_EMBEDDINGS_CONFIG = Path(
     configured_path("ETR_EMBEDDINGS_CONFIG", "config/embeddings.yaml")
 )
@@ -124,6 +143,7 @@ portable_app = typer.Typer(no_args_is_help=True)
 analytics_app = typer.Typer(no_args_is_help=True)
 setup_app = typer.Typer(no_args_is_help=True)
 mission_app = typer.Typer(no_args_is_help=True)
+schedule_app = typer.Typer(no_args_is_help=True)
 app.add_typer(run_app, name="run")
 app.add_typer(fixture_app, name="fixture")
 app.add_typer(report_app, name="report")
@@ -135,6 +155,44 @@ app.add_typer(portable_app, name="portable")
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(setup_app, name="setup")
 app.add_typer(mission_app, name="mission")
+app.add_typer(schedule_app, name="schedule")
+
+CLI_COMMAND = "uv run emerging-telemetry-research"
+
+
+@app.command("onboard")
+def onboard(
+    project_root: Annotated[Path, typer.Option("--project-root")] = Path("."),
+    profile: Annotated[str, typer.Option("--profile")] = "portable",
+    port: Annotated[int, typer.Option("--port", min=1024, max=65535)] = 8765,
+    open_browser: Annotated[
+        bool,
+        typer.Option("--open-browser/--no-open-browser"),
+    ] = True,
+) -> None:
+    """Start the authenticated, loopback-only onboarding control plane."""
+    from apps.setup.main import SetupSettings, create_app
+
+    root = project_root.resolve()
+    try:
+        if not (root / ".emerging-telemetry-research/config.env").is_file():
+            initialize_workspace(root, profile=profile)
+        os.chdir(root)
+        token = secrets.token_urlsafe(32)
+        application = create_app(
+            SetupSettings(project_root=root, access_token=token, profile=profile)
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    url = f"http://127.0.0.1:{port}/login?token={token}"
+    typer.echo("Emerging Telemetry Research setup is available only on this computer:")
+    typer.echo(url)
+    typer.echo("Press Ctrl+C when setup is complete; the startup token then expires.")
+    if open_browser:
+        threading.Timer(0.8, webbrowser.open, args=(url,)).start()
+    import uvicorn
+
+    uvicorn.run(application, host="127.0.0.1", port=port, access_log=False)
 
 
 @app.callback()
@@ -494,9 +552,11 @@ def setup_generate(
             "output_root": str(result.output_root),
             "files": [str(path) for path in result.files],
             "next": [
-                "copy research.env.example to research.env",
-                "configure BRAVE_API_KEY and XAI_API_KEY in a secret store",
-                "run ./run-research.sh",
+                f"{CLI_COMMAND} setup init --profile portable",
+                f"{CLI_COMMAND} setup harnesses",
+                "use the onboarding control plane or keyring commands for credentials",
+                "optionally copy research.env.example to research.env for adapter overrides",
+                "run ./run-research.sh (or run-research.ps1 on Windows)",
             ],
         },
         pretty=not json_output,
@@ -516,12 +576,12 @@ def setup_init(
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     result["next"] = [
-        "emerging-telemetry-research setup secret-set BRAVE_API_KEY",
-        "emerging-telemetry-research setup secret-set XAI_API_KEY",
-        "emerging-telemetry-research setup approval-request",
+        f"{CLI_COMMAND} setup secret-set BRAVE_API_KEY",
+        f"{CLI_COMMAND} setup secret-set XAI_API_KEY",
+        f"{CLI_COMMAND} setup approval-request",
         "review and apply the deployment approval request",
-        "emerging-telemetry-research setup doctor --profile portable",
-        "emerging-telemetry-research portable run --json",
+        f"{CLI_COMMAND} setup doctor --profile {profile}",
+        f"{CLI_COMMAND} portable run --json",
     ]
     emit(result, pretty=not json_output)
 
@@ -575,6 +635,84 @@ def setup_doctor(
         raise typer.Exit(code=2)
 
 
+@setup_app.command("harnesses")
+def setup_harnesses(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Discover installed agent harnesses without making model calls."""
+    statuses = inspect_harnesses()
+    emit(
+        {
+            "harnesses": [status.to_contract() for status in statuses],
+            "model_calls_executed": False,
+            "next": (
+                f"{CLI_COMMAND} setup harness-test --adapter HARNESS "
+                "--acknowledge-cost"
+            ),
+        },
+        pretty=not json_output,
+    )
+
+
+@setup_app.command("harness-test")
+def setup_harness_test(
+    adapter: Annotated[str, typer.Option("--adapter")],
+    acknowledge_cost: Annotated[
+        bool,
+        typer.Option(
+            "--acknowledge-cost",
+            help="Acknowledge that the five-role contract test may consume provider quota.",
+        ),
+    ] = False,
+    output: Annotated[Path, typer.Option("--output")] = Path(
+        ".emerging-telemetry-research/harness-tests"
+    ),
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Certify one configured harness with the complete structured-output role graph."""
+    if adapter in {"auto", "fixture"}:
+        raise typer.BadParameter("select one real harness instead of auto or fixture")
+    if not acknowledge_cost:
+        raise typer.BadParameter("--acknowledge-cost is required before model dispatch")
+    status = harness_status(adapter)
+    if status is None or not status.available:
+        raise typer.BadParameter(f"{adapter} harness is unavailable or not configured")
+    fixtures_root = Path(__file__).resolve().parents[2] / "fixtures" / "vertical_slice"
+    if not fixtures_root.is_dir():
+        fixtures_root = (
+            Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "vertical_slice"
+        )
+    evaluation_root = output / adapter / "evaluation"
+    try:
+        evaluation = asyncio.run(
+            run_agent_evaluation(
+                fixtures_root=fixtures_root,
+                output_root=evaluation_root,
+                provider=build_agent_provider(adapter),
+                adapter_name=adapter,
+                repeats=1,
+                case="early",
+            )
+        )
+        receipt = write_harness_test_receipt(
+            output / f"{adapter}.receipt.json",
+            status=status,
+            evaluation=evaluation,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "adapter": adapter,
+            "passed": True,
+            "receipt": str(receipt.resolve()),
+            "evaluation": str(evaluation_root.resolve()),
+            "expires_at_days": 30,
+        },
+        pretty=not json_output,
+    )
+
+
 @setup_app.command("approval-request")
 def setup_approval_request(
     environment_id: Annotated[str, typer.Option("--environment-id")] = "local",
@@ -604,7 +742,7 @@ def setup_approval_request(
             **request,
             "request_path": str(written.resolve()),
             "next": (
-                "review, then run `emerging-telemetry-research "
+                f"review, then run `{CLI_COMMAND} "
                 "setup approval-apply REQUEST ...`"
             ),
         },
@@ -663,6 +801,7 @@ def mission_create(
     ] = None,
     window_hours: Annotated[int, typer.Option("--window-hours", min=1, max=2160)] = 168,
     cadence: Annotated[str, typer.Option("--cadence")] = "daily",
+    workflow_template: Annotated[str, typer.Option("--template")] = "balanced",
     output: Annotated[Path | None, typer.Option("--output")] = None,
     force: Annotated[bool, typer.Option("--force")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
@@ -676,6 +815,7 @@ def mission_create(
             outcome_noun=outcome,
             window_hours=window_hours,
             cadence=cadence,
+            workflow_template=workflow_template,
         )
         destination = output or (
             Path("missions") / mission.mission_id.removeprefix("ms_") / "mission.yaml"
@@ -693,8 +833,11 @@ def mission_create(
             "query_count": len(compiled.queries),
             "collection_authorized": False,
             "next": [
-                f"research mission plan {written}",
-                f"research mission activate {written} --approved-by NAME --approval-id ID",
+                f"{CLI_COMMAND} mission plan {written}",
+                (
+                    f"{CLI_COMMAND} mission activate {written} "
+                    "--approved-by NAME --approval-id ID"
+                ),
             ],
         },
         pretty=not json_output,
@@ -719,6 +862,44 @@ def mission_validate(
             "mission_sha256": compiled.mission_sha256,
             "query_count": len(compiled.queries),
             "collection_authorized": compiled.collection_authorized,
+        },
+        pretty=not json_output,
+    )
+
+
+@mission_app.command("source-add")
+def mission_source_add(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    url: Annotated[str, typer.Option("--url")],
+    kind: Annotated[str, typer.Option("--kind")] = "search",
+    freshness: Annotated[str, typer.Option("--freshness")] = "week",
+    output: Annotated[Path | None, typer.Option("--output")] = None,
+    force: Annotated[bool, typer.Option("--force")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Add an HTTPS site search, page, or RSS feed to a draft mission."""
+    destination = output or mission_path.with_name("mission.updated.yaml")
+    try:
+        mission = add_web_source(
+            load_mission(mission_path),
+            url,
+            kind=kind,
+            freshness=freshness,
+        )
+        written = write_mission(mission, destination, force=force)
+        compiled = compile_mission(mission)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    added = mission.payload["sources"][-1]
+    emit(
+        {
+            "mission_id": mission.mission_id,
+            "status": "draft",
+            "source": added,
+            "mission_path": str(written),
+            "query_count": len(compiled.queries),
+            "collection_authorized": False,
+            "next": f"{CLI_COMMAND} mission plan {written}",
         },
         pretty=not json_output,
     )
@@ -772,7 +953,7 @@ def mission_activate(
             "collection_authorized": compiled.collection_authorized,
             "mission_path": str(mission_written),
             "receipt_path": str(receipt_written),
-            "rollback": f"research mission rollback {receipt_written}",
+            "rollback": f"{CLI_COMMAND} mission rollback {receipt_written}",
         },
         pretty=not json_output,
     )
@@ -825,10 +1006,7 @@ def mission_run_command(
             _require_deployment_capability("collection")
             compiled = compile_mission(mission)
             signal_payload = asyncio.run(
-                collect_mission_signals(
-                    compiled,
-                    BraveSearchClient(_required_env("BRAVE_API_KEY")),
-                )
+                collect_mission_signals(compiled, registry=_mission_registry(compiled))
             )
         else:
             if signals is None:
@@ -921,7 +1099,7 @@ def mission_feedback(
             **payload,
             "feedback_path": str(path),
             "next": (
-                f"research mission evaluate {mission_path} --report {report} "
+                f"{CLI_COMMAND} mission evaluate {mission_path} --report {report} "
                 f"--feedback-root {output}"
             ),
         },
@@ -954,6 +1132,182 @@ def mission_list(
             }
         )
     emit({"missions": missions}, pretty=not json_output)
+
+
+@schedule_app.command("add")
+def schedule_add(
+    mission_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_SCHEDULE_DB,
+    run_now: Annotated[bool, typer.Option("--run-now")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Schedule an approved active mission using its declared cadence."""
+    try:
+        scheduled = MissionScheduleStore(database).add(mission_path, run_now=run_now)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit(
+        {
+            "schedule": scheduled.to_contract(),
+            "next": f"{CLI_COMMAND} schedule serve --database {database}",
+        },
+        pretty=not json_output,
+    )
+
+
+@schedule_app.command("list")
+def schedule_list(
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_SCHEDULE_DB,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List durable schedules and their last success or bounded error."""
+    schedules = MissionScheduleStore(database).list()
+    emit(
+        {"schedules": [item.to_contract() for item in schedules]},
+        pretty=not json_output,
+    )
+
+
+@schedule_app.command("set-enabled")
+def schedule_set_enabled(
+    schedule_id: Annotated[str, typer.Argument()],
+    enabled: Annotated[bool, typer.Option("--enabled/--disabled")],
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_SCHEDULE_DB,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Pause or resume a mission schedule without deleting its history."""
+    try:
+        scheduled = MissionScheduleStore(database).set_enabled(
+            schedule_id,
+            enabled=enabled,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    emit({"schedule": scheduled.to_contract()}, pretty=not json_output)
+
+
+@schedule_app.command("run-due")
+def schedule_run_due(
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_SCHEDULE_DB,
+    output: Annotated[Path, typer.Option("--output")] = DEFAULT_MISSION_REPORT_ROOT,
+    agent_mode: Annotated[str, typer.Option("--agent-mode")] = "plan",
+    agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = "auto",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Claim and run every due mission exactly once across concurrent workers."""
+    result = _run_due_schedules(
+        MissionScheduleStore(database),
+        output=output,
+        agent_mode=agent_mode,
+        agent_adapter=agent_adapter,
+    )
+    emit(result, pretty=not json_output)
+    if result["failed"]:
+        raise typer.Exit(code=2)
+
+
+@schedule_app.command("serve")
+def schedule_serve(
+    database: Annotated[Path, typer.Option("--database")] = DEFAULT_SCHEDULE_DB,
+    output: Annotated[Path, typer.Option("--output")] = DEFAULT_MISSION_REPORT_ROOT,
+    agent_mode: Annotated[str, typer.Option("--agent-mode")] = "plan",
+    agent_adapter: Annotated[str, typer.Option("--agent-adapter")] = "auto",
+    poll_seconds: Annotated[int, typer.Option("--poll-seconds", min=5, max=300)] = 30,
+) -> None:
+    """Run the portable scheduler until interrupted; leases recover abandoned runs."""
+    store = MissionScheduleStore(database)
+    typer.echo("Mission scheduler started; press Ctrl+C to stop.")
+    try:
+        while True:
+            result = _run_due_schedules(
+                store,
+                output=output,
+                agent_mode=agent_mode,
+                agent_adapter=agent_adapter,
+            )
+            if result["claimed"]:
+                emit(result)
+            time.sleep(poll_seconds)
+    except KeyboardInterrupt:
+        typer.echo("Mission scheduler stopped.")
+
+
+def _run_due_schedules(
+    store: MissionScheduleStore,
+    *,
+    output: Path,
+    agent_mode: str,
+    agent_adapter: str,
+) -> dict[str, Any]:
+    claimed = store.claim_due()
+    completed: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    for scheduled in claimed:
+        try:
+            result = _execute_scheduled_mission(
+                scheduled,
+                output=output,
+                agent_mode=agent_mode,
+                agent_adapter=agent_adapter,
+            )
+        except (RuntimeError, ValueError) as exc:
+            updated = store.complete(
+                scheduled.schedule_id,
+                succeeded=False,
+                error=str(exc),
+            )
+            failed.append(
+                {
+                    "schedule_id": scheduled.schedule_id,
+                    "error": updated.last_error,
+                    "retry_at": updated.next_run_at,
+                }
+            )
+            continue
+        store.complete(scheduled.schedule_id, succeeded=True)
+        completed.append(result)
+    return {
+        "claimed": len(claimed),
+        "completed": completed,
+        "failed": failed,
+    }
+
+
+def _execute_scheduled_mission(
+    scheduled: ScheduledMission,
+    *,
+    output: Path,
+    agent_mode: str,
+    agent_adapter: str,
+) -> dict[str, Any]:
+    _require_deployment_capability("collection")
+    mission = load_mission(Path(scheduled.mission_path))
+    compiled = compile_mission(mission)
+    signals = asyncio.run(collect_mission_signals(compiled, registry=_mission_registry(compiled)))
+    provider = _agent_runtime(agent_mode, agent_adapter)
+    result = asyncio.run(
+        run_mission(
+            mission,
+            signals,
+            output,
+            agent_mode=agent_mode,
+            agent_provider=provider,
+        )
+    )
+    return {
+        "schedule_id": scheduled.schedule_id,
+        "mission_id": mission.mission_id,
+        "report_id": result.report["report_id"],
+        "report_html": str(result.report_html_path),
+    }
+
+
+def _mission_registry(compiled: CompiledMission) -> MissionCollectorRegistry:
+    requires_brave = any(
+        query.adapter == "brave_surface_search" for query in compiled.queries
+    )
+    client = BraveSearchClient(_required_env("BRAVE_API_KEY")) if requires_brave else None
+    return MissionCollectorRegistry.with_builtins(client)
 
 
 def _s3_encryption_mode() -> str | None:

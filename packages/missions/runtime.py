@@ -62,6 +62,8 @@ AUTHORITY_BY_TYPE = {
     "news": 78.0,
     "github": 72.0,
     "web": 60.0,
+    "website": 65.0,
+    "rss": 70.0,
     "reddit": 45.0,
     "tiktok": 40.0,
     "x": 40.0,

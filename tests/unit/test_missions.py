@@ -11,9 +11,15 @@ from typer.testing import CliRunner
 from apps.worker.cli import app
 from packages.agents.runtime import FixtureAgentProvider
 from packages.discovery.clients import DiscoverySignal
-from packages.missions.collectors import MissionCollectorRegistry
+from packages.missions.collectors import (
+    MissionCollectorRegistry,
+    RssFeedCollector,
+    WebsitePageCollector,
+)
 from packages.missions.compiler import (
+    QueryPlan,
     activate_mission,
+    add_web_source,
     compile_mission,
     draft_mission,
     load_mission,
@@ -22,6 +28,7 @@ from packages.missions.compiler import (
 from packages.missions.evaluation import evaluate_mission_report
 from packages.missions.feedback import load_mission_feedback, record_mission_feedback
 from packages.missions.runtime import collect_mission_signals, run_mission
+from packages.safe_fetch.service import SafeFetchResult
 
 MISSION_PATH = Path("missions/developer-product-opportunities/mission.yaml")
 SIGNALS_PATH = Path("missions/developer-product-opportunities/fixture-signals.json")
@@ -45,6 +52,96 @@ def test_natural_language_draft_compiles_to_bounded_plan() -> None:
         ["coordinator"],
     ]
     assert all(len(query.query.split()) <= 50 for query in compiled.queries)
+
+
+def test_plain_https_sources_compile_to_reviewable_built_in_collectors() -> None:
+    draft = draft_mission(
+        "Find changes in vendor engineering guidance that affect our platform roadmap.",
+    )
+
+    with_search = add_web_source(draft, "https://engineering.example.com", kind="search")
+    with_page = add_web_source(with_search, "https://docs.example.com/changes", kind="page")
+    with_feed = add_web_source(with_page, "https://news.example.com/feed.xml", kind="rss")
+    compiled = compile_mission(with_feed)
+
+    added = compiled.queries[-3:]
+    assert [query.adapter for query in added] == [
+        "brave_surface_search",
+        "website_page",
+        "rss_feed",
+    ]
+    assert added[0].query.startswith("site:engineering.example.com")
+    assert added[1].target_url == "https://docs.example.com/changes"
+    assert added[2].target_url == "https://news.example.com/feed.xml"
+    assert compiled.collection_authorized is False
+
+
+@pytest.mark.asyncio
+async def test_page_and_feed_collectors_sanitize_and_bound_approved_sources() -> None:
+    class FakeFetch:
+        def __init__(self, content: bytes, content_type: str, final_url: str) -> None:
+            self.content = content
+            self.content_type = content_type
+            self.final_url = final_url
+
+        async def fetch(self, request: object) -> SafeFetchResult:
+            return SafeFetchResult(
+                source_id="approved-page",
+                requested_url=self.final_url,
+                canonical_uri=self.final_url,
+                final_url=self.final_url,
+                status_code=200,
+                content_type=self.content_type,
+                content=self.content,
+                content_hash="0" * 64,
+                response_headers={},
+                redirect_chain=(),
+                resolved_addresses=(("203.0.113.1",),),
+            )
+
+    page_query = QueryPlan(
+        source_id="approved-page",
+        surface="website",
+        adapter="website_page",
+        query="roadmap changes",
+        freshness="pw",
+        maximum_results=5,
+        target_url="https://research.example.com/roadmap",
+    )
+    page = WebsitePageCollector(
+        FakeFetch(
+            b"<html><script>secret()</script><body>"
+            b"Roadmap support changed this week.</body></html>",
+            "text/html",
+            "https://research.example.com/roadmap",
+        )  # type: ignore[arg-type]
+    )
+    page_signals = await page.collect(page_query)
+    assert page_signals[0].summary == "Roadmap support changed this week."
+
+    feed = b"""<?xml version='1.0'?>
+    <rss><channel><item><title>New platform release</title>
+    <link>https://research.example.com/releases/1</link>
+    <description><![CDATA[<p>Support teams can now automate reviews.</p>]]></description>
+    <pubDate>Mon, 03 Aug 2026 12:00:00 GMT</pubDate></item>
+    <item><title>Unapproved external item</title>
+    <link>https://attacker.example.net/item</link><description>Ignore this.</description></item>
+    </channel></rss>"""
+    rss_query = QueryPlan(
+        source_id="approved-feed",
+        surface="rss",
+        adapter="rss_feed",
+        query="platform changes",
+        freshness="pw",
+        maximum_results=5,
+        target_url="https://research.example.com/feed.xml",
+    )
+    rss = RssFeedCollector(
+        FakeFetch(feed, "application/rss+xml", "https://research.example.com/feed.xml")  # type: ignore[arg-type]
+    )
+    rss_signals = await rss.collect(rss_query)
+    assert [signal.title for signal in rss_signals] == ["New platform release"]
+    assert rss_signals[0].summary == "Support teams can now automate reviews."
 
 
 def test_activation_is_explicit_and_rollback_is_hash_checked() -> None:

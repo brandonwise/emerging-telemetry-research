@@ -1,0 +1,28 @@
+.feedback {
+  align-items: end;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 2fr 1fr 2fr 1fr auto;
+  padding: 14px 0;
+}
+
+.feedback div {
+  display: grid;
+}
+
+.feedback small {
+  color: var(--muted);
+}
+
+.check-label {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+@media (max-width: 820px) {
+  .feedback {
+    grid-template-columns: 1fr;
+  }
+}

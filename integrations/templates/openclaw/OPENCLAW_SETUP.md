@@ -9,7 +9,8 @@ engine, storage, verification, and report rendering stay portable.
    change, then repeat the check.
 3. Run `./run-research.sh`.
 4. Set `ETR_AGENT_ADAPTER=openclaw` and `ETR_AGENT_MODE=shadow` to execute the bounded role
-   graph through the configured `research-*` agents.
+   graph through the configured `research-*` agents. The installer preserves OpenClaw's default
+   model unless `ETR_AGENT_MODEL` or `--model` explicitly selects an approved model.
 5. Inspect the emitted local delivery plan and `agent_reviews` before connecting any destination.
 6. Add `openclaw/workflows/telemetry-research-portable.lobster` to an isolated cron job.
 

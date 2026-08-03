@@ -118,6 +118,7 @@
       "additionalProperties": false,
       "required": ["roles", "maximum_parallel_roles"],
       "properties": {
+        "template": {"enum": ["fast_scan", "balanced", "deep_research"]},
         "roles": {
           "type": "array",
           "minItems": 5,
@@ -206,9 +207,10 @@
       ],
       "properties": {
         "source_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,99}$"},
-        "surface": {"enum": ["web", "news", "github", "reddit", "tiktok", "x", "authoritative"]},
+        "surface": {"enum": ["web", "website", "rss", "news", "github", "reddit", "tiktok", "x", "authoritative"]},
         "adapter": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{2,99}$"},
         "enabled": {"type": "boolean"},
+        "url": {"type": "string", "format": "uri", "pattern": "^https://"},
         "query_templates": {
           "type": "array",
           "minItems": 1,

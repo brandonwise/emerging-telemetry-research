@@ -17,6 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from apps.report_renderer.render import render_report
 from packages.agents.contracts import validate_assessment
 from packages.common.canonical import canonical_json_bytes, stable_id
+from packages.common.version import PROJECT_VERSION
 from packages.contracts.validation import ContractViolation, validate_payload
 from packages.security_gateway.secrets import resolve_secret
 from packages.storage.repository import (
@@ -103,7 +104,7 @@ def create_app(
     )
     application = FastAPI(
         title="Emerging Telemetry Research internal API",
-        version="1.0.0",
+        version=PROJECT_VERSION,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,

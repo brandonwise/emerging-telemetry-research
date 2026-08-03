@@ -29,6 +29,7 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from packages.analytics.store import AnalyticsStore
+from packages.common.version import PROJECT_VERSION
 from packages.contracts.validation import validate_payload
 from packages.missions.compiler import (
     BUILTIN_MISSIONS_ROOT,
@@ -143,7 +144,7 @@ def create_app(settings: PortalSettings | None = None) -> FastAPI:
     }
     application = FastAPI(
         title=f"{portal_settings.title} portal",
-        version="1.0.0",
+        version=PROJECT_VERSION,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,

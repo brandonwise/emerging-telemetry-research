@@ -70,14 +70,16 @@ Acceptance:
 ## Milestone 4 — bounded agents and model router
 
 Design: agents exchange strict evidence and assessment objects only. OpenClaw tool policies remove
-browsing, shell, schedules, secrets, and delivery from analytical roles. The chief uses
-`openai/gpt-5.6-sol` only for promoted/disputed coordination.
+browsing, shell, schedules, secrets, and delivery from analytical roles. Operators select an
+approved model or preserve their harness default; the repository does not pin a vendor model.
 
 Acceptance:
 
 - The fixture review chain executes specialist, skeptic, citation verifier, then coordinator.
 - Model routing plans daily/run/cluster budgets and a Flash reserve; provider usage is persisted for
   enforcement and operator review.
+- Shadow or active mode requires a fresh structured-output contract-test receipt bound to the
+  harness version, executable, endpoint, and selected model.
 - The chief has no raw-artifact, browser, shell, message, schedule, memory, or administrative tool.
 - The publisher has only the fixed-destination verified-delivery tool.
 
@@ -148,7 +150,8 @@ Acceptance:
 
 - The mission schema rejects unknown fields, invalid score totals, changed role dependencies,
   unapproved active sources, and external delivery.
-- The portal provides a responsive mission builder, exact plan preview, and downloadable draft.
+- The loopback setup control plane provides a responsive mission builder, exact plan preview,
+  private draft persistence, source additions, activation, scheduling, and feedback without YAML.
 - Draft missions run offline fixtures; live runs require a source-by-source activation approval.
 - Activation writes base and active hashes plus an exact rollback contract.
 - The developer-product opportunity fixture produces a cited outcome from three source types.
@@ -161,3 +164,26 @@ Acceptance:
 
 External gate: approve the live source plan for each mission separately. One mission's approval
 never grants collection authority to another.
+
+## Milestone 9 — operator onboarding and portable scheduling
+
+Design: the default user journey is a one-time authenticated loopback control plane. It configures
+any supported harness, writes only secret references, compiles three bounded research-depth
+templates, and manages a durable scheduler independently from agent platforms.
+
+Acceptance:
+
+- Generated CLI next steps execute from a source checkout and an installed wheel.
+- Private config upgrades add missing defaults without changing operator values.
+- OpenClaw, Codex, Claude, compatible HTTP, and allowlisted plugins are discovered without model
+  calls; certification requires an explicit quota acknowledgement.
+- Site search, HTTPS page, and RSS/Atom sources remain draft-only until a hash-bound activation.
+- Direct sources use the pinned safe-fetch boundary and reject off-host feed items.
+- The scheduler uses atomic claims, expiring leases, five-minute failure retry, pause/resume, and
+  persisted last-success/error state on Windows, macOS, and Linux.
+- Corrective mission feedback is immutable and feeds proposal-only evaluation.
+- The setup UI rejects remote clients, unsafe Host headers, reused startup tokens, missing CSRF,
+  oversized forms, and credential rendering.
+
+External gates: certify each production harness, run a live canary, exercise target backup/restore
+and alert delivery, then retain a signed private release and rollback artifact.

@@ -53,7 +53,10 @@ def smoke(wheel: Path) -> dict[str, Any]:
                     "root=Path(runtime.__file__).resolve().parents[2]; "
                     "required=('config/models.yaml','schemas/mission.schema.json',"
                     "'missions/developer-product-opportunities/mission.yaml',"
-                    "'integrations/templates/generic/GENERIC_SETUP.md'); "
+                    "'integrations/templates/generic/GENERIC_SETUP.md',"
+                    "'fixtures/vertical_slice/early-manifest.json',"
+                    "'apps/setup/templates/index.html',"
+                    "'apps/setup/static/setup.css'); "
                     "missing=[item for item in required if not (root/item).is_file()]; "
                     "assert not missing, missing; print(root)"
                 ),
@@ -69,6 +72,12 @@ def smoke(wheel: Path) -> dict[str, Any]:
 
         _run([str(primary), "--help"], cwd=root)
         _run([str(short_alias), "--help"], cwd=root)
+        _run([str(primary), "onboard", "--help"], cwd=root)
+        harnesses = _json_output(
+            _run([str(primary), "setup", "harnesses", "--json"], cwd=root)
+        )
+        if harnesses.get("model_calls_executed") is not False:
+            raise RuntimeError("harness discovery unexpectedly executed model calls")
         validation = _json_output(
             _run([str(primary), "mission", "validate", str(mission), "--json"], cwd=root)
         )

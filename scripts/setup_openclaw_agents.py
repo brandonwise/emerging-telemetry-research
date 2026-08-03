@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from typing import Any
 class RoleAgent:
     agent_id: str
     workspace: str
-    model: str
+    model: str | None
 
 
 DENIED_TOOLS = [
@@ -41,32 +42,32 @@ DENIED_TOOLS = [
 ]
 
 
-def expected_agents(repo_root: Path) -> tuple[RoleAgent, ...]:
+def expected_agents(repo_root: Path, *, model: str | None = None) -> tuple[RoleAgent, ...]:
     return (
         RoleAgent(
             "research-specialist",
             str(repo_root / "openclaw/agents/specialist"),
-            "openai/gpt-5.4",
+            model,
         ),
         RoleAgent(
             "research-impact",
             str(repo_root / "openclaw/agents/impact"),
-            "openai/gpt-5.4",
+            model,
         ),
         RoleAgent(
             "research-skeptic",
             str(repo_root / "openclaw/agents/skeptic"),
-            "openai/gpt-5.4",
+            model,
         ),
         RoleAgent(
             "research-verifier",
             str(repo_root / "openclaw/agents/verifier"),
-            "openai/gpt-5.4",
+            model,
         ),
         RoleAgent(
             "research-chief",
             str(repo_root / "openclaw/agents/coordinator"),
-            "openai/gpt-5.6-sol",
+            model,
         ),
     )
 
@@ -117,7 +118,7 @@ def _expected_security() -> dict[str, Any]:
     }
 
 
-def _audit(repo_root: Path) -> list[str]:
+def _audit(repo_root: Path, *, model: str | None = None) -> list[str]:
     issues: list[str] = []
     listed = _agent_map()
     configured = {
@@ -126,7 +127,7 @@ def _audit(repo_root: Path) -> list[str]:
         if isinstance(agent.get("id"), str)
     }
     security = _expected_security()
-    for expected in expected_agents(repo_root):
+    for expected in expected_agents(repo_root, model=model):
         visible = listed.get(expected.agent_id)
         config = configured.get(expected.agent_id)
         if visible is None or config is None:
@@ -134,7 +135,7 @@ def _audit(repo_root: Path) -> list[str]:
             continue
         if visible.get("workspace") != expected.workspace:
             issues.append(f"{expected.agent_id}: workspace mismatch")
-        if visible.get("model") != expected.model:
+        if expected.model is not None and visible.get("model") != expected.model:
             issues.append(f"{expected.agent_id}: model mismatch")
         for key, value in security.items():
             if config.get(key) != value:
@@ -142,11 +143,12 @@ def _audit(repo_root: Path) -> list[str]:
     return issues
 
 
-def _install(repo_root: Path) -> None:
+def _install(repo_root: Path, *, model: str | None = None) -> None:
     listed = _agent_map()
-    for expected in expected_agents(repo_root):
+    for expected in expected_agents(repo_root, model=model):
         if expected.agent_id in listed:
             continue
+        model_arguments = ("--model", expected.model) if expected.model is not None else ()
         subprocess.run(  # noqa: S603 - executable and role arguments are repository constants.
             (
                 _openclaw_executable(),
@@ -155,8 +157,7 @@ def _install(repo_root: Path) -> None:
                 expected.agent_id,
                 "--workspace",
                 expected.workspace,
-                "--model",
-                expected.model,
+                *model_arguments,
                 "--non-interactive",
                 "--json",
             ),
@@ -170,14 +171,13 @@ def _install(repo_root: Path) -> None:
     }
     security = _expected_security()
     operations: list[dict[str, Any]] = []
-    for expected in expected_agents(repo_root):
+    for expected in expected_agents(repo_root, model=model):
         index = indices.get(expected.agent_id)
         if index is None:
             raise RuntimeError(f"OpenClaw did not register {expected.agent_id}")
         operations.extend(
             (
                 {"path": f"agents.list[{index}].workspace", "value": expected.workspace},
-                {"path": f"agents.list[{index}].model", "value": expected.model},
                 {"path": f"agents.list[{index}].tools", "value": security["tools"]},
                 {"path": f"agents.list[{index}].skills", "value": security["skills"]},
                 {
@@ -186,6 +186,10 @@ def _install(repo_root: Path) -> None:
                 },
             )
         )
+        if expected.model is not None:
+            operations.append(
+                {"path": f"agents.list[{index}].model", "value": expected.model}
+            )
     subprocess.run(  # noqa: S603 - executable and config paths are repository constants.
         (
             _openclaw_executable(),
@@ -207,13 +211,18 @@ def main() -> int:
         action="store_true",
         help="Create missing agents and apply the reviewed workspace/model/security policy.",
     )
+    parser.add_argument(
+        "--model",
+        default=os.environ.get("ETR_AGENT_MODEL") or None,
+        help="Optional approved model override. Omit it to preserve the OpenClaw default.",
+    )
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parent.parent
-    initial_issues = _audit(repo_root)
+    initial_issues = _audit(repo_root, model=args.model)
     changed = bool(args.apply and initial_issues)
     if changed:
-        _install(repo_root)
-    issues = _audit(repo_root)
+        _install(repo_root, model=args.model)
+    issues = _audit(repo_root, model=args.model)
     if issues:
         print("OpenClaw role-agent audit failed:")
         for issue in issues:

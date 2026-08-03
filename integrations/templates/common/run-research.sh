@@ -13,7 +13,10 @@ fi
 
 cd "${research_root}"
 research_env_args=()
+if [[ -f "${research_root}/.emerging-telemetry-research/config.env" ]]; then
+  research_env_args+=(--env-file "${research_root}/.emerging-telemetry-research/config.env")
+fi
 if [[ -f "${research_config_root}/research.env" ]]; then
-  research_env_args=(--env-file "${research_config_root}/research.env")
+  research_env_args+=(--env-file "${research_config_root}/research.env")
 fi
 exec uv run emerging-telemetry-research "${research_env_args[@]}" portable run --json "$@"

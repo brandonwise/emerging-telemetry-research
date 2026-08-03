@@ -19,8 +19,13 @@ uv run emerging-telemetry-research mission create \
   --name "Developer Product Opportunity Research" \
   --window-hours 336 \
   --cadence weekly \
+  --template balanced \
   --json
 ```
+
+The `fast_scan`, `balanced`, and `deep_research` templates preserve the same security graph while
+changing bounded query volume, evidence depth, and output limits. They are reviewed configuration,
+not executable workflow code.
 
 A useful objective names:
 
@@ -41,6 +46,17 @@ uv run emerging-telemetry-research mission plan missions/my-mission/mission.yaml
 The plan shows every query, source surface, result limit, evidence rule, score dimension, role
 brief, and output limit. Unsupported template fields, duplicate IDs, weights that do not total 100,
 or a changed review graph fail validation.
+
+Add a website without touching YAML:
+
+```bash
+uv run emerging-telemetry-research mission source-add missions/my-mission/mission.yaml \
+  --url https://engineering.example.com --kind search --json
+```
+
+Source kinds are `search` for a site-constrained discovery query, `page` for one safely fetched
+HTTPS page, and `rss` for an RSS/Atom feed whose item links remain on the approved host. The
+updated mission is still a draft and must be reviewed and activated again.
 
 ## Prove it with fixture evidence
 
@@ -87,7 +103,7 @@ silently rewrites source approval, score weights, or collection policy.
 
 ## Activate live collection
 
-Activation is a deliberate approval, not a button hidden inside onboarding:
+Activation is a deliberate, labeled approval in the loopback setup control plane or CLI:
 
 ```bash
 uv run emerging-telemetry-research mission activate \
@@ -114,6 +130,17 @@ uv run emerging-telemetry-research mission rollback activation-receipt.json \
   --output mission.rolled-back.yaml \
   --json
 ```
+
+For hourly, daily, or weekly missions, enable the durable harness-neutral scheduler:
+
+```bash
+uv run emerging-telemetry-research schedule add \
+  missions/my-mission/mission.active.yaml --run-now --json
+uv run emerging-telemetry-research schedule serve
+```
+
+Concurrent workers cannot claim the same run. Abandoned leases expire, failed runs retry after
+five minutes, and pausing a schedule retains its history.
 
 ## What remains fixed
 

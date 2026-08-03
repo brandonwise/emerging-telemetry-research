@@ -6,10 +6,13 @@ import shutil
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 
 import yaml
+
+if TYPE_CHECKING:
+    from packages.security_gateway.deployment import DeploymentControlPaths
 
 from packages.security_gateway.permissions import harden_private_path
 from packages.security_gateway.secrets import (
@@ -23,6 +26,8 @@ CONFIG_DIRECTORY = ".emerging-telemetry-research"
 DEFAULT_CONFIG = """# Emerging Telemetry Research local configuration.
 # This private directory is ignored by Git.
 # Store credentials with setup secret-set; only keyring references appear here.
+ETR_CONFIG_SCHEMA_VERSION=1
+ETR_PROFILE=portable
 ETR_AGENT_MODE=plan
 ETR_AGENT_ADAPTER=auto
 ETR_AGENT_API_KEY_REF=
@@ -41,6 +46,9 @@ ETR_S3_REGION=us-east-1
 ETR_ANALYTICS_DB=state/research.db
 ETR_OBJECT_ROOT=state/objects
 ETR_REPORT_ROOT=reports/generated
+ETR_MISSION_ROOT=.emerging-telemetry-research/missions
+ETR_MISSION_REPORT_ROOT=reports/missions
+ETR_MISSION_FEEDBACK_ROOT=reports/mission-feedback
 ETR_DISCOVERY_CONFIG=.emerging-telemetry-research/config/discovery.yaml
 ETR_SOURCES_CONFIG=.emerging-telemetry-research/config/sources.yaml
 ETR_SOURCE_TERMS_CONFIG=.emerging-telemetry-research/config/source-terms.yaml
@@ -49,6 +57,8 @@ ETR_MODELS_CONFIG=.emerging-telemetry-research/config/models.yaml
 ETR_EMBEDDINGS_CONFIG=.emerging-telemetry-research/config/embeddings.yaml
 EXTERNAL_DELIVERY_ENABLED=false
 ETR_EMAIL_DELIVERY_ENABLED=false
+ETR_PORTAL_MISSIONS_ROOT=.emerging-telemetry-research/missions
+ETR_PORTAL_MISSION_REPORTS_ROOT=reports/missions
 """
 PRIVATE_IGNORE = "*\n!.gitignore\n"
 SECRET_GROUPS = {
@@ -73,6 +83,15 @@ PORTABLE_SOURCE_IDS = {
     "tiktok-security",
     "x-researchers",
 }
+SUPPORTED_AGENT_MODES = {"plan", "shadow", "active"}
+SUPPORTED_AGENT_ADAPTERS = {
+    "auto",
+    "fixture",
+    "openclaw",
+    "codex",
+    "claude",
+    "openai-compatible",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +114,7 @@ def initialize_workspace(
     config_root = root / CONFIG_DIRECTORY
     created: list[str] = []
     skipped: list[str] = []
+    updated: list[str] = []
     for directory in (config_root, root / "state/objects", root / "reports/generated"):
         directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         harden_private_path(directory)
@@ -104,11 +124,14 @@ def initialize_workspace(
     }
     for path, content in files.items():
         if path.exists() and not force:
+            if path.name == "config.env" and _append_missing_config_defaults(path, content):
+                updated.append(str(path))
             skipped.append(str(path))
             continue
         path.write_text(content, encoding="utf-8")
         harden_private_path(path)
         created.append(str(path))
+    _set_config_value(config_root / "config.env", "ETR_PROFILE", profile)
     local_config_root = config_root / "config"
     local_config_root.mkdir(mode=0o700, parents=True, exist_ok=True)
     harden_private_path(local_config_root)
@@ -138,6 +161,7 @@ def initialize_workspace(
         "config": str(config_root / "config.env"),
         "created": created,
         "skipped": skipped,
+        "updated": updated,
         "external_delivery": "disabled",
     }
 
@@ -154,7 +178,45 @@ def configure_keyring_credential(
     _set_config_value(config_path, f"{name}_REF", reference)
 
 
-def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dict[str, object]:
+def configure_agent_runtime(
+    *,
+    config_path: Path,
+    adapter: str,
+    mode: str,
+    model: str = "",
+    base_url: str = "",
+    provider_name: str = "",
+) -> None:
+    if adapter not in SUPPORTED_AGENT_ADAPTERS:
+        raise ValueError("unsupported agent adapter")
+    if mode not in SUPPORTED_AGENT_MODES:
+        raise ValueError("unsupported agent mode")
+    bounded = {
+        "ETR_AGENT_ADAPTER": adapter,
+        "ETR_AGENT_MODE": mode,
+        "ETR_AGENT_MODEL": _single_line(model, maximum=200),
+        "ETR_AGENT_PROVIDER_NAME": _single_line(provider_name, maximum=100),
+    }
+    clean_base_url = base_url.strip()
+    if clean_base_url:
+        parsed = urlsplit(clean_base_url)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError("agent base URL must be credential-free HTTPS")
+        if parsed.fragment:
+            raise ValueError("agent base URL cannot include a fragment")
+        bounded["ETR_AGENT_BASE_URL"] = clean_base_url.rstrip("/")
+    elif adapter == "openai-compatible":
+        raise ValueError("OpenAI-compatible adapters require an HTTPS base URL")
+    for name, value in bounded.items():
+        _set_config_value(config_path, name, value)
+
+
+def run_doctor(
+    *,
+    profile: str = "core",
+    config_path: Path | None = None,
+    control_paths: DeploymentControlPaths | None = None,
+) -> dict[str, object]:
     if profile not in {"core", "portable", "production"}:
         raise ValueError("doctor profile must be core, portable, or production")
     checks: list[DoctorCheck] = []
@@ -182,8 +244,10 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
         "schemas/mission.schema.json",
         "missions/developer-product-opportunities/mission.yaml",
         "integrations/templates/common/research.env.example",
+        "fixtures/vertical_slice/early-manifest.json",
+        "apps/setup/templates/index.html",
     )
-    missing = [item for item in resources if not (RESOURCE_ROOT / item).is_file()]
+    missing = [item for item in resources if not _resource_available(item)]
     checks.append(
         DoctorCheck(
             "packaged-resources",
@@ -210,7 +274,7 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
             DoctorCheck(
                 "local-config",
                 "warn",
-                "run `emerging-telemetry-research setup init` to create local defaults",
+                "run `uv run emerging-telemetry-research setup init` to create local defaults",
                 False,
             )
         )
@@ -264,14 +328,21 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
     if profile in {"portable", "production"}:
         from packages.security_gateway.deployment import (
             DeploymentApprovalError,
+            DeploymentControlPaths,
             require_deployment_approval,
         )
 
         approval_path = selected_config.parent / "deployment-approval.yaml"
+        if control_paths is not None and not isinstance(
+            control_paths,
+            DeploymentControlPaths,
+        ):
+            raise ValueError("doctor control paths are invalid")
         try:
             approval = require_deployment_approval(
                 "collection",
                 approval_path=approval_path,
+                paths=control_paths,
             )
         except DeploymentApprovalError as exc:
             checks.append(DoctorCheck("deployment-approval", "fail", str(exc), True))
@@ -284,34 +355,73 @@ def run_doctor(*, profile: str = "core", config_path: Path | None = None) -> dic
                     True,
                 )
             )
-    adapter = os.environ.get("ETR_AGENT_ADAPTER", "codex")
+    adapter = os.environ.get("ETR_AGENT_ADAPTER", "auto")
     mode = os.environ.get("ETR_AGENT_MODE", "plan")
     if mode != "plan":
-        if adapter in {"openclaw", "codex", "claude"}:
-            executable = os.environ.get("ETR_AGENT_EXECUTABLE", adapter)
-            available = shutil.which(executable) is not None
+        from packages.onboarding.harnesses import (
+            HarnessStatus,
+            inspect_harnesses,
+            valid_harness_test_receipt,
+        )
+
+        statuses = inspect_harnesses()
+        candidates: tuple[HarnessStatus, ...]
+        if adapter == "auto":
+            candidates = tuple(
+                item
+                for item in statuses
+                if item.harness in {"openclaw", "codex", "claude", "openai-compatible"}
+                and item.available
+            )
+        else:
+            candidates = tuple(
+                item for item in statuses if item.harness == adapter and item.available
+            )
+        if adapter == "fixture":
             checks.append(
                 DoctorCheck(
                     "agent-runtime",
-                    "pass" if available else "fail",
-                    f"{adapter} command {'available' if available else 'not found'}",
+                    "pass",
+                    "deterministic fixture provider",
                     True,
                 )
             )
-        elif adapter == "openai-compatible":
-            status = inspect_secret("ETR_AGENT_API_KEY")
-            model = os.environ.get("ETR_AGENT_MODEL", "").strip()
-            configured = status.configured and bool(model)
+        else:
             checks.append(
                 DoctorCheck(
                     "agent-runtime",
-                    "pass" if configured else "fail",
-                    "HTTPS adapter configured" if configured else "model or API key missing",
+                    "pass" if candidates else "fail",
+                    (
+                        "available: " + ", ".join(item.harness for item in candidates)
+                        if candidates
+                        else f"{adapter} harness is unavailable"
+                    ),
                     True,
                 )
             )
-        elif adapter != "fixture":
-            checks.append(DoctorCheck("agent-runtime", "fail", "unsupported adapter", True))
+            certified = tuple(
+                item
+                for item in candidates
+                if valid_harness_test_receipt(
+                    selected_config.parent
+                    / "harness-tests"
+                    / f"{item.harness}.receipt.json",
+                    status=item,
+                )
+            )
+            checks.append(
+                DoctorCheck(
+                    "agent-contract-test",
+                    "pass" if certified else "fail",
+                    (
+                        "certified: " + ", ".join(item.harness for item in certified)
+                        if certified
+                        else "run `uv run emerging-telemetry-research setup harness-test` "
+                        "for the selected harness"
+                    ),
+                    True,
+                )
+            )
         if adapter != "fixture":
             pricing = (
                 os.environ.get("ETR_AGENT_INPUT_PRICE_PER_MILLION", "").strip(),
@@ -356,3 +466,43 @@ def _set_config_value(path: Path, name: str, value: str) -> None:
         updated.append(replacement)
     path.write_text("\n".join(updated).rstrip() + "\n", encoding="utf-8")
     harden_private_path(path)
+
+
+def _single_line(value: str, *, maximum: int) -> str:
+    normalized = value.strip()
+    if len(normalized) > maximum or any(character in normalized for character in "\r\n\0"):
+        raise ValueError("configuration value is invalid or too long")
+    return normalized
+
+
+def _append_missing_config_defaults(path: Path, defaults: str) -> bool:
+    existing = path.read_text(encoding="utf-8")
+    names = {
+        line.split("=", 1)[0].strip()
+        for line in existing.splitlines()
+        if line.strip() and not line.lstrip().startswith("#") and "=" in line
+    }
+    additions = [
+        line
+        for line in defaults.splitlines()
+        if line and not line.startswith("#") and line.split("=", 1)[0] not in names
+    ]
+    if not additions:
+        return False
+    content = (
+        existing.rstrip()
+        + "\n\n# Added by a compatible config upgrade.\n"
+        + "\n".join(additions)
+        + "\n"
+    )
+    path.write_text(content, encoding="utf-8")
+    harden_private_path(path)
+    return True
+
+
+def _resource_available(relative: str) -> bool:
+    if (RESOURCE_ROOT / relative).is_file():
+        return True
+    if relative.startswith("fixtures/"):
+        return (RESOURCE_ROOT / "tests" / relative).is_file()
+    return False

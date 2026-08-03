@@ -20,8 +20,9 @@ object-locked, versioned S3-compatible store; sanitizes hostile content; normali
 source lineage; scores deterministically; produces verified report JSON and self-contained HTML;
 and publishes the results to its durable database and private read-only website.
 
-Scheduling is deployment-owned and disabled in the distributable defaults. Browser automation is
-not part of source collection; it is used only for report-rendering QA.
+The built-in scheduler is disabled until an operator activates and schedules a hash-bound mission.
+It uses durable leases, bounded retries, and the same workflow regardless of AI harness. Browser
+automation is not part of source collection; it is used only for report-rendering QA.
 
 The engine itself is vendor-neutral. It can run with portable SQLite/local object storage or the
 production PostgreSQL/S3 profile. Agent platforms remain thin orchestration surfaces; they do not
@@ -29,17 +30,23 @@ own evidence, workflow state, analytics, or report history.
 
 ## Five-minute local start
 
-Requires Python 3.12–3.14 and `uv`. The setup command creates a private, ignored local workspace;
-tracked source collection, schedules, delivery, and self-mutation all remain disabled.
+Requires Python 3.12–3.14 and `uv`. The recommended path is an authenticated setup page available
+only from the local computer. It creates a private ignored workspace; collection, schedules,
+delivery, and self-mutation stay off until their own explicit approvals.
 
 ```bash
 git clone <private-repository-url> emerging-telemetry-research
 cd emerging-telemetry-research
-uv sync --frozen --extra dev
-uv run emerging-telemetry-research setup init --profile portable --json
-uv run emerging-telemetry-research setup secret-set BRAVE_API_KEY
-uv run emerging-telemetry-research setup secret-set XAI_API_KEY
+uv sync --frozen
+uv run emerging-telemetry-research onboard
 ```
+
+The command opens a one-time loopback link. Choose any installed OpenClaw, Codex, Claude, or
+OpenAI-compatible harness; store credentials in the OS keyring; describe the research objective;
+review and approve the exact collection boundary; paste extra sites, pages, or RSS feeds; inspect
+the compiled plan; and activate it. Shadow/active users can run the cost-acknowledged five-role
+harness certification from the same page. No YAML editing is required. Advanced operators can use
+the equivalent commands below.
 
 Review `.emerging-telemetry-research/config/`, then bind an approval to the exact code, policies, source terms,
 and enabled local sources:
@@ -76,8 +83,23 @@ Describe a new research objective:
 uv run emerging-telemetry-research mission create \
   --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
   --result-type opportunity \
+  --template balanced \
   --json
 ```
+
+Add an approved source without editing YAML:
+
+```bash
+uv run emerging-telemetry-research mission source-add missions/my-research/mission.yaml \
+  --url https://engineering.example.com --kind search --json
+uv run emerging-telemetry-research mission source-add missions/my-research/mission.updated.yaml \
+  --url https://engineering.example.com/feed.xml --kind rss --json
+```
+
+`search` constrains discovery to a site, `page` safely fetches one approved HTTPS page, and `rss`
+parses a same-site RSS/Atom feed. Direct fetching uses pinned validated IPs, bounded response sizes,
+strict content types, disposable time/memory/CPU-bounded parser processes, sanitizer controls, and
+no browser or script execution.
 
 Preview the generated source and review plan, then prove it without network access:
 
