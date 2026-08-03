@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -132,7 +133,8 @@ def test_workspace_init_is_private_and_idempotent(tmp_path: Path) -> None:
     config = tmp_path / ".outcome-radar/config.env"
 
     assert config.is_file()
-    assert config.stat().st_mode & 0o077 == 0
+    if os.name != "nt":
+        assert config.stat().st_mode & 0o077 == 0
     assert first["created"]
     assert second["created"] == []
     assert second["skipped"]

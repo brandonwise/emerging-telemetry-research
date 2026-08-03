@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
 from email.message import EmailMessage
 from pathlib import Path
@@ -144,7 +145,8 @@ def test_smtp_sender_is_tls_fixed_recipient_and_retry_safe(
         for part in message.walk()
     )
     receipt_path = next((run_root / ".delivery-receipts").glob("*.json"))
-    assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
 
 
 def test_sender_rejects_plan_for_different_fixed_recipient(

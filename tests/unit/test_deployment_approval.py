@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -71,7 +72,8 @@ def test_approval_is_expiring_capability_and_control_bound(tmp_path: Path) -> No
     )
 
     assert loaded["approval_id"] == "review-123"
-    assert approval_path.stat().st_mode & 0o077 == 0
+    if os.name != "nt":
+        assert approval_path.stat().st_mode & 0o077 == 0
     with pytest.raises(DeploymentApprovalError, match="does not grant external_delivery"):
         require_deployment_approval(
             "external_delivery",

@@ -10,7 +10,6 @@ permissions:
   actions: read
   contents: read
   packages: read
-  security-events: write
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -24,3 +23,26 @@ jobs:
         with:
           languages: ${{ matrix.language }}
       - uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          output: codeql-results
+          upload: never
+          upload-database: false
+      - name: Enforce CodeQL results
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          paths = sorted(Path("codeql-results").glob("*.sarif"))
+          if not paths:
+              raise SystemExit("CodeQL produced no SARIF results")
+          findings = []
+          for path in paths:
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              for run in payload.get("runs", []):
+                  findings.extend(run.get("results", []))
+          if findings:
+              for finding in findings[:20]:
+                  print(finding.get("ruleId", "unknown-rule"))
+              raise SystemExit(f"CodeQL reported {len(findings)} finding(s)")
+          print(f"CodeQL completed with zero findings across {len(paths)} result file(s)")

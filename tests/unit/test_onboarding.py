@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,8 @@ def test_platform_setup_generates_runnable_adapter(
     )
 
     assert generated.platform == platform
-    assert (destination / "run-radar.sh").stat().st_mode & 0o100
+    if os.name != "nt":
+        assert (destination / "run-radar.sh").stat().st_mode & 0o100
     assert (destination / "run-radar.ps1").is_file()
     assert (destination / "radar.env.example").is_file()
     if platform == "claude-code":
