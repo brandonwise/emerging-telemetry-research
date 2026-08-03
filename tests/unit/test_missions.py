@@ -188,6 +188,7 @@ async def test_allowlisted_collector_contract_extends_live_missions() -> None:
             return (
                 DiscoverySignal(
                     source_id=compile_mission(active).queries[0].source_id,
+                    source_type="website",
                     title="Support teams report a repeated onboarding gap",
                     url="https://support.example.test/gap",
                     summary="Independent teams describe the same support workflow gap.",
@@ -205,6 +206,7 @@ async def test_allowlisted_collector_contract_extends_live_missions() -> None:
     )
 
     assert result["signals"][0]["url"] == "https://support.example.test/gap"
+    assert result["signals"][0]["source_type"] == "web"
 
 
 def test_unregistered_collector_fails_closed() -> None:

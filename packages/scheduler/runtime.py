@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -38,7 +40,7 @@ class MissionScheduleStore:
         self.path = path.resolve()
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         harden_private_path(self.path.parent)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS mission_schedules (
@@ -78,7 +80,7 @@ class MissionScheduleStore:
         current = _utc(now)
         next_run = current if run_now else current + CADENCE_DELTA[cadence]
         schedule_id = stable_id("sc", mission.mission_id, str(path))
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 INSERT INTO mission_schedules (
@@ -110,14 +112,14 @@ class MissionScheduleStore:
         return scheduled
 
     def list(self) -> tuple[ScheduledMission, ...]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT * FROM mission_schedules ORDER BY mission_name, schedule_id"
             ).fetchall()
         return tuple(_scheduled(row) for row in rows)
 
     def get(self, schedule_id: str) -> ScheduledMission | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT * FROM mission_schedules WHERE schedule_id = ?",
                 (schedule_id,),
@@ -125,7 +127,7 @@ class MissionScheduleStore:
         return _scheduled(row) if row is not None else None
 
     def set_enabled(self, schedule_id: str, *, enabled: bool) -> ScheduledMission:
-        with self._connect() as connection:
+        with self._connection() as connection:
             cursor = connection.execute(
                 "UPDATE mission_schedules SET enabled = ?, lease_until = NULL "
                 "WHERE schedule_id = ?",
@@ -150,7 +152,7 @@ class MissionScheduleStore:
         now_text = format_timestamp(current)
         lease_text = format_timestamp(current + timedelta(seconds=lease_seconds))
         claimed: list[ScheduledMission] = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             rows = connection.execute(
                 """
@@ -198,7 +200,7 @@ class MissionScheduleStore:
             else current + timedelta(minutes=5)
         )
         bounded_error = None if succeeded else " ".join((error or "run failed").split())[:500]
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 UPDATE mission_schedules
@@ -225,6 +227,15 @@ class MissionScheduleStore:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA busy_timeout=10000")
         return connection
+
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
 
 def _scheduled(row: sqlite3.Row | dict[str, object]) -> ScheduledMission:

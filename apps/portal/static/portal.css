@@ -237,7 +237,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-weight: 720;
   letter-spacing: .055em;
   text-transform: uppercase;
-}
 .quiet-button:hover { color: var(--ink); }
 main {
   width: 100%;

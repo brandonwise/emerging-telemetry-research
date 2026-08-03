@@ -13,7 +13,9 @@ from packages.agents.runtime import (
     FixtureAgentProvider,
     OpenAICompatibleAgentProvider,
     RoutedAgentProvider,
+    _agent_prompt,
     _maximum_currency_reservation,
+    _normalize_assessment,
     evidence_packet_from_finding,
     execute_agent_reviews,
 )
@@ -94,6 +96,58 @@ def test_evidence_packet_from_finding_contains_only_bounded_evidence() -> None:
         "ev_agent_two",
     }
     assert "raw_content" not in str(packet)
+
+
+def test_agent_prompt_supplies_the_code_owned_disposition_anchor() -> None:
+    generated_at = datetime(2026, 7, 30, 13, tzinfo=UTC)
+    invocation = AgentInvocation(
+        run_id="run_prompt_anchor",
+        finding_id="fd_agent_runtime",
+        role="specialist",
+        route={"model": "portable-model", "recommended_disposition": "watch"},
+        packet=evidence_packet_from_finding(
+            _finding(),
+            run_id="run_prompt_anchor",
+            generated_at=generated_at,
+        ),
+        prior_assessments=(),
+        created_at="2026-07-30T13:00:00Z",
+    )
+
+    payload = json.loads(_agent_prompt(invocation))
+
+    assert payload["deterministic_disposition"] == "watch"
+    assert any("only code may classify" in rule for rule in payload["decision_policy"])
+
+
+def test_assessment_normalization_discards_undeclared_model_fields() -> None:
+    generated_at = datetime(2026, 7, 30, 13, tzinfo=UTC)
+    packet = evidence_packet_from_finding(
+        _finding(),
+        run_id="run_extra_fields",
+        generated_at=generated_at,
+    )
+
+    normalized = _normalize_assessment(
+        {
+            "judgment": "The bounded evidence supports Watch.",
+            "claims": [],
+            "uncertainties": [],
+            "contradictions": [],
+            "recommended_disposition": "watch",
+            "requested_followups": [],
+            "impact_assessment": "undeclared model field",
+        },
+        role="specialist",
+        packet=packet,
+        run_id="run_extra_fields",
+        finding_id="fd_agent_runtime",
+        created_at="2026-07-30T13:00:00Z",
+        model="portable-model",
+    )
+
+    assert "impact_assessment" not in normalized
+    assert normalized["recommended_disposition"] == "watch"
 
 
 @pytest.mark.asyncio

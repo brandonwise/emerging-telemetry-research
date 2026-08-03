@@ -867,6 +867,7 @@ def _agent_prompt(invocation: AgentInvocation) -> str:
             "Return one JSON object and no prose or code fences.",
         ],
         "decision_policy": _decision_policy(generic_mission),
+        "deterministic_disposition": invocation.route.get("recommended_disposition"),
         "evidence_packet": invocation.packet,
         "prior_assessments": list(invocation.prior_assessments),
         "required_shape": assessment_shape,
@@ -892,13 +893,13 @@ def _decision_policy(generic_mission: bool) -> list[str]:
         ]
     return [
             (
-                "The deterministic publication_class is the enforced policy anchor, not an "
-                "agent suggestion."
+                "The supplied deterministic_disposition is the enforced policy anchor, not an "
+                "agent suggestion. Return it unless cited evidence contradicts a required trigger."
             ),
             (
                 "A Flash disposition may be globally warranted by authoritative known "
                 "exploitation plus severe impact even when affected inventory or organization "
-                "exposure is unknown."
+                "exposure is unknown, but only code may classify that trigger as Flash."
             ),
             (
                 "Keep organizational relevance separate from impact, exploitation status, "
@@ -909,8 +910,9 @@ def _decision_policy(generic_mission: bool) -> list[str]:
                 "or organization inventory is absent. Record those gaps as uncertainty."
             ),
             (
+                "Never promote or downgrade the deterministic disposition from intuition. "
                 "Recommend a different disposition only when cited evidence contradicts a "
-                "required deterministic trigger. Explain the contradiction."
+                "required deterministic trigger, and explain that contradiction."
             ),
             ("recommended_disposition is advisory and never grants publication authority."),
         ]
@@ -927,7 +929,6 @@ def _normalize_assessment(
     model: str,
 ) -> dict[str, Any]:
     normalized = {
-        **assessment,
         "schema_version": "1.0",
         "assessment_id": stable_id("as", run_id, finding_id, role),
         "cluster_id": packet["cluster_id"],
@@ -935,11 +936,13 @@ def _normalize_assessment(
         "created_at": created_at,
         "model": model,
         "prompt_revision": "agent-runtime-v1",
+        "judgment": assessment.get("judgment"),
+        "claims": assessment.get("claims", []),
+        "uncertainties": assessment.get("uncertainties", []),
+        "contradictions": assessment.get("contradictions", []),
+        "recommended_disposition": assessment.get("recommended_disposition"),
+        "requested_followups": assessment.get("requested_followups", []),
     }
-    normalized.setdefault("claims", [])
-    normalized.setdefault("uncertainties", [])
-    normalized.setdefault("contradictions", [])
-    normalized.setdefault("requested_followups", [])
     normalized["recommended_disposition"] = _bounded_disposition(
         normalized.get("recommended_disposition")
     )

@@ -113,8 +113,10 @@ async def collect_mission_signals(
             signals.append(
                 {
                     "source_id": signal.source_id,
-                    "source_type": signal.source_type
-                    or surface_by_source.get(signal.source_id, "web"),
+                    "source_type": surface_by_source.get(
+                        signal.source_id,
+                        signal.source_type or "web",
+                    ),
                     "title": signal.title,
                     "url": signal.url,
                     "summary": signal.summary,
