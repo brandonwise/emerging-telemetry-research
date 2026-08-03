@@ -9,14 +9,14 @@
 </section>
 <section class="mission-builder">
   <form class="mission-form panel" method="get" action="/missions/new">
-    <label for="objective">Desired outcome</label>
+    <label for="objective">Research objective</label>
     <textarea id="objective" name="objective" rows="6" minlength="12" maxlength="1200"
       required placeholder="Find recurring developer workflow pain that could support a useful product in the next quarter.">{{ objective }}</textarea>
     <div class="mission-form-grid">
       <div><label for="name">Mission name <span>optional</span></label>
         <input id="name" name="name" maxlength="100" value="{{ mission_name }}"
           placeholder="Developer Product Opportunity Research"></div>
-      <div><label for="outcome">One result is an… <span>optional</span></label>
+      <div><label for="outcome">Result type <span>optional</span></label>
         <input id="outcome" name="outcome" maxlength="40" value="{{ outcome }}"
           placeholder="opportunity"></div>
       <div><label for="window-hours">Research window</label>

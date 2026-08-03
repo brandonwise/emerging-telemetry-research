@@ -70,12 +70,12 @@ make package-smoke
 See [setup and operation](docs/SETUP.md) and the
 [production readiness runbook](docs/PRODUCTION.md) before enabling live collection.
 
-Describe a new research outcome:
+Describe a new research objective:
 
 ```bash
 uv run emerging-telemetry-research mission create \
   --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
-  --outcome opportunity \
+  --result-type opportunity \
   --json
 ```
 
@@ -95,7 +95,7 @@ uv run emerging-telemetry-research mission run \
 
 Open `/missions/new` in the portal for the guided builder and downloadable mission draft. Live
 collection stays off until an operator reviews and activates the compiled source plan. See
-[Outcome missions](docs/MISSIONS.md) for validation, activation, evaluation, and rollback.
+[Research missions](docs/MISSIONS.md) covers validation, activation, evaluation, and rollback.
 
 Generate one complete fixture report:
 
@@ -184,7 +184,7 @@ LAN mode binds `0.0.0.0` but accepts only configured private networks and requir
 access token by default. Trusted-network deployments can explicitly use
 `scripts/install-portal-service.sh --auth disabled`; re-enable it with `--auth required`. Use
 `--certfile` and `--keyfile` for TLS; otherwise use only a trusted LAN or an encrypted overlay such
-as Tailscale. The portal is read-only and includes a guided outcome-mission builder, mission and
+as Tailscale. The portal is read-only and includes a guided research-mission builder, mission and
 report views, a filterable security findings archive, categories and tags, a score-sorted analyst
 queue, claim verification, deduplicated new-finding and source metrics,
 live review posture, deterministic score breakdowns, source-native excerpts and links,
@@ -262,7 +262,7 @@ and inject `X-Client-Cert-SHA256`; callers cannot self-assert that header over a
 
 [Watch the animated architecture](docs/architecture-motion.html) for the guided end-to-end runtime,
 [open the complete visual architecture](docs/architecture-visual.html) for the ten-diagram as-built
-system map, [inspect the mission engine](docs/mission-engine.html) for the outcome-to-workflow
+system map, [inspect the mission engine](docs/mission-engine.html) for the objective-to-workflow
 lifecycle, and [inspect the universal runtime diagram](docs/universal-agent-runtime.html) for the
 provider-neutral agent and source boundaries.
 

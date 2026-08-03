@@ -317,7 +317,7 @@ def test_mission_cli_creates_and_validates_draft(tmp_path: Path) -> None:
             "create",
             "--objective",
             "Find recurring support workflow gaps that an operations team can fix.",
-            "--outcome",
+            "--result-type",
             "gap",
             "--output",
             str(destination),

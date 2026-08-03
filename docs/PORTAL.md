@@ -76,7 +76,7 @@ CIDR allowlist.
 
 - guided plain-language mission builder with an exact source/query preview
 - downloadable plan-mode mission YAML; collection remains disabled until CLI approval
-- mission inventory, activation posture, evidence rules, role briefs, and verified outcome reports
+- mission inventory, activation posture, evidence rules, role briefs, and verified research reports
 - score-sorted analyst queue bounded to the selected time window
 - deduplicated priority, claim verification, new-finding, source-health, and publication-mix KPIs
 - attributed evidence mix with distinct source and evidence counts, X share, and non-X volume

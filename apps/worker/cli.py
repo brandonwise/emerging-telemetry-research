@@ -653,15 +653,22 @@ def setup_approval_apply(
 def mission_create(
     objective: Annotated[str | None, typer.Option("--objective", "-o")] = None,
     name: Annotated[str | None, typer.Option("--name")] = None,
-    outcome: Annotated[str | None, typer.Option("--outcome")] = None,
+    outcome: Annotated[
+        str | None,
+        typer.Option(
+            "--result-type",
+            "--outcome",
+            help="Singular noun for a finding, such as opportunity, risk, or trend.",
+        ),
+    ] = None,
     window_hours: Annotated[int, typer.Option("--window-hours", min=1, max=2160)] = 168,
     cadence: Annotated[str, typer.Option("--cadence")] = "daily",
     output: Annotated[Path | None, typer.Option("--output")] = None,
     force: Annotated[bool, typer.Option("--force")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    """Describe an outcome and create a safe, reviewable mission draft."""
-    stated_objective = objective or typer.prompt("What outcome should this mission find?")
+    """Describe a research objective and create a safe, reviewable mission draft."""
+    stated_objective = objective or typer.prompt("What should this research mission investigate?")
     try:
         mission = draft_mission(
             stated_objective,

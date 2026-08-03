@@ -5,6 +5,13 @@ for release identifiers while it remains private.
 
 ## [Unreleased]
 
+### Changed
+
+- Standardized the product and onboarding language on Emerging Telemetry Research, research
+  missions, and research objectives.
+- Added `--result-type` as the primary mission-authoring option while retaining `--outcome` as a
+  backward-compatible alias.
+
 ## [1.0.0] - 2026-08-03
 
 ### Added
@@ -26,7 +33,7 @@ for release identifiers while it remains private.
 - Approval-gated collection and external delivery.
 - Hash-bound, expiring local capability approvals for collection, delivery, and improvement apply.
 - DNS-pinned HTTPS fetching and resource-bounded cross-platform parser subprocesses.
-- Syndication-aware independent-source counting for outcome missions.
+- Syndication-aware independent-source counting for research missions.
 - Hostile-content sanitation and schema-validated agent boundaries.
 - Immutable evidence, report, and delivery receipts.
 

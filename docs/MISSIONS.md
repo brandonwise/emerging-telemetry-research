@@ -1,11 +1,11 @@
-# Outcome missions
+# Research missions
 
-A mission is a reviewable contract for one research outcome. It says what to find, where the
+A mission is a reviewable contract for one research objective. It says what to investigate, where the
 system may look, what counts as enough evidence, how results are scored, which review roles should
 challenge them, and what a useful run looks like.
 
 Security is one mission pack. The same engine can research developer-product opportunities,
-customer pain, market changes, operational risks, leads, or another bounded outcome without
+customer pain, market changes, operational risks, leads, or another bounded question without
 giving a prompt permission to write or run a scraper.
 
 ## Start with the decision
@@ -15,7 +15,7 @@ Use the portal at `/missions/new`, or create a draft from the CLI:
 ```bash
 uv run emerging-telemetry-research mission create \
   --objective "Find recurring developer workflow pain that could support a useful product next quarter." \
-  --outcome opportunity \
+  --result-type opportunity \
   --name "Developer Product Opportunity Research" \
   --window-hours 336 \
   --cadence weekly \
@@ -130,4 +130,4 @@ impact ─────┼─→ citation verifier → coordinator → determinis
 skeptic ────┘
 ```
 
-The engine owns safety and provenance. The mission owns the outcome.
+The engine owns safety and provenance. The mission owns the research objective.

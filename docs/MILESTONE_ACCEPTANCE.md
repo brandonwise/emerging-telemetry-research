@@ -137,7 +137,7 @@ Acceptance:
 Deployment gates: database point-in-time restore, object-lock restore, alert delivery, chaos,
 rollback, and OpenClaw deep-audit evidence from the target environment.
 
-## Milestone 8 — universal outcome missions
+## Milestone 8 — universal research missions
 
 Design: security becomes a built-in mission pack on a universal research contract. Plain-language
 intent compiles into bounded sources and queries, evidence rules, deterministic scoring, mission-

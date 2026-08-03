@@ -73,8 +73,11 @@ def test_portal_mission_onboarding_and_report_navigation(tmp_path: Path) -> None
     )
 
     assert index.status_code == 200
+    assert "Research missions" in index.text
+    assert "Outcome missions" not in index.text
     assert "Developer Product Opportunity Research" in index.text
     assert builder.status_code == 200
+    assert "Research objective" in builder.text
     assert "Build research plan" in builder.text
     assert "Download mission" in builder.text
     assert download.status_code == 200

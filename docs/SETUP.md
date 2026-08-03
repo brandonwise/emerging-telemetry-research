@@ -72,14 +72,14 @@ terms before generating a new deployment approval request. TikTok requires an
 approved Research API project with `research.data.basic`; its client access token expires after
 two hours, so refresh it in the host secret workflow rather than inside an agent prompt.
 
-### Create an outcome mission
+### Create a research mission
 
 Use the portal mission builder or the CLI before configuring live collection:
 
 ```bash
 uv run emerging-telemetry-research mission create \
   --objective "Find recurring workflow pain that could support a useful product next quarter." \
-  --outcome opportunity \
+  --result-type opportunity \
   --json
 ```
 
@@ -223,7 +223,7 @@ source in the local source and discovery config, generate a new approval, and re
 approval to isolate collection. Never delete old evidence or rewrite an immutable report; publish
 a corrected version.
 
-For an activated outcome mission, run `emerging-telemetry-research mission rollback` with its activation receipt.
+For an activated research mission, run `emerging-telemetry-research mission rollback` with its activation receipt.
 This restores the exact pre-activation contract and verifies its base hash before writing it.
 
 See `docs/PRODUCTION.md` for deployment, backup, restore, release, and incident-response gates.
