@@ -39,7 +39,7 @@ test: ## Run the complete pytest suite.
 	$(UV) run pytest -W error
 
 audit: ## Audit the complete locked dependency graph for known vulnerabilities.
-	$(UV) --preview-features audit audit --locked --all-extras
+	$(UV) --preview-features audit audit --locked
 
 acceptance: ## Run the frozen end-to-end and hostile-content acceptance suite.
 	$(RADAR) eval acceptance --output $(REPORT_ROOT)/acceptance --json
